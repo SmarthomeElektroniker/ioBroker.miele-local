@@ -39,8 +39,9 @@
   "scripts": {
     "test:crypto": "node test/test-crypto.js",
     "test:package": "mocha test/package --exit",
-    "test": "npm run test:crypto",
-    "lint": "eslint ."
+    "test": "npm run test:crypto && npm run test:package",
+    "lint": "eslint .",
+    "test:integration": "mocha test/integration --exit"
   },
   "files": [
     "admin/",
