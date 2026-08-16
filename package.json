@@ -33,7 +33,8 @@
     "@iobroker/testing": "^5.2.2",
     "@types/node": "^22",
     "eslint": "^9.39.0",
-    "globals": "^15.15.0"
+    "globals": "^15.15.0",
+    "mocha": "^11.7.5"
   },
   "scripts": {
     "test:crypto": "node test/test-crypto.js",
