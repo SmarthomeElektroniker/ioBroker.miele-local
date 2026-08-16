@@ -5,150 +5,153 @@
 [![NPM version](https://img.shields.io/npm/v/iobroker.miele-lokal.svg)](https://www.npmjs.com/package/iobroker.miele-lokal)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Mit diesem Adapter verbinden Sie moderne **Miele@Home**-Geräte **lokal ohne Internet**.
-Der Adapter spricht das lokale Miele-Protokoll (`MieleH256` / DOP2) direkt über das LAN –
-kein Cloud-Konto im laufenden Betrieb, kein Umweg über die Miele-3rd-Party-API.
+This adapter connects modern **Miele@Home** appliances **locally, without the internet**.
+It speaks the local Miele protocol (`MieleH256` / DOP2) directly over the LAN — no cloud
+account during operation, no detour through the Miele 3rd-party API.
 
-> Die einmalige **Anmeldung** mit dem Miele-Konto dient nur dazu, den haushaltsweiten
-> lokalen Schlüssel (GroupID/GroupKey) zu ermitteln. Danach läuft der Adapter offline,
-> und die Miele-App funktioniert unverändert weiter.
+> The one-time **login** with your Miele account only serves to obtain the household-wide
+> local key (GroupID/GroupKey). After that the adapter runs offline, and the Miele app
+> keeps working unchanged.
 
-## Funktionen
+## Features
 
-- **Automatische Ermittlung der Zugangsdaten** über einen geführten Login (Cloud-OAuth),
-  ohne Neu-Provisionierung der Geräte.
-- **Automatische Geräteerkennung** per mDNS (`_mieleathome._tcp`).
-- **Live-Zustände** aller unterstützten Geräteklassen (Waschmaschine, Trockner,
-  Spülmaschine, Backofen, Dampfgarer, Kochfeld, Kaffeevollautomat u. a.) mit
-  Klartext-Dekodierung von Status, Programm und Phase.
-- **Echtzeit-Updates** über den SuperVision-Push-Kanal (optional) mit Polling als
-  zuverlässigem Fallback.
-- **Steuerung** (optional): Start/Stop/Pause, Licht, Ein/Aus über beschreibbare
-  Datenpunkte – sofern das Gerät „MobileStart/Fernsteuerung" freigegeben hat.
+- **Automatic credential retrieval** via a guided login (cloud OAuth), without
+  re-provisioning the appliances.
+- **Automatic device discovery** via mDNS (`_mieleathome._tcp`).
+- **Live states** of all supported appliance classes (washing machine, dryer,
+  dishwasher, oven, steam oven, hob, coffee machine and more) with plain-text decoding of
+  status, program and phase.
+- **Real-time updates** via the SuperVision push channel (optional), with polling as a
+  reliable fallback.
+- **Control** (optional): start/stop/pause, light, on/off through writable states — as
+  long as "MobileStart/remote control" is enabled on the appliance.
 
 ## Installation
 
-1. Adapter installieren und eine Instanz anlegen.
-2. Im Tab **Anmeldung** Land wählen und **Login-Seite öffnen** – im Browser mit dem
-   Miele-Konto anmelden. Der Browser wird am Ende auf eine `miele://…`-Adresse
-   umgeleitet (blockiert); diese vollständige Adresse kopieren.
-3. Die `miele://…`-Adresse einfügen und **GroupKey ermitteln**. GroupID/GroupKey werden
-   (GroupKey verschlüsselt) gespeichert.
-4. Speichern. Der Adapter findet die Geräte per mDNS und legt die Datenpunkte an.
+1. Install the adapter and create an instance.
+2. On the **Login** tab, choose your country and click **Open login page** — sign in with
+   your Miele account in the browser. At the end the browser is redirected to a
+   `miele://…` address (which fails to open — that is expected); copy that full address.
+3. Paste the `miele://…` address and click **Fetch GroupKey**. GroupID/GroupKey are stored
+   (GroupKey encrypted).
+4. Save. The adapter discovers the devices via mDNS and creates the states.
 
-### Redirect-URL abgreifen
+### Capturing the redirect URL
 
-Der Browser kann die finale `miele://`-Adresse nicht selbst öffnen – das ist erwartet.
-Die vollständige Adresse (`miele://oauth2-code/?code=…&state=…`) bekommt man so – **eine
-Methode genügt**:
+The browser cannot open the final `miele://` address itself — that is expected. You obtain
+the full address (`miele://oauth2-code/?code=…&state=…`) as follows — **one method is
+enough**:
 
-- **Einfach – über den „Öffnen mit"-Dialog:** Fragt der Browser, die Adresse „mit einer
-  Anwendung öffnen", übergibt er die komplette `miele://`-Adresse an diese App. Öffnet man
-  sie z. B. mit einem Texteditor (Linux: kate/gedit; Windows: Editor; macOS: TextEdit),
-  steht die vollständige Adresse dort im Titel/Dateinamen bzw. im Text – von dort kopieren.
-  Den eigentlichen Öffnen-Vorgang kann man abbrechen.
-- **Zuverlässig – über DevTools:** Vor dem Login DevTools öffnen (F12) → Reiter „Netzwerk",
-  „Preserve log" aktivieren. Nach dem Login die letzte Anfrage suchen, deren Adresse mit
-  `miele://` beginnt bzw. `…/de/redirect?…&code=…` enthält → Rechtsklick → „Adresse des
-  Links kopieren".
+- **Easy — via the "Open with" dialog:** When the browser asks to open the address "with an
+  application", it hands the complete `miele://` address to that app. If you open it with a
+  text editor (Linux: kate/gedit; Windows: Notepad; macOS: TextEdit), the full address
+  appears in the title/file name or in the text — copy it from there. You can cancel the
+  actual open action.
+- **Reliable — via DevTools:** Open DevTools before logging in (F12) → tab "Network",
+  enable "Preserve log". After logging in, find the last request whose address begins with
+  `miele://` or contains `…/de/redirect?…&code=…` → right-click → "Copy link address".
 
-Beide liefern denselben Text mit `code=` und `state=`; der Adapter akzeptiert beide Formen.
+Both yield the same text with `code=` and `state=`; the adapter accepts both forms.
 
-## Benötigte Ports / Firewall
+## Required ports / firewall
 
-| Richtung | Port | Zweck | Pflicht |
+| Direction | Port | Purpose | Required |
 |---|---|---|---|
-| eingehend | TCP *Push-Port* (Standard 18082) | Geräte senden Echtzeit-Updates an ioBroker (Callback-Ziel) | nur bei aktiviertem Push |
-| ein/aus | UDP 5353 (mDNS) | Geräte-Discovery und Push-Anmeldung | ja |
-| ausgehend | TCP 80 → Geräte | Zustände lesen / Steuerbefehle | ja |
-| ausgehend | TCP 443 → miele-iot.com | nur während der Anmeldung (GroupKey holen) | nur Login |
+| inbound | TCP *push port* (default 18082) | Devices send real-time updates to ioBroker (callback target) | only when push is enabled |
+| in/out | UDP 5353 (mDNS) | device discovery and push registration | yes |
+| outbound | TCP 80 → devices | read states / send control commands | yes |
+| outbound | TCP 443 → miele-iot.com | only during login (fetch GroupKey) | login only |
 
-Ohne Push ist **kein eingehender Port** nötig. ioBroker und die Geräte müssen sich im
-selben Broadcast-Segment befinden (kein VLAN-/Docker-Bridge-Trennung), damit mDNS
-funktioniert.
+Without push, **no inbound port** is required. ioBroker and the devices must be in the same
+broadcast segment (no VLAN/Docker-bridge separation) for mDNS to work.
 
-### Betrieb in Docker (wichtig)
+### Running in Docker (important)
 
-Läuft ioBroker in einem **Docker-Container mit Bridge-Netzwerk** (Standard, z. B. das
-buanet-Image), erreicht die automatische **mDNS-Suche die Geräte nicht** – Multicast wird
-nicht über die Bridge gebrückt. Die direkte Kommunikation (TCP 80) funktioniert dagegen,
-da sie geroutet wird. In diesem Fall:
+If ioBroker runs in a **Docker container with bridge networking** (the default, e.g. the
+buanet image), the automatic **mDNS discovery cannot reach the devices** — multicast is not
+bridged. Direct communication (TCP 80) does work, because it is routed. In that case:
 
-- **Geräte-IPs im Tab „Geräte & Abfrage" manuell eintragen.** Dann läuft das Polling normal.
-- **Push** funktioniert im Bridge-Netz nicht (die Geräte können den Container nicht
-  erreichen). Für Push den Container im **Host-Netzwerk** betreiben (`network_mode: host`) –
-  dann ist der Push-Port automatisch offen. Im Bridge-Netz zusätzlich `-p 18082:18082`
-  mappen, doch die Callback-Rückadresse liegt hinter NAT, daher bleibt Push dort unzuverlässig.
+- **Enter the device IPs manually on the "Devices & polling" tab.** Polling then works
+  normally.
+- **Push** does not work in a bridge network (the devices cannot reach the container). For
+  push, run the container in **host networking** (`network_mode: host`) — the push port is
+  then automatically open. In a bridge network you additionally have to map `-p
+  18082:18082`, but the callback return address sits behind NAT, so push stays unreliable.
 
-### Wie Push funktioniert (technisch)
+### How push works (technical)
 
-Bei aktiviertem Push führt der Adapter pro Gerät ein **Enrollment** durch: `PUT
-/Devices/<serie>/SuperVision/<eigene-fab>` (registriert den Adapter als Peer) und mehrere
-`POST /Subscriptions` mit einer **Callback-URL** `http://<ioBroker-LAN-IP>:<Push-Port>/…`.
-Das Gerät sendet danach Zustandsänderungen unaufgefordert an diese URL (sub-sekunde). Die
-Subscriptions werden periodisch erneuert. Erreicht das Gerät die Callback-URL nicht (Bridge-NAT),
-kommen keine Pushes an – der Adapter fällt dann auf Polling zurück.
+When push is enabled, the adapter performs an **enrollment** per device: `PUT
+/Devices/<series>/SuperVision/<own-fab>` (registers the adapter as a peer) and several
+`POST /Subscriptions` with a **callback URL** `http://<ioBroker-LAN-IP>:<push-port>/…`. The
+device then sends state changes to that URL unsolicited (sub-second). Subscriptions are
+renewed periodically. If the device cannot reach the callback URL (bridge NAT), no pushes
+arrive — the adapter then falls back to polling.
 
-## Datenschutz
+## Privacy
 
-Es werden **keine persönlichen Daten** im Adapter hinterlegt. GroupID, GroupKey und
-Refresh-Token liegen ausschließlich in der (verschlüsselten) Instanz-Konfiguration bzw.
-in ioBroker-Objekten. Es findet keine Übertragung an Dritte statt; im Normalbetrieb
-besteht keine Cloud-Verbindung.
+**No personal data** is stored by the adapter. GroupID, GroupKey and refresh token live
+only in the (encrypted) instance configuration or in ioBroker objects. No data is
+transmitted to third parties; in normal operation there is no cloud connection.
 
-## Datenpunkte (Auszug)
+## States (excerpt)
 
-Pro Gerät unter `<serial>.info` (statisch) und `<serial>.state` (live):
+Per device under `<serial>.info` (static) and `<serial>.state` (live):
 
-- `state.statusText` / `state.status` – Betriebszustand (Klartext + Rohwert)
-- `state.programText` / `state.programId` – laufendes Programm
-- `state.programPhaseText` / `state.programPhase` – Programmphase
+- `state.statusText` / `state.status` — operating state (plain text + raw value)
+- `state.programText` / `state.programId` — running program
+- `state.programPhaseText` / `state.programPhase` — program phase
 - `state.remainingMinutes`, `state.elapsedMinutes`, `state.startInMinutes`
+- `state.estimatedEndTime` / `state.estimatedEndTimeText` — projected finish time
 - `state.temperature[Zone2/3]`, `state.targetTemperature[Zone2/3]`
 - `state.signalDoor`, `state.signalInfo`, `state.signalFailure`
-- `state.mobileStart` – ist Fernsteuerung am Gerät freigegeben
-- `state.light`, `state.spinningSpeed` (Waschmaschine), `state.dryingStepText` (Trockner)
+- `state.mobileStart` — whether remote control is enabled on the device
+- `state.light`, `state.spinningSpeed` (washing machine), `state.dryingStepText` (dryer)
 - `info.techType`, `info.fabNumber`, `info.xkmType`, `info.xkmVersion`, `info.deviceType`
 
-Bei aktivierter Steuerung zusätzlich `<serial>.control.*` (start, stop, pause, powerOn,
+With control enabled, additionally `<serial>.control.*` (start, stop, pause, powerOn,
 powerOff, lightOn, lightOff).
 
-## Kompatibilität / Grenzen
+## Compatibility / limits
 
-- Getestet gegen Waschmaschine (WCR860/EK037), Spülmaschine (G5840/EK037) und
-  Backofen (H2469BP/EK057).
-- Kühl-/Gefriergeräte sind lokal in der Regel **nur lesbar** (Firmware lehnt
-  Schreibbefehle ab).
-- Steuerbefehle erfordern „MobileStart/Fernsteuerung" am Gerät; manche Firmwares
-  beantworten DOP2-Schreibzugriffe mit HTTP 404/500.
-- Der SuperVision-Push ist eine Best-Effort-Ergänzung; das Polling ist der zuverlässige
-  Standardweg.
+- Tested against a washing machine (WCR860/EK037), dishwasher (G5840/EK037) and oven
+  (H2469BP/EK057).
+- Refrigeration/freezer appliances are usually **read-only** locally (firmware rejects
+  write commands).
+- Control commands require "MobileStart/remote control" on the device; some firmwares
+  answer DOP2 writes with HTTP 404/500.
+- The SuperVision push is a best-effort addition; polling is the reliable default path.
 
-## Rechtliches / Haftungsausschluss
+## Legal / disclaimer
 
-Dies ist ein **inoffizielles, privat entwickeltes** Projekt und steht in **keiner
-Verbindung zur Miele & Cie. KG** und wird von dieser weder unterstützt noch geprüft.
-„Miele", „Miele@home" und zugehörige Namen sind Marken der Miele & Cie. KG und werden
-hier ausschließlich beschreibend zur Angabe der Kompatibilität verwendet.
+This is an **unofficial, privately developed** project and is **not affiliated with Miele
+& Cie. KG**, nor endorsed or reviewed by them. "Miele", "Miele@home" and related names are
+trademarks of Miele & Cie. KG and are used here only descriptively to indicate
+compatibility.
 
-Der Adapter nutzt ein durch **Reverse Engineering** öffentlich dokumentiertes lokales
-Protokoll. Die Nutzung erfolgt **auf eigenes Risiko**; sie kann je nach Gerät/Firmware
-Garantie- oder Gewährleistungsansprüche berühren. Die Software wird gemäß der
-MIT-Lizenz **ohne jede Gewährleistung** bereitgestellt (siehe LICENSE). Der Autor haftet
-nicht für Schäden an Geräten, Daten oder sonstige Folgen der Nutzung.
+The adapter uses a local protocol that has been publicly documented through **reverse
+engineering**. Use is **at your own risk**; depending on device/firmware it may affect
+warranty claims. The software is provided under the MIT license **without any warranty**
+(see LICENSE). The author is not liable for damage to devices, data or any other
+consequences of use.
 
-## Danksagung
+## Acknowledgements
 
-Das lokale Protokoll (`MieleH256`, DOP2, Provisioning) basiert auf den öffentlichen
-Reverse-Engineering-Arbeiten der Projekte `MieleRESTServer` (akappner),
-`home-assistant-miele-mobile` und `ha-miele-at-lan`.
+The local protocol (`MieleH256`, DOP2, provisioning) is based on the public reverse
+engineering work of the projects `MieleRESTServer` (akappner),
+`home-assistant-miele-mobile` and `ha-miele-at-lan`.
 
 ## Changelog
 
 ### 0.1.0
-- Erste Version: Login/GroupKey-Ermittlung, mDNS-Discovery, State-Polling mit
-  Enum-Dekodierung, optionaler SuperVision-Push, optionale Steuerung.
+- Initial release: login/GroupKey retrieval, mDNS discovery, state polling with enum
+  decoding, optional SuperVision push, optional control.
 
 ## License
 
-MIT © 2026 Immanuel
+MIT License
+
+Copyright (c) 2026 Immanuel
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction. See the [LICENSE](LICENSE) file for the full text.

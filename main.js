@@ -76,7 +76,7 @@ class MieleLokal extends utils.Adapter {
         const seenIp = new Set();
         if (this.config.autoDiscover !== false) {
             try {
-                const list = await discover(6000, m => this.log.debug(m));
+                const list = await discover(6000, m => this.log.debug(m), this);
                 for (const d of list) {
                     if (d.txt.group && d.txt.group.toUpperCase() !== groupId.toUpperCase()) continue;
                     found.push({ ip: d.ip, techType: d.techType, deviceType: Number(d.txt.devicetype) });
@@ -280,10 +280,10 @@ class MieleLokal extends utils.Adapter {
             await this.pollAll();
             this.schedulePoll(false);
         };
-        const wait = immediate ? 100 : interval;
+        const nextDelayMs = immediate ? 100 : interval;
         // Nach einem Schreibbefehl kurz pausieren (Gerät bearbeitet nur eine Anfrage,
         // und der neue Zustand steht erst nach kurzer Zeit im /State).
-        const effective = Math.max(wait, (this.pausePollUntil || 0) - Date.now());
+        const effective = Math.max(nextDelayMs, (this.pausePollUntil || 0) - Date.now());
         this.pollTimer = this.setTimeout(run, effective);
     }
 
@@ -474,6 +474,7 @@ class MieleLokal extends utils.Adapter {
                 port: this.config.pushPort || 18082,
                 crypto: this.mc,
                 log: this.log,
+                adapter: this,
                 onEvent: async ev => {
                     // ev = { route, state }
                     const deviceId = ev.route;
@@ -542,7 +543,7 @@ class MieleLokal extends utils.Adapter {
                 return;
             }
             if (obj.command === 'discover') {
-                const list = await discover(6000, m => this.log.debug(m));
+                const list = await discover(6000, m => this.log.debug(m), this);
                 this.sendTo(obj.from, obj.command, { devices: list.map(d => ({ ip: d.ip, techType: d.techType, deviceType: Number(d.txt.devicetype), group: d.txt.group })) }, obj.callback);
                 return;
             }
