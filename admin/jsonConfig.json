@@ -97,7 +97,13 @@
         "_captureBText": {
           "type": "staticText",
           "newLine": true,
-          "text": "Vor dem Login DevTools öffnen (F12) → Reiter „Netzwerk\", „Log beibehalten/Preserve log\" aktivieren. Nach dem Login die letzte Anfrage suchen, deren Adresse mit „miele://\" beginnt bzw. „…/de/redirect?…&code=…\" enthält → Rechtsklick → „Adresse des Links kopieren\".",
+          "text": "Chrome / Edge / Brave: Vor dem Login DevTools öffnen (F12) → Reiter „Netzwerk\" → „Log beibehalten / Preserve log\" aktivieren. Nach dem Login die letzte Anfrage suchen, deren Adresse „…/de/redirect?…&code=…\" enthält (oder mit „miele://\" beginnt) → Rechtsklick → „Adresse des Links kopieren / Copy link address\".",
+          "sm": 12
+        },
+        "_captureBFirefox": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Firefox: F12 → Reiter „Netzwerkanalyse\" → Zahnrad → „Protokolle dauerhaft anzeigen\" aktivieren. Firefox listet die „miele://\"-Weiterleitung meist NICHT als eigene Zeile – stattdessen die letzte Anfrage an „…/de/redirect?…&code=…\" anklicken → Rechtsklick → „Kopieren\" → „URL kopieren\". Alternativ die Anfrage markieren und im Reiter „Kopfzeilen\" die vollständige Anfrage-URL herauskopieren. Am einfachsten unter Firefox ist jedoch Methode A („Öffnen mit\"-Dialog).",
           "sm": 12
         },
         "_captureNote": {
@@ -175,6 +181,7 @@
           "type": "number",
           "label": "Abfrageintervall (Ruhe) in Sekunden",
           "newLine": true,
+          "default": 30,
           "min": 5,
           "max": 3600,
           "sm": 6,
@@ -183,7 +190,8 @@
         "activePollInterval": {
           "type": "number",
           "label": "Abfrageintervall (aktiv) in Sekunden",
-          "min": 1,
+          "default": 30,
+          "min": 5,
           "max": 600,
           "sm": 6,
           "md": 4
