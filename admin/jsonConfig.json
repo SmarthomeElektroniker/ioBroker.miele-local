@@ -1,0 +1,319 @@
+{
+  "i18n": true,
+  "type": "tabs",
+  "items": {
+    "tabLogin": {
+      "type": "panel",
+      "label": "Anmeldung",
+      "items": {
+        "_introLogin": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Der Adapter ermittelt die lokalen Zugangsdaten (GroupID/GroupKey) einmalig über eine Anmeldung mit Ihrem Miele-Konto. Die Miele-App funktioniert danach unverändert weiter. Es werden keine Zugangsdaten an Dritte übertragen.",
+          "sm": 12
+        },
+        "country": {
+          "type": "select",
+          "label": "Land",
+          "newLine": true,
+          "sm": 6,
+          "md": 4,
+          "options": [
+            { "label": "Deutschland", "value": "de" },
+            { "label": "Österreich", "value": "at" },
+            { "label": "Schweiz", "value": "ch" },
+            { "label": "Niederlande", "value": "nl" },
+            { "label": "Frankreich", "value": "fr" },
+            { "label": "Italien", "value": "it" },
+            { "label": "Spanien", "value": "es" },
+            { "label": "Großbritannien", "value": "gb" },
+            { "label": "Dänemark", "value": "dk" },
+            { "label": "Schweden", "value": "se" },
+            { "label": "Polen", "value": "pl" },
+            { "label": "Tschechien", "value": "cz" },
+            { "label": "USA", "value": "us" }
+          ]
+        },
+        "region": {
+          "type": "select",
+          "label": "Cloud-Region",
+          "sm": 6,
+          "md": 4,
+          "options": [
+            { "label": "Europa (EU)", "value": "EU" },
+            { "label": "Europa (EU2)", "value": "EU2" },
+            { "label": "Asien (AS)", "value": "AS" }
+          ]
+        },
+        "_step1": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Schritt 1: Auf „Login-Seite öffnen\" klicken und im Browser mit dem Miele-Konto anmelden. Am Ende versucht der Browser, eine Adresse der Form „miele://oauth2-code/?code=…&state=…\" zu öffnen. Diese vollständige Adresse (der „Code\") wird in Schritt 2 gebraucht.",
+          "sm": 12
+        },
+        "openLogin": {
+          "type": "sendTo",
+          "label": "Login-Seite öffnen",
+          "command": "getAuthUrl",
+          "jsonData": "{ \"country\": \"${data.country}\" }",
+          "openUrl": true,
+          "variant": "contained",
+          "sm": 6,
+          "md": 4
+        },
+        "_captureIntro": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "So kommen Sie an die „miele://…\"-Adresse — wählen Sie EINE der beiden Methoden:",
+          "sm": 12
+        },
+        "_captureA": {
+          "type": "header",
+          "text": "Methode A — einfach: über den „Öffnen mit\"-Dialog",
+          "size": 5,
+          "newLine": true,
+          "sm": 12
+        },
+        "_captureAText": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Wenn der Browser fragt, die Adresse „mit einer Anwendung öffnen\", übergibt er die komplette miele://-Adresse an diese App. Öffnet man sie z. B. mit einem Texteditor (Linux: kate/gedit; Windows: Editor; macOS: TextEdit), steht die vollständige Adresse dort im Titel/Dateinamen oder im Text – von dort kopieren. Den eigentlichen Öffnen-Vorgang kann man abbrechen.",
+          "sm": 12
+        },
+        "_captureOr": {
+          "type": "header",
+          "text": "— oder —",
+          "size": 6,
+          "newLine": true,
+          "sm": 12
+        },
+        "_captureB": {
+          "type": "header",
+          "text": "Methode B — zuverlässig: über die Entwicklertools (DevTools)",
+          "size": 5,
+          "newLine": true,
+          "sm": 12
+        },
+        "_captureBText": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Vor dem Login DevTools öffnen (F12) → Reiter „Netzwerk\", „Log beibehalten/Preserve log\" aktivieren. Nach dem Login die letzte Anfrage suchen, deren Adresse mit „miele://\" beginnt bzw. „…/de/redirect?…&code=…\" enthält → Rechtsklick → „Adresse des Links kopieren\".",
+          "sm": 12
+        },
+        "_captureNote": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Beide Methoden liefern denselben Text mit „code=\" und „state=\"; der Adapter akzeptiert beide Formen.",
+          "sm": 12
+        },
+        "_step2": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Schritt 2: Die kopierte Adresse (mit „code=…&state=…\") hier einfügen und GroupKey ermitteln.",
+          "sm": 12
+        },
+        "redirectUrl": {
+          "type": "text",
+          "label": "miele://-Redirect-URL",
+          "newLine": true,
+          "sm": 12,
+          "md": 8
+        },
+        "fetchKey": {
+          "type": "sendTo",
+          "label": "GroupKey ermitteln",
+          "command": "submitRedirect",
+          "jsonData": "{ \"redirectUrl\": \"${data.redirectUrl}\", \"region\": \"${data.region}\" }",
+          "variant": "contained",
+          "useNative": true,
+          "sm": 6,
+          "md": 4
+        },
+        "_status": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.",
+          "sm": 12
+        }
+      }
+    },
+    "tabDevices": {
+      "type": "panel",
+      "label": "Geräte & Abfrage",
+      "items": {
+        "_dockerHint": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).",
+          "sm": 12
+        },
+        "autoDiscover": {
+          "type": "checkbox",
+          "label": "Geräte automatisch per mDNS finden (experimentell)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6
+        },
+        "discoverNow": {
+          "type": "sendTo",
+          "label": "Jetzt suchen",
+          "command": "discover",
+          "variant": "outlined",
+          "sm": 6,
+          "md": 4
+        },
+        "devices": {
+          "type": "table",
+          "label": "Manuelle Geräte-IPs (optional, zusätzlich)",
+          "newLine": true,
+          "sm": 12,
+          "items": [
+            { "type": "text", "attr": "ip", "title": "IP-Adresse", "width": "100%" }
+          ]
+        },
+        "pollInterval": {
+          "type": "number",
+          "label": "Abfrageintervall (Ruhe) in Sekunden",
+          "newLine": true,
+          "min": 5,
+          "max": 3600,
+          "sm": 6,
+          "md": 4
+        },
+        "activePollInterval": {
+          "type": "number",
+          "label": "Abfrageintervall (aktiv) in Sekunden",
+          "min": 1,
+          "max": 600,
+          "sm": 6,
+          "md": 4
+        },
+        "germanNames": {
+          "type": "checkbox",
+          "label": "Datenpunkt-Namen auf Deutsch",
+          "newLine": true,
+          "sm": 12,
+          "md": 6
+        },
+        "ecoFeedback": {
+          "type": "checkbox",
+          "label": "EcoFeedback (Energie/Wasser) abrufen",
+          "newLine": true,
+          "sm": 6,
+          "md": 4
+        },
+        "ecoInterval": {
+          "type": "number",
+          "label": "EcoFeedback-Intervall in Sekunden",
+          "min": 15,
+          "max": 3600,
+          "sm": 6,
+          "md": 4,
+          "hidden": "!data.ecoFeedback"
+        },
+        "_ecoHint": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.",
+          "sm": 12
+        },
+        "_germanNamesHint": {
+          "type": "staticText",
+          "text": "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.",
+          "sm": 12
+        }
+      }
+    },
+    "tabPush": {
+      "type": "panel",
+      "label": "Push & Ports",
+      "items": {
+        "_pushInfo": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Bei aktiviertem Push geben sich der Adapter als Haushalts-Peer aus und die Geräte senden Zustandsänderungen in Echtzeit. Dafür muss der unten gewählte Port am ioBroker-Host EINGEHEND aus dem Gerätenetz erreichbar sein (Firewall). UDP 5353 (mDNS) wird ohnehin benötigt. Ohne Push ist KEIN eingehender Port nötig – dann wird nur gepollt.",
+          "sm": 12
+        },
+        "usePush": {
+          "type": "checkbox",
+          "label": "SuperVision-Push aktivieren (experimentell, Echtzeit)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6
+        },
+        "_pushHwHint": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).",
+          "sm": 12
+        },
+        "pushPort": {
+          "type": "number",
+          "label": "Eingehender Push-Port (TCP)",
+          "min": 1024,
+          "max": 65535,
+          "sm": 6,
+          "md": 4,
+          "hidden": "!data.usePush"
+        },
+        "_ports": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Benötigte Ports: eingehend TCP <Push-Port> (nur bei Push) · UDP 5353 mDNS · ausgehend TCP 80 zu den Geräten · ausgehend TCP 443 zu miele-iot.com nur während der Anmeldung.",
+          "sm": 12
+        },
+        "_portsDocker": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Docker: Läuft ioBroker im Container, muss der Push-Port eingehend erreichbar sein UND die Geräte müssen den Container unter einer echten LAN-IP erreichen. Zuverlässig geht das nur mit „network_mode: host\" (dann ist der Port automatisch offen). Im Bridge-Netz zusätzlich „-p <Push-Port>:<Push-Port>\" mappen – Push funktioniert dort aber meist trotzdem nicht, weil die Rück-Adresse (Callback) hinter NAT liegt. Ohne Push ist kein eingehender Port nötig.",
+          "sm": 12
+        }
+      }
+    },
+    "tabControl": {
+      "type": "panel",
+      "label": "Steuerung",
+      "items": {
+        "_controlWarn": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Achtung: Bei aktivierter Steuerung werden beschreibbare Datenpunkte (Start/Stop/Pause, Licht, Ein/Aus) angelegt. Befehle erfordern zusätzlich, dass am Gerät „MobileStart/Fernsteuerung\" freigegeben ist. Manche Firmwares (z.B. Kühlgeräte) lehnen Schreibbefehle grundsätzlich ab.",
+          "sm": 12
+        },
+        "allowControl": {
+          "type": "checkbox",
+          "label": "Steuerung (Schreibbefehle) aktivieren",
+          "newLine": true,
+          "sm": 12,
+          "md": 6
+        }
+      }
+    },
+    "tabAdvanced": {
+      "type": "panel",
+      "label": "Erweitert",
+      "items": {
+        "_advInfo": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "Diese Werte werden normalerweise über die Anmeldung gesetzt. Manuelle Eingabe nur, wenn GroupID/GroupKey bereits bekannt sind (z.B. aus MieleRESTServer). Der GroupKey wird verschlüsselt gespeichert.",
+          "sm": 12
+        },
+        "groupId": {
+          "type": "text",
+          "label": "GroupID (16 Hex-Zeichen)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6
+        },
+        "groupKey": {
+          "type": "password",
+          "label": "GroupKey (128 Hex-Zeichen)",
+          "visible": true,
+          "sm": 12,
+          "md": 6
+        }
+      }
+    }
+  }
+}
