@@ -83,7 +83,7 @@
         "_captureOr": {
           "type": "header",
           "text": "— oder —",
-          "size": 6,
+          "size": 5,
           "newLine": true,
           "sm": 12
         },

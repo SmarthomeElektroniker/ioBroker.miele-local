@@ -1,0 +1,23 @@
+{
+  "Anmeldung": "Iniciar sesión",
+  "Geräte & Abfrage": "Dispositivos y consulta",
+  "Push & Ports": "Push y puertos",
+  "Steuerung": "Control",
+  "Erweitert": "Avanzado",
+  "Land": "País",
+  "Cloud-Region": "Región de nube",
+  "Login-Seite öffnen": "Abrir página de inicio de sesión",
+  "miele://-Redirect-URL": "URL de redirección miele://",
+  "GroupKey ermitteln": "Obtener GroupKey",
+  "Geräte automatisch per mDNS finden": "Detectar dispositivos automáticamente por mDNS",
+  "Jetzt suchen": "Buscar ahora",
+  "Manuelle Geräte-IPs (optional, zusätzlich)": "IPs de dispositivos manuales (opcional, adicional)",
+  "IP-Adresse": "Dirección IP",
+  "Abfrageintervall (Ruhe) in Sekunden": "Intervalo de consulta (reposo) en segundos",
+  "Abfrageintervall (aktiv) in Sekunden": "Intervalo de consulta (activo) en segundos",
+  "SuperVision-Push aktivieren (Echtzeit)": "Activar push SuperVision (tiempo real)",
+  "Eingehender Push-Port (TCP)": "Puerto push entrante (TCP)",
+  "Steuerung (Schreibbefehle) aktivieren": "Activar control (comandos de escritura)",
+  "GroupID (16 Hex-Zeichen)": "GroupID (16 caracteres hex)",
+  "GroupKey (128 Hex-Zeichen)": "GroupKey (128 caracteres hex)"
+}
