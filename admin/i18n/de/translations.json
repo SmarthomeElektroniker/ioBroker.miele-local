@@ -1,0 +1,23 @@
+{
+  "Anmeldung": "Anmeldung",
+  "Geräte & Abfrage": "Geräte & Abfrage",
+  "Push & Ports": "Push & Ports",
+  "Steuerung": "Steuerung",
+  "Erweitert": "Erweitert",
+  "Land": "Land",
+  "Cloud-Region": "Cloud-Region",
+  "Login-Seite öffnen": "Login-Seite öffnen",
+  "miele://-Redirect-URL": "miele://-Redirect-URL",
+  "GroupKey ermitteln": "GroupKey ermitteln",
+  "Geräte automatisch per mDNS finden": "Geräte automatisch per mDNS finden",
+  "Jetzt suchen": "Jetzt suchen",
+  "Manuelle Geräte-IPs (optional, zusätzlich)": "Manuelle Geräte-IPs (optional, zusätzlich)",
+  "IP-Adresse": "IP-Adresse",
+  "Abfrageintervall (Ruhe) in Sekunden": "Abfrageintervall (Ruhe) in Sekunden",
+  "Abfrageintervall (aktiv) in Sekunden": "Abfrageintervall (aktiv) in Sekunden",
+  "SuperVision-Push aktivieren (Echtzeit)": "SuperVision-Push aktivieren (Echtzeit)",
+  "Eingehender Push-Port (TCP)": "Eingehender Push-Port (TCP)",
+  "Steuerung (Schreibbefehle) aktivieren": "Steuerung (Schreibbefehle) aktivieren",
+  "GroupID (16 Hex-Zeichen)": "GroupID (16 Hex-Zeichen)",
+  "GroupKey (128 Hex-Zeichen)": "GroupKey (128 Hex-Zeichen)"
+}

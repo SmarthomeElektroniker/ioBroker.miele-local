@@ -1,0 +1,8 @@
+test/
+.github/
+.gitignore
+.eslintrc.json
+tmp/
+node_modules/
+*.log
+coverage/

@@ -1,0 +1,127 @@
+{
+  "common": {
+    "name": "miele-lokal",
+    "version": "0.1.0",
+    "title": "Miele@lokal",
+    "titleLang": {
+      "en": "Miele@local",
+      "de": "Miele@lokal"
+    },
+    "desc": {
+      "en": "Connect modern Miele@Home appliances locally without the internet.",
+      "de": "Verbindet moderne Miele@Home-Geräte lokal ohne Internet."
+    },
+    "authors": [
+      "Immanuel"
+    ],
+    "keywords": [
+      "miele",
+      "local",
+      "dop2",
+      "smarthome",
+      "washing machine",
+      "dishwasher",
+      "oven"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "miele-lokal.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/SmarthomeElektroniker/ioBroker.miele-lokal/main/admin/miele-lokal.png",
+    "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-lokal/blob/main/README.md",
+    "loglevel": "info",
+    "news": {
+      "0.1.0": {
+        "en": "Initial release: login/GroupKey retrieval, mDNS discovery, state polling with enum decoding, optional SuperVision push, optional control.",
+        "de": "Erste Version: Login/GroupKey-Ermittlung, mDNS-Discovery, State-Polling mit Enum-Dekodierung, optionaler SuperVision-Push, optionale Steuerung."
+      }
+    },
+    "mode": "daemon",
+    "type": "household",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.0"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=6.13.0"
+      }
+    ],
+    "messagebox": true,
+    "supportCustoms": false,
+    "materialize": true,
+    "encryptedNative": [
+      "groupKey",
+      "refreshToken"
+    ],
+    "protectedNative": [
+      "groupKey",
+      "refreshToken",
+      "groupId"
+    ]
+  },
+  "native": {
+    "country": "de",
+    "region": "EU",
+    "groupId": "",
+    "groupKey": "",
+    "refreshToken": "",
+    "autoDiscover": true,
+    "devices": [],
+    "pollInterval": 15,
+    "activePollInterval": 5,
+    "usePush": false,
+    "pushPort": 18082,
+    "allowControl": false,
+    "germanNames": true,
+    "ecoFeedback": true,
+    "ecoInterval": 60,
+    "secondsTime": true,
+    "secondsInterval": 30
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.discoveredDevices",
+      "type": "state",
+      "common": {
+        "role": "json",
+        "name": "Discovered devices (mDNS)",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": "[]"
+      },
+      "native": {}
+    }
+  ]
+}
