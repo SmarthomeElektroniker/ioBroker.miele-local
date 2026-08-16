@@ -1,0 +1,23 @@
+{
+  "Anmeldung": "Вход",
+  "Geräte & Abfrage": "Устройства и опрос",
+  "Push & Ports": "Push и порты",
+  "Steuerung": "Управление",
+  "Erweitert": "Расширенные",
+  "Land": "Страна",
+  "Cloud-Region": "Облачный регион",
+  "Login-Seite öffnen": "Открыть страницу входа",
+  "miele://-Redirect-URL": "URL перенаправления miele://",
+  "GroupKey ermitteln": "Получить GroupKey",
+  "Geräte automatisch per mDNS finden": "Автопоиск устройств через mDNS",
+  "Jetzt suchen": "Искать сейчас",
+  "Manuelle Geräte-IPs (optional, zusätzlich)": "Ручные IP устройств (опционально, дополнительно)",
+  "IP-Adresse": "IP-адрес",
+  "Abfrageintervall (Ruhe) in Sekunden": "Интервал опроса (покой), сек",
+  "Abfrageintervall (aktiv) in Sekunden": "Интервал опроса (активно), сек",
+  "SuperVision-Push aktivieren (Echtzeit)": "Включить push SuperVision (реальное время)",
+  "Eingehender Push-Port (TCP)": "Входящий push-порт (TCP)",
+  "Steuerung (Schreibbefehle) aktivieren": "Включить управление (команды записи)",
+  "GroupID (16 Hex-Zeichen)": "GroupID (16 hex-символов)",
+  "GroupKey (128 Hex-Zeichen)": "GroupKey (128 hex-символов)"
+}

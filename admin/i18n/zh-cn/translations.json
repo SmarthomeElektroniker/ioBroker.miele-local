@@ -1,0 +1,23 @@
+{
+  "Anmeldung": "登录",
+  "Geräte & Abfrage": "设备与轮询",
+  "Push & Ports": "推送与端口",
+  "Steuerung": "控制",
+  "Erweitert": "高级",
+  "Land": "国家/地区",
+  "Cloud-Region": "云区域",
+  "Login-Seite öffnen": "打开登录页面",
+  "miele://-Redirect-URL": "miele:// 重定向 URL",
+  "GroupKey ermitteln": "获取 GroupKey",
+  "Geräte automatisch per mDNS finden": "通过 mDNS 自动发现设备",
+  "Jetzt suchen": "立即搜索",
+  "Manuelle Geräte-IPs (optional, zusätzlich)": "手动设备 IP（可选，附加）",
+  "IP-Adresse": "IP 地址",
+  "Abfrageintervall (Ruhe) in Sekunden": "轮询间隔（空闲）秒",
+  "Abfrageintervall (aktiv) in Sekunden": "轮询间隔（活动）秒",
+  "SuperVision-Push aktivieren (Echtzeit)": "启用 SuperVision 推送（实时）",
+  "Eingehender Push-Port (TCP)": "入站推送端口 (TCP)",
+  "Steuerung (Schreibbefehle) aktivieren": "启用控制（写命令）",
+  "GroupID (16 Hex-Zeichen)": "GroupID（16 位十六进制）",
+  "GroupKey (128 Hex-Zeichen)": "GroupKey（128 位十六进制）"
+}

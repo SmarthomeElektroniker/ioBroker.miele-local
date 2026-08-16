@@ -2,7 +2,6 @@
   "common": {
     "name": "miele-lokal",
     "version": "0.1.0",
-    "title": "Miele@lokal",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@lokal"
@@ -23,9 +22,12 @@
       "dishwasher",
       "oven"
     ],
-    "license": "MIT",
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "tier": 3,
     "platform": "Javascript/Node.js",
-    "main": "main.js",
     "icon": "miele-lokal.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/SmarthomeElektroniker/ioBroker.miele-lokal/main/admin/miele-lokal.png",
@@ -47,27 +49,26 @@
     },
     "dependencies": [
       {
-        "js-controller": ">=5.0.0"
+        "js-controller": ">=6.0.11"
       }
     ],
     "globalDependencies": [
       {
-        "admin": ">=6.13.0"
+        "admin": ">=7.6.17"
       }
     ],
     "messagebox": true,
-    "supportCustoms": false,
-    "materialize": true,
-    "encryptedNative": [
-      "groupKey",
-      "refreshToken"
-    ],
-    "protectedNative": [
-      "groupKey",
-      "refreshToken",
-      "groupId"
-    ]
+    "supportCustoms": false
   },
+  "encryptedNative": [
+    "groupKey",
+    "refreshToken"
+  ],
+  "protectedNative": [
+    "groupKey",
+    "refreshToken",
+    "groupId"
+  ],
   "native": {
     "country": "de",
     "region": "EU",

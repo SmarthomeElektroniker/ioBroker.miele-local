@@ -1,0 +1,23 @@
+{
+  "Anmeldung": "Aanmelden",
+  "Geräte & Abfrage": "Apparaten & opvragen",
+  "Push & Ports": "Push & poorten",
+  "Steuerung": "Besturing",
+  "Erweitert": "Geavanceerd",
+  "Land": "Land",
+  "Cloud-Region": "Cloudregio",
+  "Login-Seite öffnen": "Inlogpagina openen",
+  "miele://-Redirect-URL": "miele://-omleidings-URL",
+  "GroupKey ermitteln": "GroupKey ophalen",
+  "Geräte automatisch per mDNS finden": "Apparaten automatisch via mDNS vinden",
+  "Jetzt suchen": "Nu zoeken",
+  "Manuelle Geräte-IPs (optional, zusätzlich)": "Handmatige apparaat-IP's (optioneel, aanvullend)",
+  "IP-Adresse": "IP-adres",
+  "Abfrageintervall (Ruhe) in Sekunden": "Opvraaginterval (rust) in seconden",
+  "Abfrageintervall (aktiv) in Sekunden": "Opvraaginterval (actief) in seconden",
+  "SuperVision-Push aktivieren (Echtzeit)": "SuperVision-push inschakelen (realtime)",
+  "Eingehender Push-Port (TCP)": "Inkomende push-poort (TCP)",
+  "Steuerung (Schreibbefehle) aktivieren": "Besturing inschakelen (schrijfopdrachten)",
+  "GroupID (16 Hex-Zeichen)": "GroupID (16 hex-tekens)",
+  "GroupKey (128 Hex-Zeichen)": "GroupKey (128 hex-tekens)"
+}
