@@ -28,9 +28,12 @@
     "multicast-dns": "^7.2.5"
   },
   "devDependencies": {
-    "@iobroker/testing": "^5.2.2",
+    "@eslint/js": "^9.39.0",
     "@iobroker/adapter-dev": "^1.5.0",
-    "@types/node": "^22"
+    "@iobroker/testing": "^5.2.2",
+    "@types/node": "^22",
+    "eslint": "^9.39.0",
+    "globals": "^15.15.0"
   },
   "scripts": {
     "test:crypto": "node test/test-crypto.js",
