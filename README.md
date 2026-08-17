@@ -142,9 +142,13 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.2.0
+- Renamed from `miele-lokal` to `miele-local`: English adapter name and title.
+  First release under the new package name.
+
 ### 0.1.1
 - Released via GitHub Actions with npm provenance (trusted publishing). No functional
-  changes.
+  changes. Published under the former name `iobroker.miele-lokal`.
 
 ### 0.1.0
 - Initial release: login/GroupKey retrieval, mDNS discovery, state polling with enum

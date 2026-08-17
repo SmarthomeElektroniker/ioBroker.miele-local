@@ -64,32 +64,6 @@
         "pl": "Zmiana nazwy z miele-lokal na miele-local: angielska nazwa i tytuł adaptera.",
         "uk": "Перейменовано з miele-lokal на miele-local: англійська назва та заголовок адаптера.",
         "zh-cn": "从 miele-lokal 重命名为 miele-local：英文适配器名称和标题。"
-      },
-      "0.1.1": {
-        "en": "Released via GitHub Actions with npm provenance (trusted publishing). No functional changes.",
-        "de": "Veröffentlichung über GitHub Actions mit npm-Provenance (Trusted Publishing). Keine funktionalen Änderungen.",
-        "ru": "Выпуск через GitHub Actions с npm-provenance (trusted publishing). Функциональных изменений нет.",
-        "pt": "Publicado via GitHub Actions com proveniência npm (trusted publishing). Sem alterações funcionais.",
-        "nl": "Uitgebracht via GitHub Actions met npm-provenance (trusted publishing). Geen functionele wijzigingen.",
-        "fr": "Publié via GitHub Actions avec la provenance npm (trusted publishing). Aucun changement fonctionnel.",
-        "it": "Pubblicato tramite GitHub Actions con provenance npm (trusted publishing). Nessuna modifica funzionale.",
-        "es": "Publicado mediante GitHub Actions con procedencia npm (trusted publishing). Sin cambios funcionales.",
-        "pl": "Opublikowano przez GitHub Actions z npm provenance (trusted publishing). Bez zmian funkcjonalnych.",
-        "uk": "Випущено через GitHub Actions з npm-provenance (trusted publishing). Функціональних змін немає.",
-        "zh-cn": "通过 GitHub Actions 发布并附带 npm provenance（可信发布）。无功能变更。"
-      },
-      "0.1.0": {
-        "en": "Initial release: login/GroupKey retrieval, mDNS discovery, state polling with enum decoding, optional SuperVision push, optional control.",
-        "de": "Erste Version: Login/GroupKey-Ermittlung, mDNS-Discovery, State-Polling mit Enum-Dekodierung, optionaler SuperVision-Push, optionale Steuerung.",
-        "ru": "Первый выпуск: получение логина/GroupKey, mDNS-обнаружение, опрос состояний с декодированием enum, опциональный SuperVision-push, опциональное управление.",
-        "pt": "Primeira versão: obtenção de login/GroupKey, deteção mDNS, sondagem de estados com descodificação de enums, push SuperVision opcional, controlo opcional.",
-        "nl": "Eerste versie: login/GroupKey ophalen, mDNS-detectie, statuspolling met enum-decodering, optionele SuperVision-push, optionele besturing.",
-        "fr": "Première version : récupération login/GroupKey, découverte mDNS, interrogation des états avec décodage enum, push SuperVision optionnel, commande optionnelle.",
-        "it": "Prima versione: recupero login/GroupKey, rilevamento mDNS, polling degli stati con decodifica enum, push SuperVision opzionale, controllo opzionale.",
-        "es": "Primera versión: obtención de login/GroupKey, detección mDNS, sondeo de estados con decodificación de enums, push SuperVision opcional, control opcional.",
-        "pl": "Pierwsza wersja: pobieranie login/GroupKey, wykrywanie mDNS, odpytywanie stanów z dekodowaniem enum, opcjonalny push SuperVision, opcjonalne sterowanie.",
-        "uk": "Перший випуск: отримання логіна/GroupKey, виявлення mDNS, опитування станів з декодуванням enum, опціональний SuperVision-push, опціональне керування.",
-        "zh-cn": "首个版本：登录/GroupKey 获取、mDNS 发现、带枚举解码的状态轮询、可选 SuperVision 推送、可选控制。"
       }
     },
     "mode": "daemon",
