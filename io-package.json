@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.2.1": {
+        "en": "Released via GitHub Actions with npm provenance (trusted publishing). No functional changes.",
+        "de": "Veröffentlichung über GitHub Actions mit npm-Provenance (Trusted Publishing). Keine funktionalen Änderungen.",
+        "ru": "Выпуск через GitHub Actions с npm-provenance (trusted publishing). Функциональных изменений нет.",
+        "pt": "Publicado via GitHub Actions com proveniência npm (trusted publishing). Sem alterações funcionais.",
+        "nl": "Uitgebracht via GitHub Actions met npm-provenance (trusted publishing). Geen functionele wijzigingen.",
+        "fr": "Publié via GitHub Actions avec provenance npm (trusted publishing). Aucun changement fonctionnel.",
+        "it": "Pubblicato tramite GitHub Actions con provenance npm (trusted publishing). Nessuna modifica funzionale.",
+        "es": "Publicado mediante GitHub Actions con procedencia npm (trusted publishing). Sin cambios funcionales.",
+        "pl": "Opublikowano przez GitHub Actions z npm provenance (trusted publishing). Bez zmian funkcjonalnych.",
+        "uk": "Випуск через GitHub Actions з npm-provenance (trusted publishing). Функціональних змін немає.",
+        "zh-cn": "通过 GitHub Actions 发布并带有 npm provenance（可信发布）。无功能变更。"
+      },
       "0.2.0": {
         "en": "Renamed from miele-lokal to miele-local: English adapter name and title.",
         "de": "Umbenennung von miele-lokal in miele-local: englischer Adaptername und Titel.",

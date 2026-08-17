@@ -142,6 +142,10 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.2.1
+- Released via GitHub Actions with npm provenance (trusted publishing). No functional
+  changes.
+
 ### 0.2.0
 - Renamed from `miele-lokal` to `miele-local`: English adapter name and title.
   First release under the new package name.
