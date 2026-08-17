@@ -1,7 +1,7 @@
 'use strict';
 
 /*
- * ioBroker.miele-lokal
+ * ioBroker.miele-local
  * Verbindet moderne Miele@Home-Geräte lokal ohne Internet (MieleH256/DOP2).
  */
 
@@ -39,9 +39,9 @@ function buildUserRequest(opcode) {
     return Buffer.concat([USER_REQ_PREFIX, Buffer.from([opcode & 0xff]), Buffer.alloc(15, 0x20)]);
 }
 
-class MieleLokal extends utils.Adapter {
+class MieleLocal extends utils.Adapter {
     constructor(options) {
-        super({ ...options, name: 'miele-lokal' });
+        super({ ...options, name: 'miele-local' });
         /** @type {Object.<string, {ip:string, route:string, deviceType:number, api:MieleDeviceApi, active:boolean}>} */
         this.devices = {};
         this.pollTimer = null;
@@ -430,7 +430,7 @@ class MieleLokal extends utils.Adapter {
 
     async onStateChange(id, state) {
         if (!state || state.ack) return; // nur echte Nutzerbefehle
-        const parts = id.split('.'); // miele-lokal.0.<serial>.control.<sub>
+        const parts = id.split('.'); // miele-local.0.<serial>.control.<sub>
         const idx = parts.indexOf('control');
         if (idx < 0) return;
         const deviceId = parts[idx - 1];
@@ -570,7 +570,7 @@ class MieleLokal extends utils.Adapter {
 }
 
 if (require.main !== module) {
-    module.exports = options => new MieleLokal(options);
+    module.exports = options => new MieleLocal(options);
 } else {
-    new MieleLokal();
+    new MieleLocal();
 }

@@ -1,6 +1,6 @@
-# Datenpunkt-Referenz — ioBroker.miele-lokal
+# Datenpunkt-Referenz — ioBroker.miele-local
 
-Objektbaum pro Gerät: `miele-lokal.0.<Seriennummer>.…`. Deutsche Namen erscheinen, wenn die
+Objektbaum pro Gerät: `miele-local.0.<Seriennummer>.…`. Deutsche Namen erscheinen, wenn die
 Checkbox „Datenpunkt-Namen auf Deutsch" aktiv ist (Standard). Enum-Felder gibt es doppelt:
 `*Text` (Klartext) und der reine Rohwert.
 

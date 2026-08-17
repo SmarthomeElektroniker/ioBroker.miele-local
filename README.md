@@ -1,8 +1,8 @@
-![Logo](admin/miele-lokal.png)
+![Logo](admin/miele-local.png)
 
-# ioBroker.miele-lokal
+# ioBroker.miele-local
 
-[![NPM version](https://img.shields.io/npm/v/iobroker.miele-lokal.svg)](https://www.npmjs.com/package/iobroker.miele-lokal)
+[![NPM version](https://img.shields.io/npm/v/iobroker.miele-local.svg)](https://www.npmjs.com/package/iobroker.miele-local)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 This adapter connects modern **Miele@Home** appliances **locally, without the internet**.

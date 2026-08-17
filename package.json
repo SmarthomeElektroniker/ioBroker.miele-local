@@ -1,7 +1,7 @@
 {
-  "name": "iobroker.miele-lokal",
+  "name": "iobroker.miele-local",
   "version": "0.1.1",
-  "description": "Verbindet moderne Miele@Home-Geräte lokal ohne Internet (MieleH256/DOP2).",
+  "description": "Connect modern Miele@Home appliances locally without the internet (MieleH256/DOP2).",
   "author": "Immanuel",
   "license": "MIT",
   "keywords": [
@@ -14,12 +14,12 @@
   "main": "main.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SmarthomeElektroniker/ioBroker.miele-lokal.git"
+    "url": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local.git"
   },
   "bugs": {
-    "url": "https://github.com/SmarthomeElektroniker/ioBroker.miele-lokal/issues"
+    "url": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/issues"
   },
-  "homepage": "https://github.com/SmarthomeElektroniker/ioBroker.miele-lokal",
+  "homepage": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local",
   "engines": {
     "node": ">=22"
   },

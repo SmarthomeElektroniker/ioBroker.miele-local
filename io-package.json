@@ -1,19 +1,19 @@
 {
   "common": {
-    "name": "miele-lokal",
+    "name": "miele-local",
     "version": "0.1.1",
     "titleLang": {
       "en": "Miele@local",
-      "de": "Miele@lokal",
-      "ru": "Miele@локально",
+      "de": "Miele@local",
+      "ru": "Miele@local",
       "pt": "Miele@local",
-      "nl": "Miele@lokaal",
+      "nl": "Miele@local",
       "fr": "Miele@local",
-      "it": "Miele@locale",
+      "it": "Miele@local",
       "es": "Miele@local",
-      "pl": "Miele@lokalnie",
-      "uk": "Miele@локально",
-      "zh-cn": "Miele@本地"
+      "pl": "Miele@local",
+      "uk": "Miele@local",
+      "zh-cn": "Miele@local"
     },
     "desc": {
       "en": "Connect modern Miele@Home appliances locally without the internet.",
@@ -46,10 +46,10 @@
     },
     "tier": 3,
     "platform": "Javascript/Node.js",
-    "icon": "miele-lokal.png",
+    "icon": "miele-local.png",
     "enabled": true,
-    "extIcon": "https://raw.githubusercontent.com/SmarthomeElektroniker/ioBroker.miele-lokal/main/admin/miele-lokal.png",
-    "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-lokal/blob/main/README.md",
+    "extIcon": "https://raw.githubusercontent.com/SmarthomeElektroniker/ioBroker.miele-local/main/admin/miele-local.png",
+    "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
       "0.1.1": {

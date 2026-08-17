@@ -1,4 +1,4 @@
-# ioBroker.miele-lokal — Entwicklungsdokumentation
+# ioBroker.miele-local — Entwicklungsdokumentation
 
 Stand: 2026-08-16. Adapter läuft produktiv in der ioBroker-Instanz auf der NAS
 (`buanet-iobroker`, Host `buanet-iobroker-1`), alle drei Küchengeräte werden live gelesen.
@@ -84,9 +84,9 @@ keinen `/SuperVision`-Endpunkt → es kommen keine Push-Events. Push daher defau
 
 ## 8. Deployment (NAS)
 
-Adapter liegt im Container unter `/opt/iobroker/custom-adapters/iobroker.miele-lokal` + Symlink in
+Adapter liegt im Container unter `/opt/iobroker/custom-adapters/iobroker.miele-local` + Symlink in
 `node_modules` (wie roborock-local). Transfer per Portainer-Docker-Exec (Helfer `scratchpad/pt.py`:
-`curl --http1.1` + Retry, base64-chunked), danach `iobroker upload miele-lokal` + Restart.
+`curl --http1.1` + Retry, base64-chunked), danach `iobroker upload miele-local` + Restart.
 `multicast-dns` ist die einzige externe Laufzeit-Abhängigkeit.
 
 ## 9. Tests
