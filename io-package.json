@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.2.0": {
+        "en": "Renamed from miele-lokal to miele-local: English adapter name and title.",
+        "de": "Umbenennung von miele-lokal in miele-local: englischer Adaptername und Titel.",
+        "ru": "Переименование miele-lokal в miele-local: английское имя и заголовок адаптера.",
+        "pt": "Renomeado de miele-lokal para miele-local: nome e título do adaptador em inglês.",
+        "nl": "Hernoemd van miele-lokal naar miele-local: Engelse adapternaam en titel.",
+        "fr": "Renommé de miele-lokal en miele-local : nom et titre de l'adaptateur en anglais.",
+        "it": "Rinominato da miele-lokal a miele-local: nome e titolo adattatore in inglese.",
+        "es": "Renombrado de miele-lokal a miele-local: nombre y título del adaptador en inglés.",
+        "pl": "Zmiana nazwy z miele-lokal na miele-local: angielska nazwa i tytuł adaptera.",
+        "uk": "Перейменовано з miele-lokal на miele-local: англійська назва та заголовок адаптера.",
+        "zh-cn": "从 miele-lokal 重命名为 miele-local：英文适配器名称和标题。"
+      },
       "0.1.1": {
         "en": "Released via GitHub Actions with npm provenance (trusted publishing). No functional changes.",
         "de": "Veröffentlichung über GitHub Actions mit npm-Provenance (Trusted Publishing). Keine funktionalen Änderungen.",

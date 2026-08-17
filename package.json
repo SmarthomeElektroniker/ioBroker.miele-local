@@ -1,6 +1,6 @@
 {
   "name": "iobroker.miele-local",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Connect modern Miele@Home appliances locally without the internet (MieleH256/DOP2).",
   "author": "Immanuel",
   "license": "MIT",
