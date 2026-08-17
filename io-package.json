@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-lokal",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@lokal",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-lokal/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.1.1": {
+        "en": "Released via GitHub Actions with npm provenance (trusted publishing). No functional changes.",
+        "de": "Veröffentlichung über GitHub Actions mit npm-Provenance (Trusted Publishing). Keine funktionalen Änderungen.",
+        "ru": "Выпуск через GitHub Actions с npm-provenance (trusted publishing). Функциональных изменений нет.",
+        "pt": "Publicado via GitHub Actions com proveniência npm (trusted publishing). Sem alterações funcionais.",
+        "nl": "Uitgebracht via GitHub Actions met npm-provenance (trusted publishing). Geen functionele wijzigingen.",
+        "fr": "Publié via GitHub Actions avec la provenance npm (trusted publishing). Aucun changement fonctionnel.",
+        "it": "Pubblicato tramite GitHub Actions con provenance npm (trusted publishing). Nessuna modifica funzionale.",
+        "es": "Publicado mediante GitHub Actions con procedencia npm (trusted publishing). Sin cambios funcionales.",
+        "pl": "Opublikowano przez GitHub Actions z npm provenance (trusted publishing). Bez zmian funkcjonalnych.",
+        "uk": "Випущено через GitHub Actions з npm-provenance (trusted publishing). Функціональних змін немає.",
+        "zh-cn": "通过 GitHub Actions 发布并附带 npm provenance（可信发布）。无功能变更。"
+      },
       "0.1.0": {
         "en": "Initial release: login/GroupKey retrieval, mDNS discovery, state polling with enum decoding, optional SuperVision push, optional control.",
         "de": "Erste Version: Login/GroupKey-Ermittlung, mDNS-Discovery, State-Polling mit Enum-Dekodierung, optionaler SuperVision-Push, optionale Steuerung.",

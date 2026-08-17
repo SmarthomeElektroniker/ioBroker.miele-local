@@ -61,9 +61,11 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # Write permissions are required to create GitHub releases
+    # Write permissions are required to create GitHub releases,
+    # id-token is required for npm trusted publishing (provenance)
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - uses: ioBroker/testing-action-deploy@v1

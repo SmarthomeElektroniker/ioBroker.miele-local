@@ -142,6 +142,10 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.1.1
+- Released via GitHub Actions with npm provenance (trusted publishing). No functional
+  changes.
+
 ### 0.1.0
 - Initial release: login/GroupKey retrieval, mDNS discovery, state polling with enum
   decoding, optional SuperVision push, optional control.
