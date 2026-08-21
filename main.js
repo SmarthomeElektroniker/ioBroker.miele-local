@@ -61,54 +61,29 @@ class MieleLocal extends utils.Adapter {
         const groupId = this.config.groupId;
         const groupKey = this.config.groupKey;
         if (!groupId || !groupKey) {
-            this.log.warn('Keine Zugangsdaten. Bitte in den Instanzeinstellungen anmelden (GroupKey ermitteln).');
+            this.log.warn('No credentials found. Please sign in via the instance configuration to obtain a GroupKey.');
             return;
         }
         try {
             this.mc = new MieleCrypto(groupId, groupKey);
         } catch (e) {
-            this.log.error(`Ungültiger GroupKey: ${e.message}`);
+            this.log.error(`Invalid GroupKey: ${e.message}`);
             return;
         }
 
         // Geräte ermitteln: Auto-Discovery und/oder manuelle IP-Liste
-        const found = [];
-        const seenIp = new Set();
-        if (this.config.autoDiscover !== false) {
-            try {
-                const list = await discover(6000, m => this.log.debug(m), this);
-                for (const d of list) {
-                    if (d.txt.group && d.txt.group.toUpperCase() !== groupId.toUpperCase()) continue;
-                    found.push({ ip: d.ip, techType: d.techType, deviceType: Number(d.txt.devicetype) });
-                    seenIp.add(d.ip);
-                }
-            } catch (e) {
-                this.log.warn(`mDNS-Discovery fehlgeschlagen: ${e.message}`);
-            }
-        }
-        for (const entry of this.config.devices || []) {
-            const ip = typeof entry === 'string' ? entry : entry && entry.ip;
-            if (ip && !seenIp.has(ip)) {
-                found.push({ ip, techType: '', deviceType: null });
-                seenIp.add(ip);
-            }
-        }
+        await this.discoverDevices();
 
-        if (!found.length) {
-            this.log.warn('Keine Miele-Geräte gefunden (weder per mDNS noch manuell konfiguriert).');
-        }
-        await this.setStateAsync('info.discoveredDevices', { val: JSON.stringify(found), ack: true });
-
-        for (const f of found) {
-            try {
-                await this.initDevice(f);
-            } catch (e) {
-                this.log.warn(`Gerät ${f.ip} konnte nicht initialisiert werden: ${e.message}`);
-            }
-        }
-
-        if (Object.keys(this.devices).length) {
+        if (!Object.keys(this.devices).length) {
+            this.log.warn('No Miele devices found (neither via mDNS nor manually configured).');
+        } else {
             await this.setStateAsync('info.connection', { val: true, ack: true });
+        }
+
+        // Periodisches Re-Discovery im Hintergrund (z. B. für Geräte, die aus dem Standby aufwachen)
+        if (this.config.autoDiscover !== false) {
+            const discInterval = Math.max(1, this.config.autoDiscoverInterval || 10) * 60 * 1000;
+            this.discoveryTimer = this.setInterval(() => this.discoverDevices(), discInterval);
         }
 
         await this.subscribeStatesAsync('*.control.*');
@@ -139,21 +114,65 @@ class MieleLocal extends utils.Adapter {
         }
     }
 
+    async discoverDevices() {
+        const groupId = this.config.groupId;
+        if (!groupId || !this.mc) return;
+        const found = [];
+        const seenIp = new Set();
+        if (this.config.autoDiscover !== false) {
+            try {
+                const list = await discover(6000, m => this.log.debug(m), this);
+                for (const d of list) {
+                    if (d.txt.group && d.txt.group.toUpperCase() !== groupId.toUpperCase()) continue;
+                    found.push({ ip: d.ip, techType: d.techType, deviceType: Number(d.txt.devicetype) });
+                    seenIp.add(d.ip);
+                }
+            } catch (e) {
+                this.log.debug(`mDNS background discovery failed: ${e.message}`);
+            }
+        }
+        for (const entry of this.config.devices || []) {
+            const ip = typeof entry === 'string' ? entry : entry && entry.ip;
+            if (ip && !seenIp.has(ip)) {
+                found.push({ ip, techType: '', deviceType: null });
+                seenIp.add(ip);
+            }
+        }
+
+        if (found.length) {
+            await this.setStateAsync('info.discoveredDevices', { val: JSON.stringify(found), ack: true });
+        }
+
+        for (const f of found) {
+            const alreadyKnown = Object.values(this.devices).some(d => d.ip === f.ip);
+            if (!alreadyKnown) {
+                try {
+                    await this.initDevice(f);
+                    if (this.config.usePush && this.push) {
+                        await this.enrollAll();
+                    }
+                } catch (e) {
+                    this.log.debug(`Device at ${f.ip} could not be initialized: ${e.message}`);
+                }
+            }
+        }
+    }
+
     /** Gerät initialisieren: Route (Seriennr.) ermitteln, Objektbaum anlegen, Ident lesen. */
     async initDevice(f) {
         const api = new MieleDeviceApi(f.ip, this.mc, { timeout: 8000 });
         // Seriennummer(n) über signiertes /Devices/ ermitteln
         const list = await api.get('Devices/');
         const routes = Object.keys(list || {});
-        if (!routes.length) throw new Error('keine Geräte-Route gefunden');
+        if (!routes.length) throw new Error('no device route found');
 
         for (const route of routes) {
-            const deviceId = route; // Objekt-ID = Seriennummer
+            const deviceId = route.replace(/[^a-zA-Z0-9_-]/g, '_'); // Objekt-ID = sanitierte Seriennummer
             let ident = null;
             try {
                 ident = await api.getIdent(route);
             } catch (e) {
-                this.log.debug(`Ident ${route} nicht lesbar: ${e.message}`);
+                this.log.debug(`Could not read Ident for ${route}: ${e.message}`);
             }
             const deviceType = ident ? Number(ident.DeviceType) : f.deviceType;
             const techType = ident ? objdef.pathGet(ident, ['DeviceIdentLabel', 'TechType']) : f.techType;
@@ -161,9 +180,10 @@ class MieleLocal extends utils.Adapter {
             await this.createDeviceTree(deviceId, techType, deviceType);
 
             this.devices[deviceId] = { ip: f.ip, route, deviceType, api, active: false };
+            await this.setStateAsync(`${deviceId}.info.connected`, { val: true, ack: true });
             if (ident) await this.applyIdent(deviceId, ident);
             const cat = objdef.deviceCategory(deviceType);
-            this.log.info(`Gerät erkannt: ${cat ? cat + ' - ' : ''}${techType || 'unbekannt'} (${deviceId}) @ ${f.ip}`);
+            this.log.info(`Device detected: ${cat ? cat + ' - ' : ''}${techType || 'unknown'} (${deviceId}) @ ${f.ip}`);
         }
     }
 
@@ -190,7 +210,14 @@ class MieleLocal extends utils.Adapter {
         for (const f of objdef.IDENT_FIELDS) {
             await this.extendObjectAsync(`${deviceId}.info.${f.sub}`, {
                 type: 'state',
-                common: { name: objdef.nameFor('info', f.sub, f.name, german), role: f.role, type: f.type, read: true, write: false },
+                common: {
+                    name: objdef.nameFor('info', f.sub, f.name, german),
+                    role: f.role,
+                    type: f.type,
+                    read: true,
+                    write: false,
+                    def: f.def !== undefined ? f.def : (f.type === 'number' ? 0 : f.type === 'boolean' ? false : ''),
+                },
                 native: {},
             });
         }
@@ -207,6 +234,7 @@ class MieleLocal extends utils.Adapter {
                         unit: s.unit,
                         read: true,
                         write: false,
+                        def: s.def !== undefined ? s.def : (s.type === 'number' ? 0 : s.type === 'boolean' ? false : ''),
                     },
                     native: {},
                 });
@@ -222,7 +250,14 @@ class MieleLocal extends utils.Adapter {
             for (const c of objdef.CONTROL_STATES) {
                 await this.extendObjectAsync(`${deviceId}.control.${c.sub}`, {
                     type: 'state',
-                    common: { name: objdef.nameFor('control', c.sub, c.name, german), role: c.role, type: 'boolean', read: false, write: true, def: false },
+                    common: {
+                        name: objdef.nameFor('control', c.sub, c.name, german),
+                        role: c.role,
+                        type: 'boolean',
+                        read: false,
+                        write: true,
+                        def: c.def !== undefined ? c.def : false,
+                    },
                     native: { opcode: c.opcode },
                 });
             }
@@ -303,7 +338,7 @@ class MieleLocal extends utils.Adapter {
             try {
                 ({ fields } = dop2.parseLeaf(plain));
             } catch (e) {
-                this.log.debug(`Eco ${deviceId}: Parse-Fehler ${e.message}`);
+                this.log.debug(`Eco ${deviceId}: parse error ${e.message}`);
                 continue;
             }
             const energyRaw = dop2.interpValue(fields, ECO_ENERGY_IDX);
@@ -326,17 +361,17 @@ class MieleLocal extends utils.Adapter {
         if (this._ecoCreated[deviceId]) return;
         const german = this.config.germanNames !== false;
         await this.setObjectNotExistsAsync(`${deviceId}.eco`, {
-            type: 'channel', common: { name: german ? 'EcoFeedback' : 'EcoFeedback' }, native: {},
+            type: 'channel', common: { name: 'EcoFeedback' }, native: {},
         });
         const defs = [
-            { sub: 'energy', name: german ? 'Energieverbrauch' : 'Energy consumption', role: 'value.power.consumption', unit: 'kWh' },
-            { sub: 'energyWh', name: german ? 'Energieverbrauch (Rohwert Wh)' : 'Energy consumption (raw Wh)', role: 'value', unit: 'Wh' },
-            { sub: 'water', name: german ? 'Wasserverbrauch' : 'Water consumption', role: 'value', unit: 'l' },
+            { sub: 'energy', name: german ? 'Energieverbrauch' : 'Energy consumption', role: 'value.power.consumption', type: 'number', unit: 'kWh', def: 0 },
+            { sub: 'energyWh', name: german ? 'Energieverbrauch (Rohwert Wh)' : 'Energy consumption (raw Wh)', role: 'value.power.consumption', type: 'number', unit: 'Wh', def: 0 },
+            { sub: 'water', name: german ? 'Wasserverbrauch' : 'Water consumption', role: 'value.volume', type: 'number', unit: 'l', def: 0 },
         ];
         for (const d of defs) {
             await this.extendObjectAsync(`${deviceId}.eco.${d.sub}`, {
                 type: 'state',
-                common: { name: d.name, role: d.role, type: 'number', unit: d.unit, read: true, write: false },
+                common: { name: d.name, role: d.role, type: d.type, unit: d.unit, read: true, write: false, def: d.def },
                 native: {},
             });
         }
@@ -380,12 +415,12 @@ class MieleLocal extends utils.Adapter {
         const german = this.config.germanNames !== false;
         await this.extendObjectAsync(`${deviceId}.state.remainingSeconds`, {
             type: 'state',
-            common: { name: german ? 'Restzeit (Sekunden)' : 'Remaining time (seconds)', role: 'value.interval', type: 'number', unit: 's', read: true, write: false },
+            common: { name: german ? 'Restzeit (Sekunden)' : 'Remaining time (seconds)', role: 'value.interval', type: 'number', unit: 's', def: 0, read: true, write: false },
             native: {},
         });
         await this.extendObjectAsync(`${deviceId}.state.elapsedSeconds`, {
             type: 'state',
-            common: { name: german ? 'Laufzeit (Sekunden)' : 'Elapsed time (seconds)', role: 'value.interval', type: 'number', unit: 's', read: true, write: false },
+            common: { name: german ? 'Laufzeit (Sekunden)' : 'Elapsed time (seconds)', role: 'value.interval', type: 'number', unit: 's', def: 0, read: true, write: false },
             native: {},
         });
         this._secCreated[deviceId] = true;
@@ -407,7 +442,7 @@ class MieleLocal extends utils.Adapter {
                     `Enrollment ${deviceId}: SuperVision=${r.supervisionOk}, Subscriptions=[${r.subscriptions.join(' ')}]`,
                 );
             } catch (e) {
-                this.log.warn(`Enrollment ${deviceId} fehlgeschlagen: ${e.message}`);
+                this.log.warn(`Enrollment for ${deviceId} failed: ${e.message}`);
             }
         }
     }
@@ -419,10 +454,12 @@ class MieleLocal extends utils.Adapter {
                 const state = await dev.api.getState(dev.route);
                 if (state) {
                     await this.applyState(deviceId, state);
+                    await this.setStateAsync(`${deviceId}.info.connected`, { val: true, ack: true });
                     ok = true;
                 }
             } catch (e) {
-                this.log.debug(`Polling ${deviceId} fehlgeschlagen: ${e.message}`);
+                this.log.debug(`Polling ${deviceId} failed: ${e.message}`);
+                await this.setStateAsync(`${deviceId}.info.connected`, { val: false, ack: true });
             }
         }
         await this.setStateAsync('info.connection', { val: ok, ack: true });
@@ -438,7 +475,7 @@ class MieleLocal extends utils.Adapter {
         const dev = this.devices[deviceId];
         if (!dev) return;
         if (!this.config.allowControl) {
-            this.log.warn('Steuerung ist in den Instanzeinstellungen deaktiviert.');
+            this.log.warn('Device control is disabled in instance settings.');
             return;
         }
         if (!state.val) return; // nur bei true auslösen
@@ -451,7 +488,7 @@ class MieleLocal extends utils.Adapter {
             const payload = buildUserRequest(opcode);
             const status = await dev.api.put(`Devices/${dev.route}/DOP2/${USER_REQ_UNIT}/${USER_REQ_LEAF}?idx1=0&idx2=0`, payload);
             if (status === 200 || status === 204) {
-                this.log.info(`Befehl '${sub}' an ${deviceId} gesendet (opcode 0x${opcode.toString(16)}).`);
+                this.log.info(`Command '${sub}' sent to ${deviceId} (opcode 0x${opcode.toString(16)}).`);
                 await this.setStateAsync(id, { val: false, ack: true });
                 // Polling kurz pausieren, dann gezielt den neuen Zustand holen.
                 this.pausePollUntil = Date.now() + 2500;
@@ -461,10 +498,10 @@ class MieleLocal extends utils.Adapter {
                     this.schedulePoll(false);
                 }, 2600);
             } else {
-                this.log.warn(`Befehl '${sub}' an ${deviceId}: HTTP ${status} (MobileStart am Gerät aktiv?).`);
+                this.log.warn(`Command '${sub}' to ${deviceId}: HTTP ${status} (is MobileStart enabled on device?).`);
             }
         } catch (e) {
-            this.log.warn(`Befehl '${sub}' an ${deviceId} fehlgeschlagen: ${e.message} (Firmware erlaubt evtl. keine Fernsteuerung).`);
+            this.log.warn(`Command '${sub}' to ${deviceId} failed: ${e.message} (remote control might not be supported by firmware).`);
         }
     }
 
@@ -477,7 +514,7 @@ class MieleLocal extends utils.Adapter {
                 adapter: this,
                 onEvent: async ev => {
                     // ev = { route, state }
-                    const deviceId = ev.route;
+                    const deviceId = ev.route.replace(/[^a-zA-Z0-9_-]/g, '_');
                     if (this.devices[deviceId] && ev.state) {
                         await this.applyState(deviceId, ev.state);
                         this.schedulePoll(false);
@@ -485,9 +522,9 @@ class MieleLocal extends utils.Adapter {
                 },
             });
             this.push.start();
-            this.log.info(`Push-Listener aktiv auf Port ${this.config.pushPort || 18082}.`);
+            this.log.info(`Push listener active on port ${this.config.pushPort || 18082}.`);
         } catch (e) {
-            this.log.warn(`Push-Listener konnte nicht gestartet werden: ${e.message}. Polling bleibt aktiv.`);
+            this.log.warn(`Failed to start push listener: ${e.message}. Polling fallback remains active.`);
         }
     }
 
@@ -499,7 +536,7 @@ class MieleLocal extends utils.Adapter {
                 const cc = (obj.message && obj.message.country) || this.config.country || 'de';
                 const { url, challenge } = cloud.buildAuthorizeUrl(cc);
                 this.oauth[challenge.state] = challenge;
-                this.log.info(`Login-URL (im Browser öffnen): ${url}`);
+                this.log.info(`Login URL (open in browser): ${url}`);
                 // `openUrl` lässt den Admin die Login-Seite im Browser öffnen.
                 this.sendTo(obj.from, obj.command, { openUrl: url, state: challenge.state }, obj.callback);
                 return;
@@ -507,7 +544,7 @@ class MieleLocal extends utils.Adapter {
             if (obj.command === 'submitRedirect') {
                 const redirectUrl = obj.message && obj.message.redirectUrl;
                 const region = (obj.message && obj.message.region) || this.config.region || 'EU';
-                if (!redirectUrl) throw new Error('Keine Redirect-URL übergeben.');
+                if (!redirectUrl) throw new Error('No redirect URL provided.');
                 // passenden challenge über state finden
                 let challenge = null;
                 try {
@@ -518,7 +555,7 @@ class MieleLocal extends utils.Adapter {
                     /* ignore */
                 }
                 if (!challenge) challenge = Object.values(this.oauth).pop();
-                if (!challenge) throw new Error('Kein aktiver Login-Vorgang. Bitte Login-URL neu erzeugen.');
+                if (!challenge) throw new Error('No active login challenge. Please generate a new login URL.');
 
                 const code = cloud.parseRedirectUrl(redirectUrl, challenge.state);
                 const tokens = await cloud.exchangeCode(challenge, code);
@@ -536,7 +573,7 @@ class MieleLocal extends utils.Adapter {
                             region,
                         },
                         saveConfig: true,
-                        result: `${gk.devices.length} Gerät(e) im Haushalt gefunden. GroupKey gespeichert.`,
+                        result: `${gk.devices.length} device(s) found in household. GroupKey saved.`,
                     },
                     obj.callback,
                 );
@@ -556,11 +593,15 @@ class MieleLocal extends utils.Adapter {
         this.stopping = true;
         try {
             if (this.pollTimer) this.clearTimeout(this.pollTimer);
+            if (this.discoveryTimer) this.clearInterval(this.discoveryTimer);
             if (this.enrollTimer) this.clearInterval(this.enrollTimer);
             if (this.ecoTimer) this.clearInterval(this.ecoTimer);
             if (this.secTimer) this.clearInterval(this.secTimer);
             if (this.push) await this.push.stop();
             await this.setStateAsync('info.connection', { val: false, ack: true });
+            for (const deviceId of Object.keys(this.devices)) {
+                await this.setStateAsync(`${deviceId}.info.connected`, { val: false, ack: true });
+            }
         } catch {
             /* ignore */
         } finally {

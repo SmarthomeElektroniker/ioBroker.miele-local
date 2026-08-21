@@ -5,6 +5,8 @@
 [![NPM version](https://img.shields.io/npm/v/iobroker.miele-local.svg)](https://www.npmjs.com/package/iobroker.miele-local)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+*Read this in another language: [Deutsche Dokumentation](README_de.md).*
+
 This adapter connects modern **Miele@Home** appliances **locally, without the internet**.
 It speaks the local Miele protocol (`MieleH256` / DOP2) directly over the LAN — no cloud
 account during operation, no detour through the Miele 3rd-party API.
@@ -29,29 +31,28 @@ account during operation, no detour through the Miele 3rd-party API.
 ## Installation
 
 1. Install the adapter and create an instance.
-2. On the **Login** tab, choose your country and click **Open login page** — sign in with
-   your Miele account in the browser. At the end the browser is redirected to a
-   `miele://…` address (which fails to open — that is expected); copy that full address.
-3. Paste the `miele://…` address and click **Fetch GroupKey**. GroupID/GroupKey are stored
-   (GroupKey encrypted).
-4. Save. The adapter discovers the devices via mDNS and creates the states.
+2. On the **Login** tab, choose your country and follow the 3-step login guide below.
+3. Paste the captured `miele://…` redirect address and click **Fetch GroupKey**. GroupID and
+   GroupKey are stored securely (GroupKey encrypted).
+4. Save. The adapter discovers your devices and creates the states.
 
-### Capturing the redirect URL
+### Step-by-step: Capturing the redirect URL
 
-The browser cannot open the final `miele://` address itself — that is expected. You obtain
-the full address (`miele://oauth2-code/?code=…&state=…`) as follows — **one method is
-enough**:
+Because the final `miele://` address is a custom mobile-app scheme, desktop browsers cannot open
+it automatically and will hang on a spinning wheel. Capture the URL using browser DevTools:
 
-- **Easy — via the "Open with" dialog:** When the browser asks to open the address "with an
-  application", it hands the complete `miele://` address to that app. If you open it with a
-  text editor (Linux: kate/gedit; Windows: Notepad; macOS: TextEdit), the full address
-  appears in the title/file name or in the text — copy it from there. You can cancel the
-  actual open action.
-- **Reliable — via DevTools:** Open DevTools before logging in (F12) → tab "Network",
-  enable "Preserve log". After logging in, find the last request whose address begins with
-  `miele://` or contains `…/de/redirect?…&code=…` → right-click → "Copy link address".
-
-Both yield the same text with `code=` and `state=`; the adapter accepts both forms.
+1. **Prepare DevTools:** Click **Open login page** to open the Miele login in a new tab. In that
+   new tab, press **F12** to open Developer Tools and switch to the **Network** tab. Enable
+   persistent logging:
+   - **Chrome / Edge / Brave:** Check **Preserve log**.
+   - **Firefox:** Click the gear icon ⚙️ and check **Persist Logs**.
+2. **Sign In:** Enter the email and password of your Miele app account and submit the login.
+   *Note:* The page will remain on a spinning wheel (or report a failed load) — this is completely
+   expected and indicates success.
+3. **Copy & Submit:** In the Network tab (F12), scroll to the very last (usually red) request. It
+   starts with `redirect?redirect_uri=miele...` or `miele://oauth2-code/...`. Right-click this
+   entry → **Copy URL** (or **Copy link address**). Paste it into the **miele:// redirect URL**
+   field in ioBroker and click **Fetch GroupKey**.
 
 ## Required ports / firewall
 
@@ -95,17 +96,20 @@ transmitted to third parties; in normal operation there is no cloud connection.
 
 ## States (excerpt)
 
-Per device under `<serial>.info` (static) and `<serial>.state` (live):
+Per device under `<serial>.info` (static/connectivity), `<serial>.state` (live) and `<serial>.eco`:
 
+- `info.connected` — connectivity status (true when appliance responds)
 - `state.statusText` / `state.status` — operating state (plain text + raw value)
 - `state.programText` / `state.programId` — running program
 - `state.programPhaseText` / `state.programPhase` — program phase
 - `state.remainingMinutes`, `state.elapsedMinutes`, `state.startInMinutes`
+- `state.remainingSeconds`, `state.elapsedSeconds` (optional second-precise DOP2 values)
 - `state.estimatedEndTime` / `state.estimatedEndTimeText` — projected finish time
 - `state.temperature[Zone2/3]`, `state.targetTemperature[Zone2/3]`
 - `state.signalDoor`, `state.signalInfo`, `state.signalFailure`
 - `state.mobileStart` — whether remote control is enabled on the device
 - `state.light`, `state.spinningSpeed` (washing machine), `state.dryingStepText` (dryer)
+- `eco.energy` (kWh), `eco.energyWh` (Wh), `eco.water` (l) (where supported)
 - `info.techType`, `info.fabNumber`, `info.xkmType`, `info.xkmVersion`, `info.deviceType`
 
 With control enabled, additionally `<serial>.control.*` (start, stop, pause, powerOn,
@@ -142,6 +146,24 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.0
+- Adopt ioBroker development guidelines and conformity rules.
+- Translate internal log messages to pure English.
+- Add explicit default metadata values (`def`) to all state definitions.
+- Sanitize dynamic object IDs against forbidden characters.
+- Add local verification test script (`npm run test:local`).
+- Add German documentation (`README_de.md`).
+- Fix dev-server packaging issue by removing redundant prepare script.
+- Clarify step-by-step login instructions and i18n translations.
+- Add CHANGELOG_OLD.md for historical pre-rename versions.
+- Add per-device connectivity state (`info.connected`).
+- Add periodic background discovery for waking/standby appliances.
+- Add admin UI configuration for second-precise remaining time polling.
+- Refine EcoFeedback state roles and measurement units.
+- mDNS auto-discovery is no longer marked experimental - confirmed working.
+
+Most of the above was contributed by [meistermopper](https://github.com/meistermopper).
+
 ### 0.2.1
 - Released via GitHub Actions with npm provenance (trusted publishing). No functional
   changes.
@@ -150,13 +172,7 @@ engineering work of the projects `MieleRESTServer` (akappner),
 - Renamed from `miele-lokal` to `miele-local`: English adapter name and title.
   First release under the new package name.
 
-### 0.1.1
-- Released via GitHub Actions with npm provenance (trusted publishing). No functional
-  changes. Published under the former name `iobroker.miele-lokal`.
-
-### 0.1.0
-- Initial release: login/GroupKey retrieval, mDNS discovery, state polling with enum
-  decoding, optional SuperVision push, optional control.
+[Older changelog entries can be found here](CHANGELOG_OLD.md)
 
 ## License
 

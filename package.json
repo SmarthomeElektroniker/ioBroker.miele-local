@@ -1,6 +1,6 @@
 {
   "name": "iobroker.miele-local",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Connect modern Miele@Home appliances locally without the internet (MieleH256/DOP2).",
   "author": "Immanuel",
   "license": "MIT",
@@ -40,13 +40,17 @@
     "test:package": "mocha test/package --exit",
     "test": "npm run test:crypto && npm run test:package",
     "lint": "eslint .",
-    "test:integration": "mocha test/integration --exit"
+    "test:integration": "mocha test/integration --exit",
+    "test:local": "npm run lint && npm test"
   },
   "files": [
     "admin/",
     "lib/",
     "main.js",
     "io-package.json",
-    "LICENSE"
+    "LICENSE",
+    "README.md",
+    "README_de.md",
+    "CHANGELOG_OLD.md"
   ]
 }

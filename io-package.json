@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.0": {
+        "en": "Periodic discovery, per-device connectivity state, refined roles and units",
+        "de": "Periodische Gerätesuche, Erreichbarkeit je Gerät, überarbeitete Rollen und Einheiten",
+        "ru": "Периодический поиск, состояние связи по устройству",
+        "pt": "Descoberta periódica, estado de ligação por dispositivo",
+        "nl": "Periodieke detectie, verbindingsstatus per apparaat",
+        "fr": "Découverte périodique, état de connexion par appareil",
+        "it": "Rilevamento periodico, stato di connessione per dispositivo",
+        "es": "Descubrimiento periódico, estado de conexión por dispositivo",
+        "pl": "Okresowe wykrywanie, stan połączenia dla każdego urządzenia",
+        "uk": "Періодичний пошук, стан зв'язку для кожного пристрою",
+        "zh-cn": "定期发现设备，每台设备的连接状态"
+      },
       "0.2.1": {
         "en": "Released via GitHub Actions with npm provenance (trusted publishing). No functional changes.",
         "de": "Veröffentlichung über GitHub Actions mit npm-Provenance (Trusted Publishing). Keine funktionalen Änderungen.",
@@ -126,7 +139,8 @@
     "ecoFeedback": true,
     "ecoInterval": 60,
     "secondsTime": true,
-    "secondsInterval": 30
+    "secondsInterval": 30,
+    "autoDiscoverInterval": 10
   },
   "objects": [],
   "instanceObjects": [

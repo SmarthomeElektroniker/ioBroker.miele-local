@@ -126,19 +126,9 @@
           "lg": 4,
           "xl": 4
         },
-        "_captureIntro": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "So kommen Sie an die „miele://…\"-Adresse — wählen Sie EINE der beiden Methoden:",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_captureA": {
+        "_step1Header": {
           "type": "header",
-          "text": "Methode A — einfach: über den „Öffnen mit\"-Dialog",
+          "text": "Schritt 1: Entwicklertools im Browser vorbereiten",
           "size": 5,
           "newLine": true,
           "xs": 12,
@@ -147,19 +137,19 @@
           "lg": 12,
           "xl": 12
         },
-        "_captureAText": {
+        "_step1Text": {
           "type": "staticText",
           "newLine": true,
-          "text": "Wenn der Browser fragt, die Adresse „mit einer Anwendung öffnen\", übergibt er die komplette miele://-Adresse an diese App. Öffnet man sie z. B. mit einem Texteditor (Linux: kate/gedit; Windows: Editor; macOS: TextEdit), steht die vollständige Adresse dort im Titel/Dateinamen oder im Text – von dort kopieren. Den eigentlichen Öffnen-Vorgang kann man abbrechen.",
+          "text": "1. Oben auf „Login-Seite öffnen“ klicken (ein neuer Browser-Tab öffnet sich).\n2. Im neuen Tab F12 drücken und auf den Reiter „Netzwerk“ (Network) wechseln.\n3. Protokollierung dauerhaft aktivieren:\n   • Chrome / Edge / Brave: Haken bei „Log beibehalten“ (Preserve log) setzen.\n   • Firefox: Zahnrad ⚙️ ➔ „Protokolle dauerhaft anzeigen“ (Persist Logs) aktivieren.",
           "xs": 12,
           "sm": 12,
           "md": 12,
           "lg": 12,
           "xl": 12
         },
-        "_captureOr": {
+        "_step2Header": {
           "type": "header",
-          "text": "— oder —",
+          "text": "Schritt 2: Bei Miele anmelden",
           "size": 5,
           "newLine": true,
           "xs": 12,
@@ -168,9 +158,19 @@
           "lg": 12,
           "xl": 12
         },
-        "_captureB": {
+        "_step2Text": {
+          "type": "staticText",
+          "newLine": true,
+          "text": "1. E-Mail und Passwort deines Miele-App-Kontos eingeben und auf „Anmeldung“ klicken.\n2. Wichtig: Nach dem Login bleibt die Seite bei einem sich drehenden Laderad stehen (oder meldet einen Fehler). Das ist völlig normal und bedeutet, dass die Anmeldung erfolgreich war!",
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
+        },
+        "_step3Header": {
           "type": "header",
-          "text": "Methode B — zuverlässig: über die Entwicklertools (DevTools)",
+          "text": "Schritt 3: Adresse kopieren & GroupKey ermitteln",
           "size": 5,
           "newLine": true,
           "xs": 12,
@@ -179,40 +179,10 @@
           "lg": 12,
           "xl": 12
         },
-        "_captureBText": {
+        "_step3Text": {
           "type": "staticText",
           "newLine": true,
-          "text": "Chrome / Edge / Brave: Vor dem Login DevTools öffnen (F12) → Reiter „Netzwerk\" → „Log beibehalten / Preserve log\" aktivieren. Nach dem Login die letzte Anfrage suchen, deren Adresse „…/de/redirect?…&code=…\" enthält (oder mit „miele://\" beginnt) → Rechtsklick → „Adresse des Links kopieren / Copy link address\".",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_captureBFirefox": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Firefox: F12 → Reiter „Netzwerkanalyse\" → Zahnrad → „Protokolle dauerhaft anzeigen\" aktivieren. Firefox listet die „miele://\"-Weiterleitung meist NICHT als eigene Zeile – stattdessen die letzte Anfrage an „…/de/redirect?…&code=…\" anklicken → Rechtsklick → „Kopieren\" → „URL kopieren\". Alternativ die Anfrage markieren und im Reiter „Kopfzeilen\" die vollständige Anfrage-URL herauskopieren. Am einfachsten unter Firefox ist jedoch Methode A („Öffnen mit\"-Dialog).",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_captureNote": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Beide Methoden liefern denselben Text mit „code=\" und „state=\"; der Adapter akzeptiert beide Formen.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_step2": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Schritt 2: Die kopierte Adresse (mit „code=…&state=…\") hier einfügen und GroupKey ermitteln.",
+          "text": "1. Im Netzwerk-Tab (F12) ganz nach unten zur letzten (meist rot markierten) Zeile scrollen. Sie beginnt mit „redirect?redirect_uri=miele...“ oder „miele://oauth2-code/...“.\n2. Rechtsklick auf diese Zeile ➔ „URL kopieren“ (bzw. „Adresse des Links kopieren“).\n3. Die kopierte Adresse unten in das Feld einfügen und auf „GroupKey ermitteln“ klicken.",
           "xs": 12,
           "sm": 12,
           "md": 12,
@@ -270,13 +240,26 @@
         },
         "autoDiscover": {
           "type": "checkbox",
-          "label": "Geräte automatisch per mDNS finden (experimentell)",
+          "label": "Geräte automatisch per mDNS finden",
           "newLine": true,
           "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "xl": 6
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4
+        },
+        "autoDiscoverInterval": {
+          "type": "number",
+          "label": "Hintergrund-Suche Intervall in Minuten",
+          "min": 1,
+          "max": 120,
+          "default": 10,
+          "hidden": "!data.autoDiscover",
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4
         },
         "discoverNow": {
           "type": "sendTo",
@@ -341,6 +324,29 @@
           "md": 6,
           "lg": 6,
           "xl": 6
+        },
+        "secondsTime": {
+          "type": "checkbox",
+          "label": "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)",
+          "newLine": true,
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4
+        },
+        "secondsInterval": {
+          "type": "number",
+          "label": "Sekunden-Abfrageintervall in Sekunden",
+          "min": 10,
+          "max": 3600,
+          "default": 30,
+          "hidden": "!data.secondsTime",
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4
         },
         "ecoFeedback": {
           "type": "checkbox",

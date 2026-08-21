@@ -39,6 +39,16 @@
   "Datenpunkt-Namen auf Deutsch": "Nomi degli stati in tedesco",
   "EcoFeedback (Energie/Wasser) abrufen": "Recupera EcoFeedback (energia/acqua)",
   "EcoFeedback-Intervall in Sekunden": "Intervallo EcoFeedback in secondi",
-  "Geräte automatisch per mDNS finden (experimentell)": "Rileva dispositivi automaticamente via mDNS (sperimentale)",
-  "SuperVision-Push aktivieren (experimentell, Echtzeit)": "Abilita push SuperVision (sperimentale, tempo reale)"
+  "SuperVision-Push aktivieren (experimentell, Echtzeit)": "Abilita push SuperVision (sperimentale, tempo reale)",
+  "Schritt 1: Entwicklertools im Browser vorbereiten": "Step 1: Prepare browser developer tools",
+  "1. Oben auf „Login-Seite öffnen“ klicken (ein neuer Browser-Tab öffnet sich).\n2. Im neuen Tab F12 drücken und auf den Reiter „Netzwerk“ (Network) wechseln.\n3. Protokollierung dauerhaft aktivieren:\n   • Chrome / Edge / Brave: Haken bei „Log beibehalten“ (Preserve log) setzen.\n   • Firefox: Zahnrad ⚙️ ➔ „Protokolle dauerhaft anzeigen“ (Persist Logs) aktivieren.": "1. Click 'Open login page' above (a new browser tab opens).\n2. In the new tab, press F12 and switch to the 'Network' tab.\n3. Enable persistent logging:\n   • Chrome / Edge / Brave: Check 'Preserve log'.\n   • Firefox: Click gear ⚙️ ➔ check 'Persist Logs'.",
+  "Schritt 2: Bei Miele anmelden": "Step 2: Sign in with Miele",
+  "1. E-Mail und Passwort deines Miele-App-Kontos eingeben und auf „Anmeldung“ klicken.\n2. Wichtig: Nach dem Login bleibt die Seite bei einem sich drehenden Laderad stehen (oder meldet einen Fehler). Das ist völlig normal und bedeutet, dass die Anmeldung erfolgreich war!": "1. Enter your Miele app account email and password and click 'Sign in'.\n2. Note: After login, the page will hang on a spinning loading wheel (or show an error). This is completely normal and indicates success!",
+  "Schritt 3: Adresse kopieren & GroupKey ermitteln": "Step 3: Copy redirect address & fetch GroupKey",
+  "1. Im Netzwerk-Tab (F12) ganz nach unten zur letzten (meist rot markierten) Zeile scrollen. Sie beginnt mit „redirect?redirect_uri=miele...“ oder „miele://oauth2-code/...“.\n2. Rechtsklick auf diese Zeile ➔ „URL kopieren“ (bzw. „Adresse des Links kopieren“).\n3. Die kopierte Adresse unten in das Feld einfügen und auf „GroupKey ermitteln“ klicken.": "1. In the Network tab (F12), scroll to the very last (often red) request starting with 'redirect?redirect_uri=miele...' or 'miele://oauth2-code/...'.\n2. Right-click that entry ➔ 'Copy URL' / 'Copy link address'.\n3. Paste the URL into the field below and click 'Fetch GroupKey'.",
+  "Der Adapter ermittelt die lokalen Zugangsdaten (GroupID/GroupKey) einmalig über eine Anmeldung mit Ihrem Miele-Konto. Die Miele-App funktioniert danach unverändert weiter. Es werden keine Zugangsdaten an Dritte übertragen.": "The adapter retrieves local credentials (GroupID/GroupKey) once by signing in with your Miele account. The Miele app continues to work as before. No credentials are transmitted to third parties.",
+  "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.": "Once retrieved, GroupID and encrypted GroupKey appear on the 'Advanced' tab. Don't forget to save.",
+  "Hintergrund-Suche Intervall in Minuten": "Intervallo di rilevamento in background in minuti",
+  "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)": "Recupera tempo rimanente/trascorso preciso al secondo (DOP2)",
+  "Sekunden-Abfrageintervall in Sekunden": "Intervallo di polling in secondi"
 }
