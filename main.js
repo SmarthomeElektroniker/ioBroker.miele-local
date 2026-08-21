@@ -288,7 +288,14 @@ class MieleLocal extends utils.Adapter {
             if (!objdef.fieldAllowed(key, ctx.deviceType)) continue;
             const pairs = def.decode(state[key], ctx);
             for (const p of pairs) {
-                await this.setStateAsync(`${deviceId}.state.${p.sub}`, { val: p.val === undefined ? null : p.val, ack: true });
+                // Liefert das Gerät nichts (Temperatur-Sentinel, abgeschaltete Zone), wird der
+                // Datenpunkt NICHT beschrieben. Frueher stand dann null drin - der
+                // Objektstruktur-Pruefer des ioBroker-Repos beanstandet das (E3005: val muss zu
+                // common.type passen), und eine 0 waere schlimmer: 0 Grad ist ein plausibler
+                // Messwert, "kein Wert" ist keiner. So bleibt der Vorgabewert bzw. der zuletzt
+                // echte Stand erhalten.
+                if (p.val === undefined || p.val === null) continue;
+                await this.setStateAsync(`${deviceId}.state.${p.sub}`, { val: p.val, ack: true });
             }
             if (key === 'Status') statusVal = state.Status;
         }
@@ -304,7 +311,10 @@ class MieleLocal extends utils.Adapter {
                 const mm = String(end.getMinutes()).padStart(2, '0');
                 await this.setStateAsync(`${deviceId}.state.estimatedEndTimeText`, { val: `${hh}:${mm}`, ack: true });
             } else {
-                await this.setStateAsync(`${deviceId}.state.estimatedEndTime`, { val: null, ack: true });
+                // 0 statt null: der Datenpunkt ist als number deklariert, und "kein laufendes
+                // Programm" muss hier ausdrueckbar bleiben - anders als bei den Temperaturen
+                // waere ein stehengebliebenes altes Programmende irrefuehrend.
+                await this.setStateAsync(`${deviceId}.state.estimatedEndTime`, { val: 0, ack: true });
                 await this.setStateAsync(`${deviceId}.state.estimatedEndTimeText`, { val: '', ack: true });
             }
         }

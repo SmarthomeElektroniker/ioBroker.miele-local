@@ -152,6 +152,13 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.3
+- Fix E3005: states declared as `number` no longer receive `null` when the appliance does not
+  report a value - the datapoint keeps its default instead. `estimatedEndTime` is cleared with
+  0 rather than null.
+- Fix E1011: `state.light` is read-only and now carries role `sensor.light`; switching happens
+  through `control.lightOn`/`lightOff`.
+
 ### 0.3.2
 - EcoFeedback conversion moved into `dop2.ecoValues()` and covered by unit tests against the
   cloud-verified reference values (1991 Wh = 1.991 kWh, 953 = 95.3 l).

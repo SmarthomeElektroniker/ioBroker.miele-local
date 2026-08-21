@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.3": {
+        "en": "Fix object structure errors reported by the repository checker",
+        "de": "Beanstandungen des Objektstruktur-Pruefers behoben",
+        "ru": "Исправлены замечания проверки структуры объектов",
+        "pt": "Corrigidos erros de estrutura de objetos",
+        "nl": "Objectstructuurfouten verholpen",
+        "fr": "Corrections des erreurs de structure d objets",
+        "it": "Corretti errori di struttura degli oggetti",
+        "es": "Corregidos errores de estructura de objetos",
+        "pl": "Naprawiono błędy struktury obiektów",
+        "uk": "Виправлено помилки структури обʼєктів",
+        "zh-cn": "修复对象结构检查报告的错误"
+      },
       "0.3.2": {
         "en": "EcoFeedback conversion extracted and covered by tests",
         "de": "EcoFeedback-Umrechnung ausgelagert und durch Tests abgesichert",
