@@ -50,5 +50,15 @@
   "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.": "Una volta ottenute, GroupID e GroupKey (memorizzata cifrata) compaiono nella scheda «Avanzate». Non dimenticare di salvare.",
   "Hintergrund-Suche Intervall in Minuten": "Intervallo di rilevamento in background in minuti",
   "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)": "Recupera tempo rimanente/trascorso preciso al secondo (DOP2)",
-  "Sekunden-Abfrageintervall in Sekunden": "Intervallo di polling in secondi"
+  "Sekunden-Abfrageintervall in Sekunden": "Intervallo di polling in secondi",
+  "Verlauf": "Cronologia",
+  "Programme mitschreiben": "Registrare i programmi",
+  "Einträge im Ringpuffer": "Voci nel buffer circolare",
+  "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Quanti programmi recenti restano in cyclesJson. Pensato per la visualizzazione rapida; i dati a lungo termine arrivano dall’adapter history.",
+  "Aufbewahrung in Tagen": "Conservazione in giorni",
+  "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Le voci più vecchie escono dal buffer circolare. 730 giorni corrispondono a due anni.",
+  "Zusätzlich in den History-Adapter schreiben": "Scrivere anche nell’adapter history",
+  "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energia, acqua e durata per programma, con l’orario di fine – così i grafici possono coprire qualsiasi periodo.",
+  "History-Instanz": "Istanza history",
+  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "L’adapter registra ogni programma concluso: durata, programma, energia e acqua. Gli apparecchi non conservano i programmi terminati, quindi la cronologia inizia con l’attivazione e non può essere riempita a posteriori. Gli ultimi programmi sono in JSON sotto <numero di serie>.history.cyclesJson, accanto ai totali."
 }

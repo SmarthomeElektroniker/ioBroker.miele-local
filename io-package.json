@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.3",
+    "version": "0.3.4",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.4": {
+        "en": "Login instructions translated into all supported languages",
+        "de": "Login-Anleitung in alle unterstuetzten Sprachen uebersetzt",
+        "ru": "Инструкция по входу переведена на все поддерживаемые языки",
+        "pt": "Instruções de início de sessão traduzidas para todos os idiomas suportados",
+        "nl": "Inloginstructies vertaald naar alle ondersteunde talen",
+        "fr": "Instructions de connexion traduites dans toutes les langues prises en charge",
+        "it": "Istruzioni di accesso tradotte in tutte le lingue supportate",
+        "es": "Instrucciones de inicio de sesión traducidas a todos los idiomas admitidos",
+        "pl": "Instrukcja logowania przetłumaczona na wszystkie obsługiwane języki",
+        "uk": "Інструкцію входу перекладено всіма підтримуваними мовами",
+        "zh-cn": "登录说明已翻译为所有支持的语言"
+      },
       "0.3.3": {
         "en": "Fix object structure errors reported by the repository checker",
         "de": "Beanstandungen des Objektstruktur-Pruefers behoben",
@@ -140,7 +153,12 @@
     "ecoInterval": 60,
     "secondsTime": true,
     "secondsInterval": 30,
-    "autoDiscoverInterval": 10
+    "autoDiscoverInterval": 10,
+    "cycleHistory": true,
+    "cycleRingSize": 50,
+    "historyDays": 730,
+    "historyWrite": true,
+    "historyInstance": "history.0"
   },
   "objects": [],
   "instanceObjects": [

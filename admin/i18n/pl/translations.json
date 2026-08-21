@@ -50,5 +50,15 @@
   "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.": "Po pobraniu GroupID i (zaszyfrowany) GroupKey znajdują się na zakładce „Zaawansowane”. Nie zapomnij zapisać.",
   "Hintergrund-Suche Intervall in Minuten": "Interwał wykrywania w tle w minutach",
   "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)": "Pobieraj dokładny czas pozostały/upłynięty w sekundach (DOP2)",
-  "Sekunden-Abfrageintervall in Sekunden": "Interwał odpytywania sekundowego w sekundach"
+  "Sekunden-Abfrageintervall in Sekunden": "Interwał odpytywania sekundowego w sekundach",
+  "Verlauf": "Historia",
+  "Programme mitschreiben": "Zapisuj programy",
+  "Einträge im Ringpuffer": "Wpisy w buforze cyklicznym",
+  "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Ile ostatnich programów pozostaje w cyclesJson. Do szybkiego podglądu; dane długoterminowe pochodzą z adaptera history.",
+  "Aufbewahrung in Tagen": "Przechowywanie w dniach",
+  "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Starsze wpisy wypadają z bufora. 730 dni to dwa lata.",
+  "Zusätzlich in den History-Adapter schreiben": "Zapisuj także do adaptera history",
+  "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energia, woda i czas trwania każdego programu ze znacznikiem czasu zakończenia – dzięki temu wykresy mogą obejmować dowolny okres.",
+  "History-Instanz": "Instancja history",
+  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "Adapter zapisuje każdy zakończony program: czas trwania, program, energię i wodę. Urządzenia nie przechowują zakończonych programów, więc historia zaczyna się od włączenia tej funkcji – wstecz nie da się jej wypełnić. Ostatnie programy są w JSON pod <numer seryjny>.history.cyclesJson, obok sumy."
 }

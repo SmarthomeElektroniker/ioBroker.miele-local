@@ -50,5 +50,15 @@
   "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.": "Once retrieved, GroupID and encrypted GroupKey appear on the 'Advanced' tab. Don't forget to save.",
   "Hintergrund-Suche Intervall in Minuten": "Background discovery interval in minutes",
   "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)": "Fetch second-precise remaining/elapsed time (DOP2)",
-  "Sekunden-Abfrageintervall in Sekunden": "Second polling interval in seconds"
+  "Sekunden-Abfrageintervall in Sekunden": "Second polling interval in seconds",
+  "Verlauf": "History",
+  "Programme mitschreiben": "Record cycles",
+  "Einträge im Ringpuffer": "Entries in the ring buffer",
+  "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "How many recent cycles are kept in cyclesJson. Meant for quick display; long-term data comes from the history adapter.",
+  "Aufbewahrung in Tagen": "Retention in days",
+  "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Older entries drop out of the ring buffer. 730 days is two years.",
+  "Zusätzlich in den History-Adapter schreiben": "Also write to the history adapter",
+  "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energy, water and duration per cycle, timestamped at the end of the cycle – so charts can cover any period.",
+  "History-Instanz": "History instance",
+  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "The adapter records every completed cycle: duration, program, energy and water. The appliances do not keep finished cycles themselves, so the history starts when you enable this – it cannot be filled retroactively. Recent cycles are available as JSON under <serial>.history.cyclesJson, the totals next to it."
 }

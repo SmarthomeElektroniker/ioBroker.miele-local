@@ -1,525 +1,604 @@
 {
-  "i18n": true,
-  "type": "tabs",
-  "items": {
-    "tabLogin": {
-      "type": "panel",
-      "label": "Anmeldung",
-      "items": {
-        "_introLogin": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Der Adapter ermittelt die lokalen Zugangsdaten (GroupID/GroupKey) einmalig über eine Anmeldung mit Ihrem Miele-Konto. Die Miele-App funktioniert danach unverändert weiter. Es werden keine Zugangsdaten an Dritte übertragen.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "country": {
-          "type": "select",
-          "label": "Land",
-          "newLine": true,
-          "options": [
-            {
-              "label": "Deutschland",
-              "value": "de"
-            },
-            {
-              "label": "Österreich",
-              "value": "at"
-            },
-            {
-              "label": "Schweiz",
-              "value": "ch"
-            },
-            {
-              "label": "Niederlande",
-              "value": "nl"
-            },
-            {
-              "label": "Frankreich",
-              "value": "fr"
-            },
-            {
-              "label": "Italien",
-              "value": "it"
-            },
-            {
-              "label": "Spanien",
-              "value": "es"
-            },
-            {
-              "label": "Großbritannien",
-              "value": "gb"
-            },
-            {
-              "label": "Dänemark",
-              "value": "dk"
-            },
-            {
-              "label": "Schweden",
-              "value": "se"
-            },
-            {
-              "label": "Polen",
-              "value": "pl"
-            },
-            {
-              "label": "Tschechien",
-              "value": "cz"
-            },
-            {
-              "label": "USA",
-              "value": "us"
+    "i18n": true,
+    "type": "tabs",
+    "items": {
+        "tabLogin": {
+            "type": "panel",
+            "label": "Anmeldung",
+            "items": {
+                "_introLogin": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Der Adapter ermittelt die lokalen Zugangsdaten (GroupID/GroupKey) einmalig über eine Anmeldung mit Ihrem Miele-Konto. Die Miele-App funktioniert danach unverändert weiter. Es werden keine Zugangsdaten an Dritte übertragen.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "country": {
+                    "type": "select",
+                    "label": "Land",
+                    "newLine": true,
+                    "options": [
+                        {
+                            "label": "Deutschland",
+                            "value": "de"
+                        },
+                        {
+                            "label": "Österreich",
+                            "value": "at"
+                        },
+                        {
+                            "label": "Schweiz",
+                            "value": "ch"
+                        },
+                        {
+                            "label": "Niederlande",
+                            "value": "nl"
+                        },
+                        {
+                            "label": "Frankreich",
+                            "value": "fr"
+                        },
+                        {
+                            "label": "Italien",
+                            "value": "it"
+                        },
+                        {
+                            "label": "Spanien",
+                            "value": "es"
+                        },
+                        {
+                            "label": "Großbritannien",
+                            "value": "gb"
+                        },
+                        {
+                            "label": "Dänemark",
+                            "value": "dk"
+                        },
+                        {
+                            "label": "Schweden",
+                            "value": "se"
+                        },
+                        {
+                            "label": "Polen",
+                            "value": "pl"
+                        },
+                        {
+                            "label": "Tschechien",
+                            "value": "cz"
+                        },
+                        {
+                            "label": "USA",
+                            "value": "us"
+                        }
+                    ],
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "region": {
+                    "type": "select",
+                    "label": "Cloud-Region",
+                    "options": [
+                        {
+                            "label": "Europa (EU)",
+                            "value": "EU"
+                        },
+                        {
+                            "label": "Europa (EU2)",
+                            "value": "EU2"
+                        },
+                        {
+                            "label": "Asien (AS)",
+                            "value": "AS"
+                        }
+                    ],
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "_step1": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Schritt 1: Auf „Login-Seite öffnen\" klicken und im Browser mit dem Miele-Konto anmelden. Am Ende versucht der Browser, eine Adresse der Form „miele://oauth2-code/?code=…&state=…\" zu öffnen. Diese vollständige Adresse (der „Code\") wird in Schritt 2 gebraucht.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "openLogin": {
+                    "type": "sendTo",
+                    "label": "Login-Seite öffnen",
+                    "command": "getAuthUrl",
+                    "jsonData": "{ \"country\": \"${data.country}\" }",
+                    "openUrl": true,
+                    "variant": "contained",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "_step1Header": {
+                    "type": "header",
+                    "text": "Schritt 1: Entwicklertools im Browser vorbereiten",
+                    "size": 5,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_step1Text": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "1. Oben auf „Login-Seite öffnen“ klicken (ein neuer Browser-Tab öffnet sich).\n2. Im neuen Tab F12 drücken und auf den Reiter „Netzwerk“ (Network) wechseln.\n3. Protokollierung dauerhaft aktivieren:\n   • Chrome / Edge / Brave: Haken bei „Log beibehalten“ (Preserve log) setzen.\n   • Firefox: Zahnrad ⚙️ ➔ „Protokolle dauerhaft anzeigen“ (Persist Logs) aktivieren.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_step2Header": {
+                    "type": "header",
+                    "text": "Schritt 2: Bei Miele anmelden",
+                    "size": 5,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_step2Text": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "1. E-Mail und Passwort deines Miele-App-Kontos eingeben und auf „Anmeldung“ klicken.\n2. Wichtig: Nach dem Login bleibt die Seite bei einem sich drehenden Laderad stehen (oder meldet einen Fehler). Das ist völlig normal und bedeutet, dass die Anmeldung erfolgreich war!",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_step3Header": {
+                    "type": "header",
+                    "text": "Schritt 3: Adresse kopieren & GroupKey ermitteln",
+                    "size": 5,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_step3Text": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "1. Im Netzwerk-Tab (F12) ganz nach unten zur letzten (meist rot markierten) Zeile scrollen. Sie beginnt mit „redirect?redirect_uri=miele...“ oder „miele://oauth2-code/...“.\n2. Rechtsklick auf diese Zeile ➔ „URL kopieren“ (bzw. „Adresse des Links kopieren“).\n3. Die kopierte Adresse unten in das Feld einfügen und auf „GroupKey ermitteln“ klicken.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "redirectUrl": {
+                    "type": "text",
+                    "label": "miele://-Redirect-URL",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 8,
+                    "lg": 8,
+                    "xl": 8
+                },
+                "fetchKey": {
+                    "type": "sendTo",
+                    "label": "GroupKey ermitteln",
+                    "command": "submitRedirect",
+                    "jsonData": "{ \"redirectUrl\": \"${data.redirectUrl}\", \"region\": \"${data.region}\" }",
+                    "variant": "contained",
+                    "useNative": true,
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "_status": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                }
             }
-          ],
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
         },
-        "region": {
-          "type": "select",
-          "label": "Cloud-Region",
-          "options": [
-            {
-              "label": "Europa (EU)",
-              "value": "EU"
-            },
-            {
-              "label": "Europa (EU2)",
-              "value": "EU2"
-            },
-            {
-              "label": "Asien (AS)",
-              "value": "AS"
+        "tabDevices": {
+            "type": "panel",
+            "label": "Geräte & Abfrage",
+            "items": {
+                "_dockerHint": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "autoDiscover": {
+                    "type": "checkbox",
+                    "label": "Geräte automatisch per mDNS finden",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "autoDiscoverInterval": {
+                    "type": "number",
+                    "label": "Hintergrund-Suche Intervall in Minuten",
+                    "min": 1,
+                    "max": 120,
+                    "default": 10,
+                    "hidden": "!data.autoDiscover",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "discoverNow": {
+                    "type": "sendTo",
+                    "label": "Jetzt suchen",
+                    "command": "discover",
+                    "variant": "outlined",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "devices": {
+                    "type": "table",
+                    "label": "Manuelle Geräte-IPs (optional, zusätzlich)",
+                    "newLine": true,
+                    "items": [
+                        {
+                            "type": "text",
+                            "attr": "ip",
+                            "title": "IP-Adresse",
+                            "width": "100%"
+                        }
+                    ],
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "pollInterval": {
+                    "type": "number",
+                    "label": "Abfrageintervall (Ruhe) in Sekunden",
+                    "newLine": true,
+                    "default": 30,
+                    "min": 5,
+                    "max": 3600,
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "activePollInterval": {
+                    "type": "number",
+                    "label": "Abfrageintervall (aktiv) in Sekunden",
+                    "default": 30,
+                    "min": 5,
+                    "max": 600,
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "germanNames": {
+                    "type": "checkbox",
+                    "label": "Datenpunkt-Namen auf Deutsch",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "secondsTime": {
+                    "type": "checkbox",
+                    "label": "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "secondsInterval": {
+                    "type": "number",
+                    "label": "Sekunden-Abfrageintervall in Sekunden",
+                    "min": 10,
+                    "max": 3600,
+                    "default": 30,
+                    "hidden": "!data.secondsTime",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "ecoFeedback": {
+                    "type": "checkbox",
+                    "label": "EcoFeedback (Energie/Wasser) abrufen",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "ecoInterval": {
+                    "type": "number",
+                    "label": "EcoFeedback-Intervall in Sekunden",
+                    "min": 15,
+                    "max": 3600,
+                    "hidden": "!data.ecoFeedback",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "_ecoHint": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_germanNamesHint": {
+                    "type": "staticText",
+                    "text": "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                }
             }
-          ],
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
         },
-        "_step1": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Schritt 1: Auf „Login-Seite öffnen\" klicken und im Browser mit dem Miele-Konto anmelden. Am Ende versucht der Browser, eine Adresse der Form „miele://oauth2-code/?code=…&state=…\" zu öffnen. Diese vollständige Adresse (der „Code\") wird in Schritt 2 gebraucht.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "openLogin": {
-          "type": "sendTo",
-          "label": "Login-Seite öffnen",
-          "command": "getAuthUrl",
-          "jsonData": "{ \"country\": \"${data.country}\" }",
-          "openUrl": true,
-          "variant": "contained",
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "_step1Header": {
-          "type": "header",
-          "text": "Schritt 1: Entwicklertools im Browser vorbereiten",
-          "size": 5,
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_step1Text": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "1. Oben auf „Login-Seite öffnen“ klicken (ein neuer Browser-Tab öffnet sich).\n2. Im neuen Tab F12 drücken und auf den Reiter „Netzwerk“ (Network) wechseln.\n3. Protokollierung dauerhaft aktivieren:\n   • Chrome / Edge / Brave: Haken bei „Log beibehalten“ (Preserve log) setzen.\n   • Firefox: Zahnrad ⚙️ ➔ „Protokolle dauerhaft anzeigen“ (Persist Logs) aktivieren.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_step2Header": {
-          "type": "header",
-          "text": "Schritt 2: Bei Miele anmelden",
-          "size": 5,
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_step2Text": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "1. E-Mail und Passwort deines Miele-App-Kontos eingeben und auf „Anmeldung“ klicken.\n2. Wichtig: Nach dem Login bleibt die Seite bei einem sich drehenden Laderad stehen (oder meldet einen Fehler). Das ist völlig normal und bedeutet, dass die Anmeldung erfolgreich war!",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_step3Header": {
-          "type": "header",
-          "text": "Schritt 3: Adresse kopieren & GroupKey ermitteln",
-          "size": 5,
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_step3Text": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "1. Im Netzwerk-Tab (F12) ganz nach unten zur letzten (meist rot markierten) Zeile scrollen. Sie beginnt mit „redirect?redirect_uri=miele...“ oder „miele://oauth2-code/...“.\n2. Rechtsklick auf diese Zeile ➔ „URL kopieren“ (bzw. „Adresse des Links kopieren“).\n3. Die kopierte Adresse unten in das Feld einfügen und auf „GroupKey ermitteln“ klicken.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "redirectUrl": {
-          "type": "text",
-          "label": "miele://-Redirect-URL",
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 8,
-          "lg": 8,
-          "xl": 8
-        },
-        "fetchKey": {
-          "type": "sendTo",
-          "label": "GroupKey ermitteln",
-          "command": "submitRedirect",
-          "jsonData": "{ \"redirectUrl\": \"${data.redirectUrl}\", \"region\": \"${data.region}\" }",
-          "variant": "contained",
-          "useNative": true,
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "_status": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        }
-      }
-    },
-    "tabDevices": {
-      "type": "panel",
-      "label": "Geräte & Abfrage",
-      "items": {
-        "_dockerHint": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "autoDiscover": {
-          "type": "checkbox",
-          "label": "Geräte automatisch per mDNS finden",
-          "newLine": true,
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "autoDiscoverInterval": {
-          "type": "number",
-          "label": "Hintergrund-Suche Intervall in Minuten",
-          "min": 1,
-          "max": 120,
-          "default": 10,
-          "hidden": "!data.autoDiscover",
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "discoverNow": {
-          "type": "sendTo",
-          "label": "Jetzt suchen",
-          "command": "discover",
-          "variant": "outlined",
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "devices": {
-          "type": "table",
-          "label": "Manuelle Geräte-IPs (optional, zusätzlich)",
-          "newLine": true,
-          "items": [
-            {
-              "type": "text",
-              "attr": "ip",
-              "title": "IP-Adresse",
-              "width": "100%"
+        "tabPush": {
+            "type": "panel",
+            "label": "Push & Ports",
+            "items": {
+                "_pushInfo": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Bei aktiviertem Push geben sich der Adapter als Haushalts-Peer aus und die Geräte senden Zustandsänderungen in Echtzeit. Dafür muss der unten gewählte Port am ioBroker-Host EINGEHEND aus dem Gerätenetz erreichbar sein (Firewall). UDP 5353 (mDNS) wird ohnehin benötigt. Ohne Push ist KEIN eingehender Port nötig – dann wird nur gepollt.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "usePush": {
+                    "type": "checkbox",
+                    "label": "SuperVision-Push aktivieren (experimentell, Echtzeit)",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "_pushHwHint": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "pushPort": {
+                    "type": "number",
+                    "label": "Eingehender Push-Port (TCP)",
+                    "min": 1024,
+                    "max": 65535,
+                    "hidden": "!data.usePush",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "_ports": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Benötigte Ports: eingehend TCP <Push-Port> (nur bei Push) · UDP 5353 mDNS · ausgehend TCP 80 zu den Geräten · ausgehend TCP 443 zu miele-iot.com nur während der Anmeldung.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_portsDocker": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Docker: Läuft ioBroker im Container, muss der Push-Port eingehend erreichbar sein UND die Geräte müssen den Container unter einer echten LAN-IP erreichen. Zuverlässig geht das nur mit „network_mode: host\" (dann ist der Port automatisch offen). Im Bridge-Netz zusätzlich „-p <Push-Port>:<Push-Port>\" mappen – Push funktioniert dort aber meist trotzdem nicht, weil die Rück-Adresse (Callback) hinter NAT liegt. Ohne Push ist kein eingehender Port nötig.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                }
             }
-          ],
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
         },
-        "pollInterval": {
-          "type": "number",
-          "label": "Abfrageintervall (Ruhe) in Sekunden",
-          "newLine": true,
-          "default": 30,
-          "min": 5,
-          "max": 3600,
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
+        "tabControl": {
+            "type": "panel",
+            "label": "Steuerung",
+            "items": {
+                "_controlWarn": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Achtung: Bei aktivierter Steuerung werden beschreibbare Datenpunkte (Start/Stop/Pause, Licht, Ein/Aus) angelegt. Befehle erfordern zusätzlich, dass am Gerät „MobileStart/Fernsteuerung\" freigegeben ist. Manche Firmwares (z.B. Kühlgeräte) lehnen Schreibbefehle grundsätzlich ab.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "allowControl": {
+                    "type": "checkbox",
+                    "label": "Steuerung (Schreibbefehle) aktivieren",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                }
+            }
         },
-        "activePollInterval": {
-          "type": "number",
-          "label": "Abfrageintervall (aktiv) in Sekunden",
-          "default": 30,
-          "min": 5,
-          "max": 600,
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
+        "tabHistory": {
+            "type": "panel",
+            "label": "Verlauf",
+            "items": {
+                "_hinweis": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "cycleHistory": {
+                    "type": "checkbox",
+                    "label": "Programme mitschreiben",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "cycleRingSize": {
+                    "type": "number",
+                    "label": "Einträge im Ringpuffer",
+                    "help": "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.",
+                    "min": 1,
+                    "max": 1000,
+                    "default": 50,
+                    "hidden": "!data.cycleHistory",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "historyDays": {
+                    "type": "number",
+                    "label": "Aufbewahrung in Tagen",
+                    "help": "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.",
+                    "min": 1,
+                    "max": 3650,
+                    "default": 730,
+                    "hidden": "!data.cycleHistory",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "historyWrite": {
+                    "type": "checkbox",
+                    "label": "Zusätzlich in den History-Adapter schreiben",
+                    "help": "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.",
+                    "newLine": true,
+                    "hidden": "!data.cycleHistory",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
+                },
+                "historyInstance": {
+                    "type": "instance",
+                    "adapter": "history",
+                    "label": "History-Instanz",
+                    "allowDeactivate": false,
+                    "default": "history.0",
+                    "hidden": "!data.cycleHistory || !data.historyWrite",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
+                }
+            }
         },
-        "germanNames": {
-          "type": "checkbox",
-          "label": "Datenpunkt-Namen auf Deutsch",
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "xl": 6
-        },
-        "secondsTime": {
-          "type": "checkbox",
-          "label": "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)",
-          "newLine": true,
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "secondsInterval": {
-          "type": "number",
-          "label": "Sekunden-Abfrageintervall in Sekunden",
-          "min": 10,
-          "max": 3600,
-          "default": 30,
-          "hidden": "!data.secondsTime",
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "ecoFeedback": {
-          "type": "checkbox",
-          "label": "EcoFeedback (Energie/Wasser) abrufen",
-          "newLine": true,
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "ecoInterval": {
-          "type": "number",
-          "label": "EcoFeedback-Intervall in Sekunden",
-          "min": 15,
-          "max": 3600,
-          "hidden": "!data.ecoFeedback",
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "_ecoHint": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_germanNamesHint": {
-          "type": "staticText",
-          "text": "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
+        "tabAdvanced": {
+            "type": "panel",
+            "label": "Erweitert",
+            "items": {
+                "_advInfo": {
+                    "type": "staticText",
+                    "newLine": true,
+                    "text": "Diese Werte werden normalerweise über die Anmeldung gesetzt. Manuelle Eingabe nur, wenn GroupID/GroupKey bereits bekannt sind (z.B. aus MieleRESTServer). Der GroupKey wird verschlüsselt gespeichert.",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "groupId": {
+                    "type": "text",
+                    "label": "GroupID (16 Hex-Zeichen)",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "groupKey": {
+                    "type": "password",
+                    "label": "GroupKey (128 Hex-Zeichen)",
+                    "visible": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                }
+            }
         }
-      }
-    },
-    "tabPush": {
-      "type": "panel",
-      "label": "Push & Ports",
-      "items": {
-        "_pushInfo": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Bei aktiviertem Push geben sich der Adapter als Haushalts-Peer aus und die Geräte senden Zustandsänderungen in Echtzeit. Dafür muss der unten gewählte Port am ioBroker-Host EINGEHEND aus dem Gerätenetz erreichbar sein (Firewall). UDP 5353 (mDNS) wird ohnehin benötigt. Ohne Push ist KEIN eingehender Port nötig – dann wird nur gepollt.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "usePush": {
-          "type": "checkbox",
-          "label": "SuperVision-Push aktivieren (experimentell, Echtzeit)",
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "xl": 6
-        },
-        "_pushHwHint": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "pushPort": {
-          "type": "number",
-          "label": "Eingehender Push-Port (TCP)",
-          "min": 1024,
-          "max": 65535,
-          "hidden": "!data.usePush",
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "_ports": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Benötigte Ports: eingehend TCP <Push-Port> (nur bei Push) · UDP 5353 mDNS · ausgehend TCP 80 zu den Geräten · ausgehend TCP 443 zu miele-iot.com nur während der Anmeldung.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "_portsDocker": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Docker: Läuft ioBroker im Container, muss der Push-Port eingehend erreichbar sein UND die Geräte müssen den Container unter einer echten LAN-IP erreichen. Zuverlässig geht das nur mit „network_mode: host\" (dann ist der Port automatisch offen). Im Bridge-Netz zusätzlich „-p <Push-Port>:<Push-Port>\" mappen – Push funktioniert dort aber meist trotzdem nicht, weil die Rück-Adresse (Callback) hinter NAT liegt. Ohne Push ist kein eingehender Port nötig.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        }
-      }
-    },
-    "tabControl": {
-      "type": "panel",
-      "label": "Steuerung",
-      "items": {
-        "_controlWarn": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Achtung: Bei aktivierter Steuerung werden beschreibbare Datenpunkte (Start/Stop/Pause, Licht, Ein/Aus) angelegt. Befehle erfordern zusätzlich, dass am Gerät „MobileStart/Fernsteuerung\" freigegeben ist. Manche Firmwares (z.B. Kühlgeräte) lehnen Schreibbefehle grundsätzlich ab.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "allowControl": {
-          "type": "checkbox",
-          "label": "Steuerung (Schreibbefehle) aktivieren",
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "xl": 6
-        }
-      }
-    },
-    "tabAdvanced": {
-      "type": "panel",
-      "label": "Erweitert",
-      "items": {
-        "_advInfo": {
-          "type": "staticText",
-          "newLine": true,
-          "text": "Diese Werte werden normalerweise über die Anmeldung gesetzt. Manuelle Eingabe nur, wenn GroupID/GroupKey bereits bekannt sind (z.B. aus MieleRESTServer). Der GroupKey wird verschlüsselt gespeichert.",
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12
-        },
-        "groupId": {
-          "type": "text",
-          "label": "GroupID (16 Hex-Zeichen)",
-          "newLine": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "xl": 6
-        },
-        "groupKey": {
-          "type": "password",
-          "label": "GroupKey (128 Hex-Zeichen)",
-          "visible": true,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "xl": 6
-        }
-      }
     }
-  }
 }

@@ -50,5 +50,15 @@
   "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.": "После получения GroupID и (зашифрованный) GroupKey отображаются на вкладке «Дополнительно». Не забудьте сохранить.",
   "Hintergrund-Suche Intervall in Minuten": "Интервал фонового поиска в минутах",
   "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)": "Получать точное оставшееся/прошедшее время в секундах (DOP2)",
-  "Sekunden-Abfrageintervall in Sekunden": "Интервал секундного опроса в секундах"
+  "Sekunden-Abfrageintervall in Sekunden": "Интервал секундного опроса в секундах",
+  "Verlauf": "История",
+  "Programme mitschreiben": "Записывать программы",
+  "Einträge im Ringpuffer": "Записей в кольцевом буфере",
+  "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Сколько последних программ хранится в cyclesJson. Для быстрого просмотра; долговременные данные берутся из адаптера history.",
+  "Aufbewahrung in Tagen": "Хранение в днях",
+  "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Более старые записи выпадают из кольцевого буфера. 730 дней — это два года.",
+  "Zusätzlich in den History-Adapter schreiben": "Записывать также в адаптер history",
+  "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Энергия, вода и длительность каждой программы с отметкой времени окончания — чтобы строить графики за любой период.",
+  "History-Instanz": "Экземпляр history",
+  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "Адаптер записывает каждую завершённую программу: длительность, программу, энергию и воду. Сами приборы завершённые программы не хранят, поэтому история начинается с включения этой функции — задним числом её заполнить нельзя. Последние программы доступны как JSON в <серийный номер>.history.cyclesJson, рядом — итоги."
 }

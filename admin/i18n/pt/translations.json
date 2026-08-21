@@ -50,5 +50,15 @@
   "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.": "Após a obtenção, a GroupID e a GroupKey (guardada cifrada) aparecem no separador «Avançado». Não se esqueça de guardar.",
   "Hintergrund-Suche Intervall in Minuten": "Intervalo de descoberta em segundo plano em minutos",
   "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)": "Buscar tempo restante/decorrido exato em segundos (DOP2)",
-  "Sekunden-Abfrageintervall in Sekunden": "Intervalo de consulta em segundos"
+  "Sekunden-Abfrageintervall in Sekunden": "Intervalo de consulta em segundos",
+  "Verlauf": "Histórico",
+  "Programme mitschreiben": "Registar os programas",
+  "Einträge im Ringpuffer": "Entradas no buffer circular",
+  "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Quantos programas recentes ficam em cyclesJson. Destinado à visualização rápida; os dados de longo prazo vêm do adaptador history.",
+  "Aufbewahrung in Tagen": "Retenção em dias",
+  "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "As entradas mais antigas saem do buffer circular. 730 dias são dois anos.",
+  "Zusätzlich in den History-Adapter schreiben": "Escrever também no adaptador history",
+  "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energia, água e duração por programa, com a marca temporal do fim do programa – para gráficos de qualquer período.",
+  "History-Instanz": "Instância history",
+  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "O adaptador regista cada programa concluído: duração, programa, energia e água. Os aparelhos não guardam os programas terminados, por isso o histórico começa ao ativar esta opção – não pode ser preenchido retroativamente. Os últimos programas estão em JSON em <número de série>.history.cyclesJson, com os totais ao lado."
 }

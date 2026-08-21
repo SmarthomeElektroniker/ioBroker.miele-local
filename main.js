@@ -25,6 +25,8 @@ const ECO_WATER_IDX = 40; // 0,1 l
 
 // Sekundengenaue Zeiten aus DOP2-Leaf 2/256 (verifiziert: #7 Restzeit s, #8 Laufzeit s).
 const SEC_LEAF = { unit: 2, attr: 256 };
+/** Wartezeit, bevor ein Programm als beendet gilt - gegen kurzzeitige Statusaussetzer. */
+const CYCLE_END_GRACE_MS = 3 * 60000;
 const SEC_REMAINING_IDX = 7;
 const SEC_ELAPSED_IDX = 8;
 
@@ -319,7 +321,7 @@ class MieleLocal extends utils.Adapter {
             }
         }
         if (dev && statusVal != null) {
-            await this.trackCycle(deviceId, statusVal, state);
+            await this.trackCycle(deviceId, statusVal);
             dev.active = ACTIVE_STATUSES.has(statusVal);
         }
     }
@@ -334,7 +336,7 @@ class MieleLocal extends utils.Adapter {
      * in einen Endzustand ein Eintrag geschrieben. Genau dann stehen auch die Eco-Werte final
      * da - waehrend des Programms meldet die Waschmaschine dort 0.
      */
-    async trackCycle(deviceId, statusVal, state) {
+    async trackCycle(deviceId, statusVal) {
         if (this.config.cycleHistory === false) return;
         if (!this._cycles) this._cycles = {};
         const laeuft = statusVal === 5 || statusVal === 6;
@@ -343,6 +345,9 @@ class MieleLocal extends utils.Adapter {
         if (laeuft) {
             if (!offen) {
                 this._cycles[deviceId] = { start: Date.now() };
+            } else if (offen.endeSeit) {
+                // War nur ein Aussetzer - das Geraet meldete kurz "Aus" und laeuft weiter.
+                delete offen.endeSeit;
             }
             // Programmtext erst merken, wenn er vorliegt - beim Start ist er oft noch leer.
             const p = await this.getStateAsync(`${deviceId}.state.programText`);
@@ -353,15 +358,28 @@ class MieleLocal extends utils.Adapter {
         }
 
         if (!offen) return;                       // war schon vorher aus
+
+        // Nicht beim ersten "nicht mehr in Betrieb" buchen: die Waschmaschine meldete am
+        // 21.08.2026 mitten im Schleudern eine Minute lang "Aus" und lief danach weiter. Ohne
+        // Karenzzeit waere daraus ein abgeschlossener plus ein neuer Zyklus geworden.
+        if (!offen.endeSeit) {
+            offen.endeSeit = Date.now();
+            return;
+        }
+        if (Date.now() - offen.endeSeit < CYCLE_END_GRACE_MS) return;
+
         delete this._cycles[deviceId];
+        // Als Ende gilt der Zeitpunkt, an dem das Geraet zuerst nicht mehr lief - nicht das
+        // Ende der Karenzzeit.
+        const ende = offen.endeSeit;
         // Sehr kurze "Zyklen" sind meist ein Fehlstart oder ein Statusflackern beim Einschalten.
-        const dauerS = Math.round((Date.now() - offen.start) / 1000);
+        const dauerS = Math.round((ende - offen.start) / 1000);
         if (dauerS < 60) return;
 
         const zahl = async id => { const v = await this.getStateAsync(id); return v && typeof v.val === 'number' ? v.val : null; };
         const eintrag = {
             start: offen.start,
-            ende: Date.now(),
+            ende,
             dauerS,
             program: offen.program || null,
             programType: offen.programType || null,

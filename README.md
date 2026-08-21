@@ -152,6 +152,20 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.4
+- **New: cycle history.** Every completed program is recorded with duration, program name,
+  energy and water. The appliances do not keep finished cycles themselves, so the history
+  starts when the feature is enabled - it cannot be filled retroactively. Recent cycles are
+  kept as JSON in `<serial>.history.cyclesJson`, alongside running totals for cycle count,
+  runtime, energy and water. Optionally each cycle is also written to the history adapter,
+  timestamped at the end of the cycle, so charts can cover any period.
+  Configurable on the new **History** tab: ring buffer size (default 50), retention in days
+  (default 730) and the history instance.
+- The step-by-step login instructions were stored in English in nine of the eleven language
+  files. All eight texts are now translated into es, fr, it, nl, pl, pt, ru, uk and zh-cn.
+- `common.news` no longer lists versions that were never published to npm.
+- Dependabot: raised the PR limit, spread the schedule over a cron slot, added automerge.
+
 ### 0.3.3
 - Fix E3005: states declared as `number` no longer receive `null` when the appliance does not
   report a value - the datapoint keeps its default instead. `estimatedEndTime` is cleared with

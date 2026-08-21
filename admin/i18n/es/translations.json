@@ -50,5 +50,15 @@
   "Nach erfolgreicher Ermittlung stehen GroupID und (verschlüsselt gespeicherter) GroupKey unten im Tab „Erweitert\". Speichern nicht vergessen.": "Tras obtenerlos, la GroupID y la GroupKey (guardada cifrada) aparecen en la pestaña «Avanzado». No olvide guardar.",
   "Hintergrund-Suche Intervall in Minuten": "Intervalo de descubrimiento en segundo plano en minutos",
   "Sekundengenaue Rest-/Laufzeit abrufen (DOP2)": "Obtener tiempo restante/transcurrido exacto en segundos (DOP2)",
-  "Sekunden-Abfrageintervall in Sekunden": "Intervalo de consulta en segundos"
+  "Sekunden-Abfrageintervall in Sekunden": "Intervalo de consulta en segundos",
+  "Verlauf": "Historial",
+  "Programme mitschreiben": "Registrar los programas",
+  "Einträge im Ringpuffer": "Entradas en el búfer circular",
+  "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Cuántos programas recientes se guardan en cyclesJson. Pensado para la vista rápida; los datos a largo plazo vienen del adaptador history.",
+  "Aufbewahrung in Tagen": "Conservación en días",
+  "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Las entradas más antiguas salen del búfer circular. 730 días son dos años.",
+  "Zusätzlich in den History-Adapter schreiben": "Escribir también en el adaptador history",
+  "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energía, agua y duración por programa, con la marca de tiempo del final del programa, para poder crear gráficos de cualquier periodo.",
+  "History-Instanz": "Instancia de history",
+  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "El adaptador registra cada programa terminado: duración, programa, energía y agua. Los aparatos no conservan los programas finalizados, así que el historial empieza al activar esta opción; no puede rellenarse con datos pasados. Los últimos programas están como JSON en <número de serie>.history.cyclesJson, junto a los totales."
 }
