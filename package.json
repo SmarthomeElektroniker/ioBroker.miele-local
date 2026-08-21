@@ -14,7 +14,7 @@
   "main": "main.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local.git"
+    "url": "git+https://github.com/SmarthomeElektroniker/ioBroker.miele-local.git"
   },
   "bugs": {
     "url": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/issues"
