@@ -152,6 +152,10 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.2
+- EcoFeedback conversion moved into `dop2.ecoValues()` and covered by unit tests against the
+  cloud-verified reference values (1991 Wh = 1.991 kWh, 953 = 95.3 l).
+
 ### 0.3.1
 - Fix: `applyIdent` threw on the new `connected` field, which has no ident path. Because that
   entry comes first, **all** device data stayed empty - model, serial number, firmware.

@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.2": {
+        "en": "EcoFeedback conversion extracted and covered by tests",
+        "de": "EcoFeedback-Umrechnung ausgelagert und durch Tests abgesichert",
+        "ru": "Пересчёт EcoFeedback вынесен и покрыт тестами",
+        "pt": "Conversão EcoFeedback extraída e coberta por testes",
+        "nl": "EcoFeedback-omrekening uitgesplitst en getest",
+        "fr": "Conversion EcoFeedback extraite et couverte par des tests",
+        "it": "Conversione EcoFeedback estratta e coperta da test",
+        "es": "Conversión EcoFeedback extraída y cubierta por pruebas",
+        "pl": "Przeliczanie EcoFeedback wydzielone i objęte testami",
+        "uk": "Перерахунок EcoFeedback винесено та покрито тестами",
+        "zh-cn": "将 EcoFeedback 换算抽出并加入测试"
+      },
       "0.3.1": {
         "en": "Fix: device identification (model, serial, firmware) stayed empty",
         "de": "Fehlerbehebung: Gerätedaten (Modell, Seriennummer, Firmware) blieben leer",

@@ -351,17 +351,16 @@ class MieleLocal extends utils.Adapter {
                 this.log.debug(`Eco ${deviceId}: parse error ${e.message}`);
                 continue;
             }
-            const energyRaw = dop2.interpValue(fields, ECO_ENERGY_IDX);
-            const waterRaw = dop2.interpValue(fields, ECO_WATER_IDX);
-            if (energyRaw == null && waterRaw == null) continue;
+            const eco = dop2.ecoValues(fields, ECO_ENERGY_IDX, ECO_WATER_IDX);
+            if (eco.energyWh == null && eco.waterL == null) continue;
 
             await this.ensureEcoObjects(deviceId);
-            if (energyRaw != null) {
-                await this.setStateAsync(`${deviceId}.eco.energyWh`, { val: Number(energyRaw), ack: true });
-                await this.setStateAsync(`${deviceId}.eco.energy`, { val: Math.round(Number(energyRaw)) / 1000, ack: true });
+            if (eco.energyWh != null) {
+                await this.setStateAsync(`${deviceId}.eco.energyWh`, { val: eco.energyWh, ack: true });
+                await this.setStateAsync(`${deviceId}.eco.energy`, { val: eco.energyKwh, ack: true });
             }
-            if (waterRaw != null) {
-                await this.setStateAsync(`${deviceId}.eco.water`, { val: Math.round(Number(waterRaw)) / 10, ack: true });
+            if (eco.waterL != null) {
+                await this.setStateAsync(`${deviceId}.eco.water`, { val: eco.waterL, ack: true });
             }
         }
     }
