@@ -8,3 +8,6 @@ coverage/
 *.tgz
 
 .commitinfo
+.dev-server/
+obsidian.md
+

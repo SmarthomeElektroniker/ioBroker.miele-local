@@ -20,6 +20,7 @@ export default [
         },
     },
     {
-        ignores: ['node_modules/**', 'admin/**', 'test/**', 'coverage/**', '*.config.mjs'],
+        ignores: ['node_modules/**', '.dev-server/**', 'admin/**', 'test/**', 'coverage/**', '*.config.mjs'],
     },
 ];
+
