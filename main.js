@@ -266,6 +266,11 @@ class MieleLocal extends utils.Adapter {
 
     async applyIdent(deviceId, ident) {
         for (const f of objdef.IDENT_FIELDS) {
+            // "connected" steht in derselben Liste, damit das Objekt angelegt wird, stammt aber
+            // nicht aus dem Ident-Datensatz und hat deshalb keinen Pfad. Ohne diese Zeile wirft
+            // pathGet "path is not iterable" - und weil das die erste Runde ist, blieben ALLE
+            // Gerätedaten leer: Modell, Seriennummer, Firmware.
+            if (!f.path) continue;
             const val = objdef.pathGet(ident, f.path);
             if (val !== undefined) {
                 await this.setStateAsync(`${deviceId}.info.${f.sub}`, { val: f.type === 'number' ? Number(val) : String(val), ack: true });
@@ -328,7 +333,12 @@ class MieleLocal extends utils.Adapter {
             let plain;
             try {
                 const res = await dev.api.readDop2(dev.route, ECO_LEAF.unit, ECO_LEAF.attr);
-                if (res.status !== 200 || !res.headers['x-signature']) continue; // Gerät ohne Eco-Leaf
+                if (res.status !== 200 || !res.headers['x-signature']) {
+                    // Ohne diese Meldung bricht die Eco-Abfrage lautlos ab, und man sucht die
+                    // Ursache im Adapter statt beim Gerät. Nicht jedes Modell hat den Leaf.
+                    this.log.debug(`Eco ${deviceId}: no eco leaf (HTTP ${res.status})`);
+                    continue;
+                }
                 plain = this.mc.decryptResponse(res.headers['x-signature'], res.body);
             } catch (e) {
                 this.log.debug(`Eco ${deviceId}: ${e.message}`);

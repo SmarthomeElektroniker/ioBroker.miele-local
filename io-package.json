@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.1": {
+        "en": "Fix: device identification (model, serial, firmware) stayed empty",
+        "de": "Fehlerbehebung: Gerätedaten (Modell, Seriennummer, Firmware) blieben leer",
+        "ru": "Исправление: данные устройства оставались пустыми",
+        "pt": "Correção: os dados do aparelho ficavam vazios",
+        "nl": "Fix: apparaatgegevens bleven leeg",
+        "fr": "Correctif : les données de l'appareil restaient vides",
+        "it": "Correzione: i dati dell'apparecchio restavano vuoti",
+        "es": "Corrección: los datos del aparato quedaban vacíos",
+        "pl": "Poprawka: dane urządzenia pozostawały puste",
+        "uk": "Виправлення: дані пристрою залишалися порожніми",
+        "zh-cn": "修复：设备信息（型号、序列号、固件）为空"
+      },
       "0.3.0": {
         "en": "Periodic discovery, per-device connectivity state, refined roles and units",
         "de": "Periodische Gerätesuche, Erreichbarkeit je Gerät, überarbeitete Rollen und Einheiten",

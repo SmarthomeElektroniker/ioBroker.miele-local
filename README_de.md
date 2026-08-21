@@ -135,6 +135,13 @@ Die Nutzung erfolgt **auf eigene Verantwortung**. Die Software wird unter MIT-Li
 
 ## Danksagung
 
+Besonderer Dank gilt **[meistermopper](https://github.com/meistermopper)**, einem erfahrenen
+Entwickler von ioBroker-Adaptern, der diesen Adapter unaufgefordert durchgesehen und
+erhebliche Verbesserungen beigesteuert hat: die periodische Gerätesuche im Hintergrund für
+Geräte, die aus dem Standby aufwachen, einen Erreichbarkeits-Datenpunkt je Gerät, korrigierte
+Rollen und Einheiten, explizite Vorgabewerte für alle Datenpunkte sowie die deutsche
+Dokumentation. Seine Arbeit ist in Version 0.3.0 eingeflossen.
+
 Das lokale Protokoll (`MieleH256`, DOP2, Provisioning) basiert auf der Vorarbeit der
 Open-Source-Projekte `MieleRESTServer` (akappner), `home-assistant-miele-mobile` und
 `ha-miele-at-lan`.

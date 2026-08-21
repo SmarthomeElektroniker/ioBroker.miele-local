@@ -140,11 +140,22 @@ consequences of use.
 
 ## Acknowledgements
 
+Special thanks to **[meistermopper](https://github.com/meistermopper)**, an experienced
+ioBroker adapter developer, who reviewed this adapter unprompted and contributed substantial
+improvements: periodic background discovery for appliances waking from standby, a per-device
+connectivity state, corrected state roles and units, explicit defaults for all states, and
+German documentation. His work went into release 0.3.0.
+
 The local protocol (`MieleH256`, DOP2, provisioning) is based on the public reverse
 engineering work of the projects `MieleRESTServer` (akappner),
 `home-assistant-miele-mobile` and `ha-miele-at-lan`.
 
 ## Changelog
+
+### 0.3.1
+- Fix: `applyIdent` threw on the new `connected` field, which has no ident path. Because that
+  entry comes first, **all** device data stayed empty - model, serial number, firmware.
+- Eco polling now logs why it skips a device instead of failing silently.
 
 ### 0.3.0
 - Adopt ioBroker development guidelines and conformity rules.
