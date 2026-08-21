@@ -318,7 +318,127 @@ class MieleLocal extends utils.Adapter {
                 await this.setStateAsync(`${deviceId}.state.estimatedEndTimeText`, { val: '', ack: true });
             }
         }
-        if (dev && statusVal != null) dev.active = ACTIVE_STATUSES.has(statusVal);
+        if (dev && statusVal != null) {
+            await this.trackCycle(deviceId, statusVal, state);
+            dev.active = ACTIVE_STATUSES.has(statusVal);
+        }
+    }
+
+    /**
+     * Zyklushistorie fuehren.
+     *
+     * Das Geraet selbst hebt abgeschlossene Programme nicht auf - der Zyklenzaehler in DOP2
+     * 2/138 liefert bei den hier geprueften XKM-Modulen durchgaengig 0, und 2/119 laesst sich
+     * keiner Einheit zuordnen (Waschmaschine 6688, Spuelmaschine 434006). Der Adapter zaehlt
+     * deshalb selbst: ab dem Start eines Programms wird gemerkt, was laeuft, und beim Uebergang
+     * in einen Endzustand ein Eintrag geschrieben. Genau dann stehen auch die Eco-Werte final
+     * da - waehrend des Programms meldet die Waschmaschine dort 0.
+     */
+    async trackCycle(deviceId, statusVal, state) {
+        if (this.config.cycleHistory === false) return;
+        if (!this._cycles) this._cycles = {};
+        const laeuft = statusVal === 5 || statusVal === 6;
+        const offen = this._cycles[deviceId];
+
+        if (laeuft) {
+            if (!offen) {
+                this._cycles[deviceId] = { start: Date.now() };
+            }
+            // Programmtext erst merken, wenn er vorliegt - beim Start ist er oft noch leer.
+            const p = await this.getStateAsync(`${deviceId}.state.programText`);
+            const t = await this.getStateAsync(`${deviceId}.state.programTypeText`);
+            if (p && p.val) this._cycles[deviceId].program = p.val;
+            if (t && t.val) this._cycles[deviceId].programType = t.val;
+            return;
+        }
+
+        if (!offen) return;                       // war schon vorher aus
+        delete this._cycles[deviceId];
+        // Sehr kurze "Zyklen" sind meist ein Fehlstart oder ein Statusflackern beim Einschalten.
+        const dauerS = Math.round((Date.now() - offen.start) / 1000);
+        if (dauerS < 60) return;
+
+        const zahl = async id => { const v = await this.getStateAsync(id); return v && typeof v.val === 'number' ? v.val : null; };
+        const eintrag = {
+            start: offen.start,
+            ende: Date.now(),
+            dauerS,
+            program: offen.program || null,
+            programType: offen.programType || null,
+            energyKwh: await zahl(`${deviceId}.eco.energy`),
+            waterL: await zahl(`${deviceId}.eco.water`),
+        };
+        await this.appendCycle(deviceId, eintrag);
+    }
+
+    /** Haengt einen Zyklus an Ringpuffer und Summen an und schreibt ihn in die Historie. */
+    async appendCycle(deviceId, eintrag) {
+        await this.ensureHistoryObjects(deviceId);
+
+        const ring = Math.max(1, this.config.cycleRingSize || 50);
+        const tage = Math.max(1, this.config.historyDays || 730);
+        const grenze = Date.now() - tage * 86400000;
+
+        let liste = [];
+        const alt = await this.getStateAsync(`${deviceId}.history.cyclesJson`);
+        try { liste = JSON.parse(alt && alt.val) || []; } catch (e) { liste = []; }
+        liste.unshift(eintrag);
+        liste = liste.filter(e => e && e.ende >= grenze).slice(0, ring);
+        await this.setStateAsync(`${deviceId}.history.cyclesJson`, { val: JSON.stringify(liste), ack: true });
+
+        // Summen laufen unabhaengig vom Ringpuffer weiter - sie sollen nicht schrumpfen,
+        // wenn alte Eintraege herausfallen.
+        for (const [sub, wert] of [['cycleCount', 1], ['energyTotal', eintrag.energyKwh || 0],
+            ['waterTotal', eintrag.waterL || 0], ['runtimeHours', eintrag.dauerS / 3600]]) {
+            const v = await this.getStateAsync(`${deviceId}.history.${sub}`);
+            const bisher = v && typeof v.val === 'number' ? v.val : 0;
+            const neu = sub === 'cycleCount' ? bisher + 1 : Math.round((bisher + wert) * 1000) / 1000;
+            await this.setStateAsync(`${deviceId}.history.${sub}`, { val: neu, ack: true });
+        }
+
+        // Zusaetzlich in history.0, damit sich spaeter Diagramme ueber beliebige Zeitraeume
+        // bauen lassen, ohne dass der Ringpuffer alles tragen muss. Zeitstempel ist das
+        // Zyklusende, nicht der Schreibzeitpunkt.
+        const instanz = this.config.historyInstance || 'history.0';
+        if (this.config.historyWrite !== false) {
+            for (const [sub, wert] of [['energyKwh', eintrag.energyKwh], ['waterL', eintrag.waterL],
+                ['durationMin', Math.round(eintrag.dauerS / 60)]]) {
+                if (wert == null) continue;
+                this.sendTo(instanz, 'storeState', {
+                    id: `${this.namespace}.${deviceId}.history.${sub}`,
+                    state: { val: wert, ts: eintrag.ende, ack: true },
+                });
+            }
+        }
+        this.log.info(`Cycle recorded (${deviceId}): ${eintrag.program || 'unknown program'}, `
+            + `${Math.round(eintrag.dauerS / 60)} min, ${eintrag.energyKwh ?? '-'} kWh, ${eintrag.waterL ?? '-'} l`);
+    }
+
+    async ensureHistoryObjects(deviceId) {
+        if (!this._histCreated) this._histCreated = {};
+        if (this._histCreated[deviceId]) return;
+        const de = this.config.germanNames !== false;
+        await this.extendObjectAsync(`${deviceId}.history`, {
+            type: 'channel', common: { name: de ? 'Verlauf' : 'History' }, native: {},
+        });
+        const defs = [
+            ['cyclesJson', de ? 'Letzte Programme (JSON)' : 'Recent cycles (JSON)', 'string', 'json', '', '[]'],
+            ['cycleCount', de ? 'Programme gesamt' : 'Cycles total', 'number', 'value', '', 0],
+            ['runtimeHours', de ? 'Laufzeit gesamt' : 'Runtime total', 'number', 'value.interval', 'h', 0],
+            ['energyTotal', de ? 'Energie gesamt' : 'Energy total', 'number', 'value.power.consumption', 'kWh', 0],
+            ['waterTotal', de ? 'Wasser gesamt' : 'Water total', 'number', 'value.volume', 'l', 0],
+            ['energyKwh', de ? 'Energie je Programm' : 'Energy per cycle', 'number', 'value.power.consumption', 'kWh', 0],
+            ['waterL', de ? 'Wasser je Programm' : 'Water per cycle', 'number', 'value.volume', 'l', 0],
+            ['durationMin', de ? 'Dauer je Programm' : 'Duration per cycle', 'number', 'value.interval', 'min', 0],
+        ];
+        for (const [sub, name, typ, rolle, einheit, def] of defs) {
+            await this.extendObjectAsync(`${deviceId}.history.${sub}`, {
+                type: 'state',
+                common: { name, type: typ, role: rolle, unit: einheit || undefined, def, read: true, write: false },
+                native: {},
+            });
+        }
+        this._histCreated[deviceId] = true;
     }
 
     schedulePoll(immediate = false) {
@@ -423,8 +543,14 @@ class MieleLocal extends utils.Adapter {
             const ela = fields[SEC_ELAPSED_IDX] && typeof fields[SEC_ELAPSED_IDX].value === 'number' ? fields[SEC_ELAPSED_IDX].value : null;
             if (rem == null && ela == null) continue;
             await this.ensureSecondsObjects(deviceId);
-            if (rem != null) await this.setStateAsync(`${deviceId}.state.remainingSeconds`, { val: rem, ack: true });
-            if (ela != null) await this.setStateAsync(`${deviceId}.state.elapsedSeconds`, { val: ela, ack: true });
+            // Nur echte Werte uebernehmen. Bei laufendem Programm liefert nicht jedes Geraet die
+            // Sekunden: die Waschmaschine (WCR860) meldet in 2/256 durchgaengig 0, waehrend
+            // /State parallel 11 Minuten Restzeit ausweist - die Spuelmaschine liefert dort
+            // korrekte Werte. Eine 0 als "Rest" zu schreiben laesst die Anzeige auf 0:00:00
+            // stehen, obwohl das Programm laeuft. Auf 0 zurueckgesetzt wird oben, wenn das
+            // Programm wirklich endet.
+            if (rem) await this.setStateAsync(`${deviceId}.state.remainingSeconds`, { val: rem, ack: true });
+            if (ela) await this.setStateAsync(`${deviceId}.state.elapsedSeconds`, { val: ela, ack: true });
         }
     }
 

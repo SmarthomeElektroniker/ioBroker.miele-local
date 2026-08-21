@@ -65,45 +65,6 @@
         "uk": "Виправлено помилки структури обʼєктів",
         "zh-cn": "修复对象结构检查报告的错误"
       },
-      "0.3.2": {
-        "en": "EcoFeedback conversion extracted and covered by tests",
-        "de": "EcoFeedback-Umrechnung ausgelagert und durch Tests abgesichert",
-        "ru": "Пересчёт EcoFeedback вынесен и покрыт тестами",
-        "pt": "Conversão EcoFeedback extraída e coberta por testes",
-        "nl": "EcoFeedback-omrekening uitgesplitst en getest",
-        "fr": "Conversion EcoFeedback extraite et couverte par des tests",
-        "it": "Conversione EcoFeedback estratta e coperta da test",
-        "es": "Conversión EcoFeedback extraída y cubierta por pruebas",
-        "pl": "Przeliczanie EcoFeedback wydzielone i objęte testami",
-        "uk": "Перерахунок EcoFeedback винесено та покрито тестами",
-        "zh-cn": "将 EcoFeedback 换算抽出并加入测试"
-      },
-      "0.3.1": {
-        "en": "Fix: device identification (model, serial, firmware) stayed empty",
-        "de": "Fehlerbehebung: Gerätedaten (Modell, Seriennummer, Firmware) blieben leer",
-        "ru": "Исправление: данные устройства оставались пустыми",
-        "pt": "Correção: os dados do aparelho ficavam vazios",
-        "nl": "Fix: apparaatgegevens bleven leeg",
-        "fr": "Correctif : les données de l'appareil restaient vides",
-        "it": "Correzione: i dati dell'apparecchio restavano vuoti",
-        "es": "Corrección: los datos del aparato quedaban vacíos",
-        "pl": "Poprawka: dane urządzenia pozostawały puste",
-        "uk": "Виправлення: дані пристрою залишалися порожніми",
-        "zh-cn": "修复：设备信息（型号、序列号、固件）为空"
-      },
-      "0.3.0": {
-        "en": "Periodic discovery, per-device connectivity state, refined roles and units",
-        "de": "Periodische Gerätesuche, Erreichbarkeit je Gerät, überarbeitete Rollen und Einheiten",
-        "ru": "Периодический поиск, состояние связи по устройству",
-        "pt": "Descoberta periódica, estado de ligação por dispositivo",
-        "nl": "Periodieke detectie, verbindingsstatus per apparaat",
-        "fr": "Découverte périodique, état de connexion par appareil",
-        "it": "Rilevamento periodico, stato di connessione per dispositivo",
-        "es": "Descubrimiento periódico, estado de conexión por dispositivo",
-        "pl": "Okresowe wykrywanie, stan połączenia dla każdego urządzenia",
-        "uk": "Періодичний пошук, стан зв'язку для кожного пристрою",
-        "zh-cn": "定期发现设备，每台设备的连接状态"
-      },
       "0.2.1": {
         "en": "Released via GitHub Actions with npm provenance (trusted publishing). No functional changes.",
         "de": "Veröffentlichung über GitHub Actions mit npm-Provenance (Trusted Publishing). Keine funktionalen Änderungen.",
