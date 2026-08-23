@@ -8,3 +8,5 @@ coverage/
 *.tgz
 
 .commitinfo
+.dev-server/
+.agents/
