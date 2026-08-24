@@ -42,7 +42,7 @@
     "lint": "eslint .",
     "test:integration": "mocha test/integration --exit",
     "test:local": "npm run lint && npm test",
-    "test:unit": "mocha test/dop2 test/stats test/api --exit"
+    "test:unit": "mocha test/dop2 test/stats test/api test/eco --exit"
   },
   "files": [
     "admin/",

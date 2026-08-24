@@ -165,6 +165,14 @@ engineering work of the projects `MieleRESTServer` (akappner),
   keeps reporting the previous cycle's figures, the unchanged value is skipped instead of
   being added to the new cycle.
 - Requests are serialised per appliance, and a cycle now survives an adapter restart.
+- **EcoFeedback is only requested while an appliance is actually running.** The DOP2 leaf
+  only answers while the appliance is awake - a switched-off machine returns HTTP 500. The
+  washing machine's last reading came in mid-programme; afterwards every poll ran into the
+  void, one per minute for days, each one occupying the XKM module that answers only one
+  request at a time. Polling now happens while a programme runs, during a ten-minute
+  follow-up afterwards (the final reading is not settled the moment the status flips), and
+  once at startup so that appliances without the leaf can still be identified. The follow-up
+  ends early once two consecutive readings are identical.
 - **All object names are complete in eleven languages.** The repository check reported 147
   W1001 warnings for `common.name`; channels, EcoFeedback data points, appliance names and the
   instance objects were still English- or German-only. Appliance categories are translated

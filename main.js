@@ -12,6 +12,7 @@ const { discover } = require('./lib/discovery');
 const cloud = require('./lib/cloud');
 const objdef = require('./lib/objects');
 const namen = require('./lib/names');
+const ecoRegel = require('./lib/eco');
 const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
@@ -496,6 +497,16 @@ class MieleLocal extends utils.Adapter {
         if (dev && statusVal != null) {
             await this.trackCycle(deviceId, statusVal);
             dev.active = ACTIVE_STATUSES.has(statusVal);
+            // Endet ein Programm, laeuft die Eco-Abfrage noch eine Weile nach - der
+            // Schlussstand steht oft erst nach dem Statuswechsel fest.
+            const laeuftJetzt = statusVal === 5 || statusVal === 6;
+            if (dev.ecoLaeuft && !laeuftJetzt) {
+                dev.ecoNachlaufBis = Date.now() + ecoRegel.NACHLAUF_MS;
+                dev.ecoStabil = 0;
+                this.log.debug(`Eco ${deviceId}: Programm beendet, Nachlauf bis `
+                    + `${new Date(dev.ecoNachlaufBis).toLocaleTimeString('de-DE')}`);
+            }
+            dev.ecoLaeuft = laeuftJetzt;
         }
     }
 
@@ -932,6 +943,12 @@ class MieleLocal extends utils.Adapter {
      */
     static get ECO_ABSAGEN_MAX() { return 3; }
 
+    /** Siehe lib/eco.js - die Regel steht dort, damit sie ohne Adapter pruefbar ist. */
+    ecoAbfragenSinnvoll(deviceId, dev) {
+        if (!this._ecoErkundet) this._ecoErkundet = {};
+        return ecoRegel.abfragenSinnvoll(this._ecoErkundet[deviceId], dev);
+    }
+
     /**
      * Sagt das Gerät "diesen Datenpunkt gibt es hier nicht"?
      *
@@ -951,6 +968,9 @@ class MieleLocal extends utils.Adapter {
             // Geräte ohne Eco-Leaf nicht endlos fragen. Der Zähler lebt nur im Arbeitsspeicher:
             // nach einem Neustart wird erneut geprüft, falls ein Gerät inzwischen mehr kann.
             if ((this._ecoAbsagen[deviceId] || 0) >= MieleLocal.ECO_ABSAGEN_MAX) continue;
+            // Schlafende Geraete nicht behelligen - siehe ecoAbfragenSinnvoll.
+            if (!this.ecoAbfragenSinnvoll(deviceId, dev)) continue;
+            this._ecoErkundet[deviceId] = true;
             // Ein 500er sagt nichts über das Modell aus - die Spülmaschine antwortet so im
             // Aus-Zustand. Solche Geräte werden weiter gefragt, nur eben seltener.
             if (this._ecoSelten && this._ecoSelten[deviceId] && Date.now() < this._ecoSelten[deviceId]) continue;
@@ -1003,6 +1023,13 @@ class MieleLocal extends utils.Adapter {
             }
             if (eco.waterL != null) {
                 await this.setStateAsync(`${deviceId}.eco.water`, { val: eco.waterL, ack: true });
+            }
+
+            // Im Nachlauf: Aendert sich nichts mehr, steht der Schlussstand fest.
+            const vorher = dev.ecoNachlaufBis;
+            Object.assign(dev, ecoRegel.nachlaufFortschreiben(dev, `${eco.energyWh}/${eco.waterL}`));
+            if (vorher && !dev.ecoNachlaufBis) {
+                this.log.debug(`Eco ${deviceId}: Schlussstand steht (${dev.ecoLetzter}), Nachlauf beendet`);
             }
         }
     }
