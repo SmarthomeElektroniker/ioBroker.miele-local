@@ -152,6 +152,24 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.5
+- **Fix: appliance status no longer flips to "off" during a running program.** A failed status
+  request was reported as a state change instead of being retried; every twenty-fifth poll
+  produced a spurious "off". Requests now get a second attempt, and an implausible jump from
+  "running" to "off" is discarded when the remaining time says the program is still going.
+  The retry count is exposed as `info.pollRetries`.
+- **Fix: remaining time was read from the wrong field.** `remainingSeconds` carries only the
+  seconds component - at "2:01" it reads 0. The plausibility check now uses
+  `remainingMinutes`.
+- **Fix: frozen EcoFeedback values are no longer booked as consumption.** When an appliance
+  keeps reporting the previous cycle's figures, the unchanged value is skipped instead of
+  being added to the new cycle.
+- Requests are serialised per appliance, and a cycle now survives an adapter restart.
+- **All object names are complete in eleven languages.** The repository check reported 147
+  W1001 warnings for `common.name`; channels, EcoFeedback data points, appliance names and the
+  instance objects were still English- or German-only. Appliance categories are translated
+  while model and serial number stay untouched - they are proper names.
+
 ### 0.3.4
 - **New: cycle history.** Every completed program is recorded with duration, program name,
   energy and water. The appliances do not keep finished cycles themselves, so the history
