@@ -86,11 +86,12 @@ class MieleLocal extends utils.Adapter {
     /**
      * Namen vorhandener EcoFeedback-Objekte abgleichen.
      *
-     * Die eco-Punkte legt ensureEcoObjects an - aber nur, wenn ein Abruf Werte liefert.
-     * Antwortet ein Geraet nicht mehr (alle drei hier melden inzwischen HTTP 500 bzw. 404),
-     * bleiben vorhandene Punkte aus frueheren Versionen unberuehrt und behalten ihre alten
-     * Namen. Gelöscht werden sie bewusst nicht, weil ihre Historie erhalten bleiben soll -
-     * also werden sie hier wenigstens im Namen nachgezogen.
+     * Die eco-Punkte legt ensureEcoObjects an - aber nur, wenn ein Abruf gerade Werte liefert.
+     * Das Eco-Leaf antwortet nur, solange das Geraet wach ist; eine ausgeschaltete Maschine
+     * meldet HTTP 500. Zwischen zwei Programmen - und das sind die meisten Adapterstarts -
+     * laeuft der Code also nie, und vorhandene Punkte aus frueheren Versionen behalten ihre
+     * alten Namen. Geloescht werden sie bewusst nicht, weil ihre Historie erhalten bleiben
+     * soll, also werden sie hier wenigstens im Namen nachgezogen.
      */
     async aktualisiereEcoNamen(deviceId) {
         const german = this.config.germanNames !== false;
