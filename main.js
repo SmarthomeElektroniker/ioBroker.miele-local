@@ -59,7 +59,32 @@ class MieleLocal extends utils.Adapter {
         this.on('unload', this.onUnload.bind(this));
     }
 
+    /**
+     * Namen der Instanzobjekte nachziehen.
+     *
+     * instanceObjects aus der io-package.json legt der Installer nur beim ERSTEN Mal an. Bei
+     * einem Update bleiben sie unveraendert - eine bestehende Installation behielte also die
+     * alten, einsprachigen Namen von info, info.connection und info.discoveredDevices, und der
+     * Objektexport zeigte sie weiterhin. Deshalb werden sie hier bei jedem Start abgeglichen.
+     */
+    async aktualisiereInstanzObjekte() {
+        const t = (de, en) => namen.text(de, en, true);
+        const soll = {
+            'info': t('Information', 'Information'),
+            'info.connection': t('Gerät oder Dienst verbunden', 'Device or service connected'),
+            'info.discoveredDevices': t('Gefundene Geräte (mDNS)', 'Discovered devices (mDNS)'),
+        };
+        for (const id of Object.keys(soll)) {
+            try {
+                await this.extendObjectAsync(id, { common: { name: soll[id] } });
+            } catch (e) {
+                this.log.debug(`Instance object ${id} not updated: ${e.message}`);
+            }
+        }
+    }
+
     async onReady() {
+        await this.aktualisiereInstanzObjekte();
         await this.setStateAsync('info.connection', { val: false, ack: true });
 
         const groupId = this.config.groupId;
