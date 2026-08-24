@@ -96,17 +96,24 @@ class MieleLocal extends utils.Adapter {
      */
     async aktualisiereEcoNamen(deviceId) {
         const german = this.config.germanNames !== false;
+        // Nicht nur der Name wird nachgezogen, sondern auch die Rolle: eco.water trug bis
+        // 0.3.5 value.volume, was der Repository-Pruefer beanstandet. Ein Geraet, das kein
+        // EcoFeedback mehr liefert, durchlaeuft ensureEcoObjects nie - dort waere die
+        // Korrektur sonst haengen geblieben.
         const soll = {
-            'eco': namen.SPRACHEN.reduce((o, sp) => (o[sp] = 'EcoFeedback', o), {}),
-            'eco.energy': namen.text('Energieverbrauch', 'Energy consumption', german),
-            'eco.energyWh': namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german),
-            'eco.water': namen.text('Wasserverbrauch', 'Water consumption', german),
+            'eco': { name: namen.SPRACHEN.reduce((o, sp) => (o[sp] = 'EcoFeedback', o), {}) },
+            'eco.energy': { name: namen.text('Energieverbrauch', 'Energy consumption', german),
+                            role: 'value.power.consumption', unit: 'kWh' },
+            'eco.energyWh': { name: namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german),
+                              role: 'value.power.consumption', unit: 'Wh' },
+            'eco.water': { name: namen.text('Wasserverbrauch', 'Water consumption', german),
+                           role: 'value', unit: 'l' },
         };
         for (const sub of Object.keys(soll)) {
             const id = `${deviceId}.${sub}`;
             try {
                 if (!(await this.getObjectAsync(id))) continue;
-                await this.extendObjectAsync(id, { common: { name: soll[sub] } });
+                await this.extendObjectAsync(id, { common: soll[sub] });
             } catch (e) {
                 this.log.debug(`Eco object ${id} not updated: ${e.message}`);
             }
