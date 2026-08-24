@@ -821,15 +821,22 @@ class MieleLocal extends utils.Adapter {
         const FELD = {
             cycles: [namen.text('Programme', 'Cycles', de), '', 'value'],
             energy: [namen.text('Energie', 'Energy', de), 'kWh', 'value.power.consumption'],
-            water: [namen.text('Wasser', 'Water', de), 'l', 'value.volume'],
+            // Rolle 'value' statt 'value.volume': Letztere steht im ioBroker-Katalog
+            // fuer die Lautstaerke, nicht fuer eine Wassermenge - die Repository-
+            // Pruefung quittierte das 49-mal mit E1008. Eine eigene Rolle fuer
+            // Verbrauchsmengen gibt es nicht: 'value.water' ist ein Prozent-Fuellstand,
+            // 'value.fill' beschreibt einen Fuellstand statt eines Verbrauchs. Die
+            // Adapter mielecloudservice und clage-dsx nehmen fuer dieselbe Groesse
+            // ebenfalls 'value' mit Einheit 'l'.
+            water: [namen.text('Wasser', 'Water', de), 'l', 'value'],
             runtimeHours: [namen.text('Laufzeit', 'Runtime', de), 'h', 'value.interval'],
             avgEnergy: [namen.text('Energie je Programm', 'Energy per cycle', de), 'kWh', 'value.power.consumption'],
-            avgWater: [namen.text('Wasser je Programm', 'Water per cycle', de), 'l', 'value.volume'],
+            avgWater: [namen.text('Wasser je Programm', 'Water per cycle', de), 'l', 'value'],
             prevCycles: [namen.text('Programme (Vorzeitraum)', 'Cycles (previous)', de), '', 'value'],
             prevEnergy: [namen.text('Energie (Vorzeitraum)', 'Energy (previous)', de), 'kWh', 'value.power.consumption'],
-            prevWater: [namen.text('Wasser (Vorzeitraum)', 'Water (previous)', de), 'l', 'value.volume'],
+            prevWater: [namen.text('Wasser (Vorzeitraum)', 'Water (previous)', de), 'l', 'value'],
             prevAvgEnergy: [namen.text('Energie je Programm (Vorzeitraum)', 'Energy per cycle (previous)', de), 'kWh', 'value.power.consumption'],
-            prevAvgWater: [namen.text('Wasser je Programm (Vorzeitraum)', 'Water per cycle (previous)', de), 'l', 'value.volume'],
+            prevAvgWater: [namen.text('Wasser je Programm (Vorzeitraum)', 'Water per cycle (previous)', de), 'l', 'value'],
         };
         await this.extendObjectAsync(`${deviceId}.stats`, {
             type: 'channel', common: { name: namen.text('Auswertung', 'Statistics', de) }, native: {},
@@ -898,9 +905,9 @@ class MieleLocal extends utils.Adapter {
             ['cycleCount', namen.text('Programme gesamt', 'Cycles total', de), 'number', 'value', '', 0],
             ['runtimeHours', namen.text('Laufzeit gesamt', 'Runtime total', de), 'number', 'value.interval', 'h', 0],
             ['energyTotal', namen.text('Energie gesamt', 'Energy total', de), 'number', 'value.power.consumption', 'kWh', 0],
-            ['waterTotal', namen.text('Wasser gesamt', 'Water total', de), 'number', 'value.volume', 'l', 0],
+            ['waterTotal', namen.text('Wasser gesamt', 'Water total', de), 'number', 'value', 'l', 0],
             ['energyKwh', namen.text('Energie je Programm', 'Energy per cycle', de), 'number', 'value.power.consumption', 'kWh', 0],
-            ['waterL', namen.text('Wasser je Programm', 'Water per cycle', de), 'number', 'value.volume', 'l', 0],
+            ['waterL', namen.text('Wasser je Programm', 'Water per cycle', de), 'number', 'value', 'l', 0],
             ['durationMin', namen.text('Dauer je Programm', 'Duration per cycle', de), 'number', 'value.interval', 'min', 0],
             // Startzeitpunkt des laufenden Programms - er ueberlebt einen Neustart des Adapters,
             // damit die Zyklusdauer danach nicht von vorn zaehlt (siehe trackCycle).
@@ -1086,7 +1093,7 @@ class MieleLocal extends utils.Adapter {
         const defs = [
             { sub: 'energy', name: namen.text('Energieverbrauch', 'Energy consumption', german), role: 'value.power.consumption', type: 'number', unit: 'kWh', def: 0 },
             { sub: 'energyWh', name: namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german), role: 'value.power.consumption', type: 'number', unit: 'Wh', def: 0 },
-            { sub: 'water', name: namen.text('Wasserverbrauch', 'Water consumption', german), role: 'value.volume', type: 'number', unit: 'l', def: 0 },
+            { sub: 'water', name: namen.text('Wasserverbrauch', 'Water consumption', german), role: 'value', type: 'number', unit: 'l', def: 0 },
         ];
         for (const d of defs) {
             await this.extendObjectAsync(`${deviceId}.eco.${d.sub}`, {
