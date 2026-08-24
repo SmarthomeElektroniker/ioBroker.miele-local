@@ -83,6 +83,34 @@ class MieleLocal extends utils.Adapter {
         }
     }
 
+    /**
+     * Namen vorhandener EcoFeedback-Objekte abgleichen.
+     *
+     * Die eco-Punkte legt ensureEcoObjects an - aber nur, wenn ein Abruf Werte liefert.
+     * Antwortet ein Geraet nicht mehr (alle drei hier melden inzwischen HTTP 500 bzw. 404),
+     * bleiben vorhandene Punkte aus frueheren Versionen unberuehrt und behalten ihre alten
+     * Namen. Gelöscht werden sie bewusst nicht, weil ihre Historie erhalten bleiben soll -
+     * also werden sie hier wenigstens im Namen nachgezogen.
+     */
+    async aktualisiereEcoNamen(deviceId) {
+        const german = this.config.germanNames !== false;
+        const soll = {
+            'eco': namen.SPRACHEN.reduce((o, sp) => (o[sp] = 'EcoFeedback', o), {}),
+            'eco.energy': namen.text('Energieverbrauch', 'Energy consumption', german),
+            'eco.energyWh': namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german),
+            'eco.water': namen.text('Wasserverbrauch', 'Water consumption', german),
+        };
+        for (const sub of Object.keys(soll)) {
+            const id = `${deviceId}.${sub}`;
+            try {
+                if (!(await this.getObjectAsync(id))) continue;
+                await this.extendObjectAsync(id, { common: { name: soll[sub] } });
+            } catch (e) {
+                this.log.debug(`Eco object ${id} not updated: ${e.message}`);
+            }
+        }
+    }
+
     async onReady() {
         await this.aktualisiereInstanzObjekte();
         await this.setStateAsync('info.connection', { val: false, ack: true });
@@ -243,6 +271,9 @@ class MieleLocal extends utils.Adapter {
             common: { name: label },
             native: { serial: deviceId },
         });
+        // Vorhandene EcoFeedback-Punkte im Namen nachziehen, auch wenn das Geraet sie nicht
+        // mehr liefert - sonst bleiben sie fuer immer einsprachig.
+        await this.aktualisiereEcoNamen(deviceId);
         // Kanäle
         for (const ch of ['info', 'state']) {
             // extendObject statt setObjectNotExists: Bestehende Installationen behalten sonst
