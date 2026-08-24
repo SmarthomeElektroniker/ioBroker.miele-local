@@ -276,6 +276,28 @@ class MieleLocal extends utils.Adapter {
         // Vorhandene EcoFeedback-Punkte im Namen nachziehen, auch wenn das Geraet sie nicht
         // mehr liefert - sonst bleiben sie fuer immer einsprachig.
         await this.aktualisiereEcoNamen(deviceId);
+
+        /*
+         * Verlauf und Statistik abgleichen, sofern sie schon existieren.
+         *
+         * Beide werden sonst erst angelegt, wenn ein Programm einen Zyklus abschliesst. Stehen
+         * die Geraete - der Normalfall zwischen zwei Waschgaengen -, laeuft der Code nie, und
+         * Aenderungen an Namen, Rollen oder Einheiten erreichen bestehende Installationen
+         * nicht. Beim Wechsel von value.volume auf value blieben so 49 Objekte auf der alten,
+         * vom Repository beanstandeten Rolle stehen.
+         *
+         * Angelegt wird hier nichts Neues: Nur wo der Kanal schon da ist, wird er aufgefrischt.
+         */
+        for (const [kanal, auffrischen] of [["history", "ensureHistoryObjects"],
+                                            ["stats", "ensureStatsObjects"]]) {
+            try {
+                if (await this.getObjectAsync(`${deviceId}.${kanal}`)) {
+                    await this[auffrischen](deviceId);
+                }
+            } catch (e) {
+                this.log.debug(`${deviceId}.${kanal} not refreshed: ${e.message}`);
+            }
+        }
         // Kanäle
         for (const ch of ['info', 'state']) {
             // extendObject statt setObjectNotExists: Bestehende Installationen behalten sonst
