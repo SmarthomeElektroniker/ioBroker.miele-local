@@ -30,6 +30,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@iobroker/adapter-dev": "^1.5.0",
+    "@iobroker/dev-server": "^0.8.0",
     "@iobroker/testing": "^5.2.2",
     "@types/node": "^22",
     "eslint": "^9.39.0",
@@ -42,7 +43,8 @@
     "lint": "eslint .",
     "test:integration": "mocha test/integration --exit",
     "test:local": "npm run lint && npm test",
-    "test:unit": "mocha test/dop2 test/stats test/api test/eco --exit"
+    "test:unit": "mocha test/dop2 test/stats test/api test/eco --exit",
+    "dev": "dev-server watch"
   },
   "files": [
     "admin/",
