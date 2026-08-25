@@ -11,9 +11,12 @@ const { MieleDeviceApi } = require('./lib/api');
 const { discover } = require('./lib/discovery');
 const cloud = require('./lib/cloud');
 const objdef = require('./lib/objects');
+const namen = require('./lib/names');
+const ecoRegel = require('./lib/eco');
 const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
+const stats = require('./lib/stats');
 
 // EcoFeedback: DOP2-Leaf 2/6195 (bislang nur Waschmaschinen liefern ihn).
 // Feldindizes (1-based) empirisch gegen den Cloud-Adapter verifiziert (WCR860):
@@ -57,7 +60,68 @@ class MieleLocal extends utils.Adapter {
         this.on('unload', this.onUnload.bind(this));
     }
 
+    /**
+     * Namen der Instanzobjekte nachziehen.
+     *
+     * instanceObjects aus der io-package.json legt der Installer nur beim ERSTEN Mal an. Bei
+     * einem Update bleiben sie unveraendert - eine bestehende Installation behielte also die
+     * alten, einsprachigen Namen von info, info.connection und info.discoveredDevices, und der
+     * Objektexport zeigte sie weiterhin. Deshalb werden sie hier bei jedem Start abgeglichen.
+     */
+    async aktualisiereInstanzObjekte() {
+        const t = (de, en) => namen.text(de, en, true);
+        const soll = {
+            'info': t('Information', 'Information'),
+            'info.connection': t('Gerät oder Dienst verbunden', 'Device or service connected'),
+            'info.discoveredDevices': t('Gefundene Geräte (mDNS)', 'Discovered devices (mDNS)'),
+        };
+        for (const id of Object.keys(soll)) {
+            try {
+                await this.extendObjectAsync(id, { common: { name: soll[id] } });
+            } catch (e) {
+                this.log.debug(`Instance object ${id} not updated: ${e.message}`);
+            }
+        }
+    }
+
+    /**
+     * Namen vorhandener EcoFeedback-Objekte abgleichen.
+     *
+     * Die eco-Punkte legt ensureEcoObjects an - aber nur, wenn ein Abruf gerade Werte liefert.
+     * Das Eco-Leaf antwortet nur, solange das Geraet wach ist; eine ausgeschaltete Maschine
+     * meldet HTTP 500. Zwischen zwei Programmen - und das sind die meisten Adapterstarts -
+     * laeuft der Code also nie, und vorhandene Punkte aus frueheren Versionen behalten ihre
+     * alten Namen. Geloescht werden sie bewusst nicht, weil ihre Historie erhalten bleiben
+     * soll, also werden sie hier wenigstens im Namen nachgezogen.
+     */
+    async aktualisiereEcoNamen(deviceId) {
+        const german = this.config.germanNames !== false;
+        // Nicht nur der Name wird nachgezogen, sondern auch die Rolle: eco.water trug bis
+        // 0.3.5 value.volume, was der Repository-Pruefer beanstandet. Ein Geraet, das kein
+        // EcoFeedback mehr liefert, durchlaeuft ensureEcoObjects nie - dort waere die
+        // Korrektur sonst haengen geblieben.
+        const soll = {
+            'eco': { name: namen.SPRACHEN.reduce((o, sp) => (o[sp] = 'EcoFeedback', o), {}) },
+            'eco.energy': { name: namen.text('Energieverbrauch', 'Energy consumption', german),
+                            role: 'value.power.consumption', unit: 'kWh' },
+            'eco.energyWh': { name: namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german),
+                              role: 'value.power.consumption', unit: 'Wh' },
+            'eco.water': { name: namen.text('Wasserverbrauch', 'Water consumption', german),
+                           role: 'value', unit: 'l' },
+        };
+        for (const sub of Object.keys(soll)) {
+            const id = `${deviceId}.${sub}`;
+            try {
+                if (!(await this.getObjectAsync(id))) continue;
+                await this.extendObjectAsync(id, { common: soll[sub] });
+            } catch (e) {
+                this.log.debug(`Eco object ${id} not updated: ${e.message}`);
+            }
+        }
+    }
+
     async onReady() {
+        await this.aktualisiereInstanzObjekte();
         await this.setStateAsync('info.connection', { val: false, ack: true });
 
         const groupId = this.config.groupId;
@@ -162,9 +226,27 @@ class MieleLocal extends utils.Adapter {
 
     /** Gerät initialisieren: Route (Seriennr.) ermitteln, Objektbaum anlegen, Ident lesen. */
     async initDevice(f) {
-        const api = new MieleDeviceApi(f.ip, this.mc, { timeout: 8000 });
-        // Seriennummer(n) über signiertes /Devices/ ermitteln
-        const list = await api.get('Devices/');
+        // 20 s statt 8: die Module antworten meist in 25 ms, waehrend eines laufenden Programms
+        // aber auch mal erst nach 5-7 s. Mit dem knappen Zeitfenster fiel jede zehnte Abfrage aus,
+        // obwohl das Geraet erreichbar war. Anfragen laufen ohnehin nacheinander (siehe api.js),
+        // eine langsame Antwort blockiert also nichts ausser der eigenen Warteschlange.
+        const api = new MieleDeviceApi(f.ip, this.mc, { timeout: 20000 });
+        // Seriennummer(n) über signiertes /Devices/ ermitteln. Mehrere Versuche, weil ein
+        // beschaeftigtes Geraet die erste Anfrage schon mal verfallen laesst - ohne
+        // Wiederholung fiele es bis zur naechsten Hintergrundsuche komplett aus der Abfrage.
+        let list = null;
+        let letzterFehler = null;
+        for (let versuch = 1; versuch <= 3; versuch++) {
+            try {
+                list = await api.get('Devices/');
+                break;
+            } catch (e) {
+                letzterFehler = e;
+                this.log.debug(`Device at ${f.ip}: attempt ${versuch}/3 failed (${e.message})`);
+                if (versuch < 3) await new Promise(r => this.setTimeout(r, 2000));
+            }
+        }
+        if (!list) throw letzterFehler || new Error('no answer');
         const routes = Object.keys(list || {});
         if (!routes.length) throw new Error('no device route found');
 
@@ -191,19 +273,50 @@ class MieleLocal extends utils.Adapter {
 
     async createDeviceTree(deviceId, techType, deviceType) {
         const cat = objdef.deviceCategory(deviceType);
-        const label = techType
-            ? `${cat ? cat + ' - ' : ''}${techType} (${deviceId})`
-            : (cat ? `${cat} (${deviceId})` : deviceId);
+        // Kategorie uebersetzt, Modell und Seriennummer unveraendert - siehe names.geraeteName.
+        const label = namen.geraeteName(cat, techType, deviceId);
         await this.extendObjectAsync(deviceId, {
             type: 'device',
             common: { name: label },
             native: { serial: deviceId },
         });
+        // Vorhandene EcoFeedback-Punkte im Namen nachziehen, auch wenn das Geraet sie nicht
+        // mehr liefert - sonst bleiben sie fuer immer einsprachig.
+        await this.aktualisiereEcoNamen(deviceId);
+
+        /*
+         * Verlauf und Statistik abgleichen, sofern sie schon existieren.
+         *
+         * Beide werden sonst erst angelegt, wenn ein Programm einen Zyklus abschliesst. Stehen
+         * die Geraete - der Normalfall zwischen zwei Waschgaengen -, laeuft der Code nie, und
+         * Aenderungen an Namen, Rollen oder Einheiten erreichen bestehende Installationen
+         * nicht. Beim Wechsel von value.volume auf value blieben so 49 Objekte auf der alten,
+         * vom Repository beanstandeten Rolle stehen.
+         *
+         * Angelegt wird hier nichts Neues: Nur wo der Kanal schon da ist, wird er aufgefrischt.
+         */
+        for (const [kanal, auffrischen] of [["history", "ensureHistoryObjects"],
+                                            ["stats", "ensureStatsObjects"]]) {
+            try {
+                if (await this.getObjectAsync(`${deviceId}.${kanal}`)) {
+                    await this[auffrischen](deviceId);
+                }
+            } catch (e) {
+                this.log.debug(`${deviceId}.${kanal} not refreshed: ${e.message}`);
+            }
+        }
         // Kanäle
         for (const ch of ['info', 'state']) {
-            await this.setObjectNotExistsAsync(`${deviceId}.${ch}`, {
+            // extendObject statt setObjectNotExists: Bestehende Installationen behalten sonst
+            // ihre alten, einsprachigen Kanalnamen - genau die, die der Repository-Check
+            // beanstandet hat.
+            await this.extendObjectAsync(`${deviceId}.${ch}`, {
                 type: 'channel',
-                common: { name: ch === 'info' ? 'Information' : 'State' },
+                common: {
+                    name: ch === 'info'
+                        ? namen.text('Information', 'Information', true)
+                        : namen.text('Zustand', 'State', true),
+                },
                 native: {},
             });
         }
@@ -244,9 +357,9 @@ class MieleLocal extends utils.Adapter {
         }
         // Steuer-States (nur wenn erlaubt)
         if (this.config.allowControl) {
-            await this.setObjectNotExistsAsync(`${deviceId}.control`, {
+            await this.extendObjectAsync(`${deviceId}.control`, {
                 type: 'channel',
-                common: { name: 'Control' },
+                common: { name: namen.text('Steuerung', 'Control', true) },
                 native: {},
             });
             for (const c of objdef.CONTROL_STATES) {
@@ -281,9 +394,72 @@ class MieleLocal extends utils.Adapter {
     }
 
     /** /State-Objekt in ioBroker-States übernehmen. */
+    /**
+     * Zustaende, aus denen ein Geraet nicht von einer Abfrage zur naechsten in "Aus" springt:
+     * in Betrieb, Pause, Programm unterbrochen. Dazwischen liegt immer "Programm beendet" (7).
+     */
+    static get LAEUFT() { return [5, 6, 9]; }
+
+    /**
+     * Faengt den unmoeglichen Sprung "laeuft" -> "Aus" ab.
+     *
+     * Beobachtet am 23.08.2026 an der laufenden Waschmaschine: Nach einem Verbindungsabriss
+     * ("read ECONNRESET") liefert das XKM-Modul im naechsten Versuch eine formal gueltige
+     * Antwort mit Status 1 (Aus) und elapsedTime 0 - die Maschine wusch dabei weiter, und die
+     * naechste Abfrage 30 s spaeter meldete wieder Status 5. Der Aussetzer ist nicht harmlos:
+     * nachgeschaltete Skripte werten ihn als Programmende und setzen ihre Zykluszaehlung
+     * zurueck (der Stromzaehler-Startwert sprang dadurch mitten im Waschgang auf den aktuellen
+     * Stand, aus rund 100 Wh wurden 10).
+     *
+     * Deshalb: Ein solcher Sprung wird beim ersten Mal verworfen. Bestaetigt ihn die naechste
+     * Abfrage, wird er uebernommen - ein echtes Abschalten kommt damit hoechstens einen
+     * Abfragetakt spaeter an.
+     */
+    /**
+     * So lange wird ein "Aus" hoechstens verworfen. Danach gilt es, auch wenn noch Restzeit
+     * gemeldet war - sonst haenge die Anzeige fest, wenn jemand das Geraet mitten im Programm
+     * am Schalter ausmacht.
+     */
+    static get AUS_VERDACHT_MAX_MS() { return 5 * 60 * 1000; }
+
+    async statusPlausibel(deviceId, neu) {
+        this._statusVerdacht = this._statusVerdacht || {};
+        if (neu !== 1) {
+            delete this._statusVerdacht[deviceId];
+            return true;
+        }
+        const vorher = ((await this.getStateAsync(`${deviceId}.state.status`)) || {}).val;
+        if (!MieleLocal.LAEUFT.includes(vorher)) return true;
+
+        // Ein echtes Programmende laeuft ueber Status 7 und eine abgelaufene Restzeit. Meldet das
+        // Geraet mitten im Programm "Aus", waehrend noch Zeit uebrig ist, glaubt der Adapter das
+        // nicht sofort - am 23.08.2026 kam das an der laufenden Waschmaschine mehrfach je Stunde
+        // vor, teils auch zweimal hintereinander (Shelly mass dabei 2200 W Heizleistung).
+        // remainingMinutes, NICHT remainingSeconds: letzteres ist nur die Sekundenkomponente der
+        // Anzeige (bei "2:01" steht dort 0), nicht die Gesamtrestzeit.
+        const restMin = ((await this.getStateAsync(`${deviceId}.state.remainingMinutes`)) || {}).val || 0;
+        const seit = this._statusVerdacht[deviceId] || Date.now();
+        this._statusVerdacht[deviceId] = seit;
+        const verstrichen = Date.now() - seit;
+        if (restMin > 2 && verstrichen < MieleLocal.AUS_VERDACHT_MAX_MS) {
+            this.log.info(`${deviceId}: Status ${vorher} (laeuft) -> 1 (Aus) bei ${restMin} min `
+                + `Restzeit - verworfen (seit ${Math.round(verstrichen / 1000)} s)`);
+            return false;
+        }
+        delete this._statusVerdacht[deviceId];
+        if (restMin > 2) {
+            this.log.warn(`${deviceId}: meldet seit ${Math.round(verstrichen / 1000)} s "Aus", obwohl noch `
+                + `${restMin} min Restzeit gemeldet waren - wird jetzt uebernommen`);
+        }
+        return true;
+    }
+
     async applyState(deviceId, state) {
         const dev = this.devices[deviceId];
         const ctx = { deviceType: dev ? dev.deviceType : null };
+        // Unmoegliche Sprünge nach "Aus" gar nicht erst in die Datenpunkte lassen - sonst
+        // schreiben Status, Restzeit und Laufzeit gemeinsam Unsinn (siehe statusPlausibel).
+        if ('Status' in state && !(await this.statusPlausibel(deviceId, state.Status))) return;
         let statusVal = null;
         for (const [key, def] of Object.entries(objdef.STATE_FIELDS)) {
             if (!(key in state)) continue;
@@ -301,13 +477,39 @@ class MieleLocal extends utils.Adapter {
             }
             if (key === 'Status') statusVal = state.Status;
         }
-        // Voraussichtliches Programmende (wie mielecloudservice.estimatedEndTime): jetzt + Restzeit.
-        // Nur wenn eine Restzeit > 0 vorliegt; sonst leeren (kein laufendes Programm). Rohantwort
-        // kennt keine Uhrzeit, daher hier berechnet. Minutengenau (Restzeit-Leaf), das genügt fürs Ende.
+        // Zeitvorwahl: das Geraet meldet nur die Restdauer bis zum Start ([7,20] = in 7:20).
+        // Sie wird vor dem Programmende ausgewertet, denn wartet das Geraet noch, faengt die
+        // Restzeit erst beim Start an zu laufen - das Ende liegt dann um die Vorwahl spaeter.
+        //
+        // Nur im Wartezustand: das Feld bleibt auch im laufenden Programm gefuellt (die
+        // Waschmaschine meldete "in 0:17", waehrend sie spuelte). Ungeprueft uebernommen ergaebe
+        // das eine Startzeit fuer ein laengst gestartetes Programm und ein um die Vorwahl zu
+        // spaetes Ende. WARTEND = 3 (programmiert) und 4 (warten auf Start).
+        let startMin = 0;
+        if ('StartTime' in state) {
+            const status = statusVal != null ? statusVal
+                : ((await this.getStateAsync(`${deviceId}.state.status`)) || {}).val;
+            const wartend = status === 3 || status === 4;
+            startMin = wartend ? (objdef.timeToMinutes(state.StartTime) || 0) : 0;
+            await this.ensureStartObjects(deviceId);
+            if (startMin > 0) {
+                const start = new Date(Date.now() + startMin * 60000);
+                const hh = String(start.getHours()).padStart(2, '0');
+                const mm = String(start.getMinutes()).padStart(2, '0');
+                await this.setStateAsync(`${deviceId}.state.startTime`, { val: start.getTime(), ack: true });
+                await this.setStateAsync(`${deviceId}.state.startTimeText`, { val: `${hh}:${mm}`, ack: true });
+            } else {
+                await this.setStateAsync(`${deviceId}.state.startTime`, { val: 0, ack: true });
+                await this.setStateAsync(`${deviceId}.state.startTimeText`, { val: '', ack: true });
+            }
+        }
+        // Voraussichtliches Programmende (wie mielecloudservice.estimatedEndTime): jetzt + Vorwahl
+        // + Restzeit. Nur wenn eine Restzeit > 0 vorliegt; sonst leeren (kein laufendes Programm).
+        // Rohantwort kennt keine Uhrzeit, daher hier berechnet. Minutengenau, das genuegt fuers Ende.
         if ('RemainingTime' in state) {
             const remMin = objdef.timeToMinutes(state.RemainingTime);
             if (remMin && remMin > 0) {
-                const end = new Date(Date.now() + remMin * 60000);
+                const end = new Date(Date.now() + (startMin + remMin) * 60000);
                 await this.setStateAsync(`${deviceId}.state.estimatedEndTime`, { val: end.getTime(), ack: true });
                 const hh = String(end.getHours()).padStart(2, '0');
                 const mm = String(end.getMinutes()).padStart(2, '0');
@@ -320,9 +522,20 @@ class MieleLocal extends utils.Adapter {
                 await this.setStateAsync(`${deviceId}.state.estimatedEndTimeText`, { val: '', ack: true });
             }
         }
+
         if (dev && statusVal != null) {
             await this.trackCycle(deviceId, statusVal);
             dev.active = ACTIVE_STATUSES.has(statusVal);
+            // Endet ein Programm, laeuft die Eco-Abfrage noch eine Weile nach - der
+            // Schlussstand steht oft erst nach dem Statuswechsel fest.
+            const laeuftJetzt = statusVal === 5 || statusVal === 6;
+            if (dev.ecoLaeuft && !laeuftJetzt) {
+                dev.ecoNachlaufBis = Date.now() + ecoRegel.NACHLAUF_MS;
+                dev.ecoStabil = 0;
+                this.log.debug(`Eco ${deviceId}: Programm beendet, Nachlauf bis `
+                    + `${new Date(dev.ecoNachlaufBis).toLocaleTimeString('de-DE')}`);
+            }
+            dev.ecoLaeuft = laeuftJetzt;
         }
     }
 
@@ -340,11 +553,51 @@ class MieleLocal extends utils.Adapter {
         if (this.config.cycleHistory === false) return;
         if (!this._cycles) this._cycles = {};
         const laeuft = statusVal === 5 || statusVal === 6;
-        const offen = this._cycles[deviceId];
+        let offen = this._cycles[deviceId];
+
+        // Nach einem Neustart ist der offene Zyklus weg, das Programm laeuft aber weiter. Ohne
+        // Wiederaufnahme begann die Zaehlung von vorn: am 22.08.2026 stand im Verlauf
+        // "1 Minute, 1,854 kWh" - erfasst war nur die letzte Minute eines mehrstuendigen
+        // Waschgangs, weil der Adapter zwischendurch neu gestartet war.
+        //
+        // Der Startzeitpunkt kommt aus zwei Quellen: bevorzugt aus der Laufzeit, die das Geraet
+        // selbst meldet (die stimmt auch, wenn der Adapter waehrend des Programms erst gestartet
+        // wurde), ersatzweise aus dem gemerkten Datenpunkt.
+        if (laeuft && !offen) {
+            let start = null;
+            const gelaufen = await this.getStateAsync(`${deviceId}.state.elapsedMinutes`);
+            if (gelaufen && typeof gelaufen.val === 'number' && gelaufen.val > 0) {
+                start = Date.now() - gelaufen.val * 60000;
+            } else {
+                const gemerkt = await this.getStateAsync(`${deviceId}.history.laufendSeit`);
+                if (gemerkt && typeof gemerkt.val === 'number' && gemerkt.val > 0) start = gemerkt.val;
+            }
+            if (start) {
+                this._cycles[deviceId] = { start };
+                offen = this._cycles[deviceId];
+                await this.ensureHistoryObjects(deviceId);
+                await this.setStateAsync(`${deviceId}.history.laufendSeit`, { val: start, ack: true });
+                this.log.debug(`Zyklus von ${deviceId} fortgesetzt `
+                    + `(laeuft seit ${new Date(start).toLocaleString()})`);
+            }
+        }
 
         if (laeuft) {
             if (!offen) {
-                this._cycles[deviceId] = { start: Date.now() };
+                // Den Eco-Stand beim Start festhalten: Nur wenn er sich bis zum Ende aendert,
+                // ist er eine Messung dieses Zyklus und keine Altlast (siehe finishCycle).
+                const stand = async id => {
+                    const v = await this.getStateAsync(id);
+                    return v && typeof v.val === 'number' ? v.val : null;
+                };
+                this._cycles[deviceId] = {
+                    start: Date.now(),
+                    ecoEnergieStart: await stand(`${deviceId}.eco.energy`),
+                    ecoWasserStart: await stand(`${deviceId}.eco.water`),
+                };
+                await this.ensureHistoryObjects(deviceId);
+                await this.setStateAsync(`${deviceId}.history.laufendSeit`,
+                    { val: this._cycles[deviceId].start, ack: true });
             } else if (offen.endeSeit) {
                 // War nur ein Aussetzer - das Geraet meldete kurz "Aus" und laeuft weiter.
                 delete offen.endeSeit;
@@ -369,6 +622,7 @@ class MieleLocal extends utils.Adapter {
         if (Date.now() - offen.endeSeit < CYCLE_END_GRACE_MS) return;
 
         delete this._cycles[deviceId];
+        await this.setStateAsync(`${deviceId}.history.laufendSeit`, { val: 0, ack: true });
         // Als Ende gilt der Zeitpunkt, an dem das Geraet zuerst nicht mehr lief - nicht das
         // Ende der Karenzzeit.
         const ende = offen.endeSeit;
@@ -376,15 +630,34 @@ class MieleLocal extends utils.Adapter {
         const dauerS = Math.round((ende - offen.start) / 1000);
         if (dauerS < 60) return;
 
+        // EcoFeedback nur uebernehmen, wenn es sich seit dem letzten Zyklus geaendert hat.
+        //
+        // Nicht jedes Geraet fuehrt die Werte waehrend des Programms nach: Die Waschmaschine
+        // WCR860 beantwortet den Eco-Leaf mal mit HTTP 404, mal mit 500, und der zuletzt
+        // gelesene Wert bleibt dann einfach stehen. Am 24.08.2026 standen deshalb zwei
+        // voellig verschiedene Programme (Baumwolle 214 min, Pflegeleicht 162 min) mit
+        // identischen 95,3 l in der Historie - der Wert stammte in Wahrheit aus einem
+        // Waschgang funf Tage zuvor. Ein unveraenderter Wert ist keine Messung, sondern ein
+        // Ueberbleibsel; er gehoert nicht in die Zyklusbilanz.
         const zahl = async id => { const v = await this.getStateAsync(id); return v && typeof v.val === 'number' ? v.val : null; };
+        const frisch = async (id, vorher) => {
+            const wert = await zahl(id);
+            if (wert == null) return null;
+            if (vorher != null && wert === vorher) {
+                this.log.debug(`${deviceId}: ${id.split('.').pop()} steht unveraendert auf ${wert} `
+                    + '- nicht als Zyklusverbrauch uebernommen');
+                return null;
+            }
+            return wert;
+        };
         const eintrag = {
             start: offen.start,
             ende,
             dauerS,
             program: offen.program || null,
             programType: offen.programType || null,
-            energyKwh: await zahl(`${deviceId}.eco.energy`),
-            waterL: await zahl(`${deviceId}.eco.water`),
+            energyKwh: await frisch(`${deviceId}.eco.energy`, offen.ecoEnergieStart),
+            waterL: await frisch(`${deviceId}.eco.water`, offen.ecoWasserStart),
         };
         await this.appendCycle(deviceId, eintrag);
     }
@@ -428,8 +701,225 @@ class MieleLocal extends utils.Adapter {
                 });
             }
         }
+        await this.updateStats(deviceId, eintrag);
         this.log.info(`Cycle recorded (${deviceId}): ${eintrag.program || 'unknown program'}, `
             + `${Math.round(eintrag.dauerS / 60)} min, ${eintrag.energyKwh ?? '-'} kWh, ${eintrag.waterL ?? '-'} l`);
+    }
+
+    /**
+     * Kennzahlen je Zeitraum und Programm fortschreiben - dasselbe, was die Hersteller-App
+     * zeigt: Verbrauch pro Programm, Programmnutzung und der Vergleich mit dem Vorzeitraum.
+     * Der Zustand liegt im Geraeteobjekt, damit er einen Neustart uebersteht.
+     */
+    async updateStats(deviceId, eintrag) {
+        const obj = await this.getObjectAsync(deviceId);
+        const vorher = obj && obj.native && obj.native.stats;
+        const stand = stats.verbuchen(vorher, eintrag);
+        await this.extendObjectAsync(deviceId, { native: { stats: stand } });
+
+        const a = stats.ausgabe(stand);
+        await this.ensureStatsObjects(deviceId);
+        for (const zeitraum of ['week', 'month', 'year']) {
+            const z = a[zeitraum];
+            for (const [sub, wert] of Object.entries({
+                cycles: z.cycles, energy: z.energy, water: z.water, runtimeHours: z.runtimeHours,
+                avgEnergy: z.avgEnergy, avgWater: z.avgWater,
+                prevCycles: z.prevCycles, prevEnergy: z.prevEnergy, prevWater: z.prevWater,
+                prevAvgEnergy: z.prevAvgEnergy, prevAvgWater: z.prevAvgWater,
+            })) {
+                // null nur bei Mittelwerten ohne Grundlage - dann den Datenpunkt auslassen,
+                // damit keine 0 als gemessener Wert erscheint.
+                if (wert === null) continue;
+                await this.setStateAsync(`${deviceId}.stats.${zeitraum}.${sub}`, { val: wert, ack: true });
+            }
+            if (z.key) await this.setStateAsync(`${deviceId}.stats.${zeitraum}.period`, { val: z.key, ack: true });
+            if (z.prevKey) await this.setStateAsync(`${deviceId}.stats.${zeitraum}.prevPeriod`, { val: z.prevKey, ack: true });
+            // Je Zeitraum eine eigene Programmliste - sonst liesse sich in der Anzeige nicht
+            // zwischen Monat und Jahr umschalten, ohne alles neu zu rechnen.
+            await this.setStateAsync(`${deviceId}.stats.${zeitraum}.programsJson`,
+                { val: JSON.stringify(z.programs || []), ack: true });
+        }
+        await this.setStateAsync(`${deviceId}.stats.programsJson`, { val: JSON.stringify(a.programs), ack: true });
+        // Alle Monate und Jahre einzeln - damit sich in der Anzeige ein bestimmter Zeitraum
+        // waehlen laesst, nicht nur der laufende und der davor.
+        await this.setStateAsync(`${deviceId}.stats.monthsJson`, { val: JSON.stringify(a.months), ack: true });
+        await this.setStateAsync(`${deviceId}.stats.yearsJson`, { val: JSON.stringify(a.years), ack: true });
+        for (const [sub, wert] of Object.entries(a.total)) {
+            if (wert === null) continue;
+            await this.setStateAsync(`${deviceId}.stats.total.${sub}`, { val: wert, ack: true });
+        }
+    }
+
+    async ensureStartObjects(deviceId) {
+        if (!this._startCreated) this._startCreated = {};
+        if (this._startCreated[deviceId]) return;
+        const de = this.config.germanNames !== false;
+        await this.extendObjectAsync(`${deviceId}.state.startTime`, {
+            type: 'state',
+            common: { name: namen.text('Startzeit (Zeitstempel)', 'Start time (timestamp)', de),
+                type: 'number', role: 'date', def: 0, read: true, write: false },
+            native: {},
+        });
+        await this.extendObjectAsync(`${deviceId}.state.startTimeText`, {
+            type: 'state',
+            common: { name: namen.text('Startzeit', 'Start time', de), type: 'string', role: 'text',
+                def: '', read: true, write: false },
+            native: {},
+        });
+        this._startCreated[deviceId] = true;
+    }
+
+    /**
+     * Datenpunkte fuer die Abfragestatistik.
+     *
+     * Die Poll-Fehler landeten bisher nur in log.debug - im Normalbetrieb also nirgends. Dass
+     * die Waschmaschine zeitweise jede zweite Abfrage verwarf, liess sich deshalb nur mit einer
+     * eigens laufenden Messung zeigen. Die Quote steht jetzt dauerhaft am Geraet.
+     */
+    async ensureDiagObjects(deviceId) {
+        if (!this._diagCreated) this._diagCreated = {};
+        if (this._diagCreated[deviceId]) return;
+        const de = this.config.germanNames !== false;
+        const felder = [
+            ['pollErrorRate', namen.text('Fehlerquote der Abfragen', 'Polling error rate', de), 'number', 'value', '%', 0],
+            ['pollErrors', namen.text('Fehlerhafte Abfragen (1 h)', 'Failed polls (1 h)', de), 'number', 'value', '', 0],
+            ['pollTotal', namen.text('Abfragen (1 h)', 'Polls (1 h)', de), 'number', 'value', '', 0],
+            ['pollRetries', namen.text('Erst im zweiten Versuch geglückt (1 h)',
+                'Succeeded on retry (1 h)', de), 'number', 'value', '', 0],
+            ['lastError', namen.text('Letzter Abfragefehler', 'Last polling error', de), 'string', 'text', '', ''],
+        ];
+        for (const [sub, name, type, role, unit, def] of felder) {
+            await this.extendObjectAsync(`${deviceId}.info.${sub}`, {
+                type: 'state',
+                common: { name, type, role, unit: unit || undefined, def, read: true, write: false },
+                native: {},
+            });
+        }
+        this._diagCreated[deviceId] = true;
+    }
+
+    /**
+     * Eine Abfrage verbuchen und die Quote fortschreiben.
+     *
+     * Gezaehlt wird ueber ein gleitendes Fenster von einer Stunde: eine Gesamtquote seit
+     * Adapterstart wuerde eine laengst behobene Stoerung noch tagelang mitschleppen.
+     */
+    /**
+     * Haelt fest, wie der Statusabruf ausgegangen ist - gleitendes Fenster ueber eine Stunde.
+     *
+     * [erholt] = erst der zweite Versuch hat geklappt. Das zaehlt bewusst NICHT als Fehler (die
+     * Daten sind ja da), wird aber getrennt ausgewiesen: Nur so bleibt sichtbar, wie oft ein
+     * Geraet zickt, ohne dass die Fehlerquote Alarm schlaegt, obwohl nichts fehlt.
+     */
+    async verbucheAbfrage(deviceId, fehler, erholt = false) {
+        if (!this._diag) this._diag = {};
+        const d = (this._diag[deviceId] = this._diag[deviceId] || { versuche: [] });
+        const jetzt = Date.now();
+        d.versuche.push({ ts: jetzt, fehler: fehler ? fehler.message : null, erholt });
+        const grenze = jetzt - 3600000;
+        while (d.versuche.length && d.versuche[0].ts < grenze) d.versuche.shift();
+
+        const gesamt = d.versuche.length;
+        const schlecht = d.versuche.filter(v => v.fehler).length;
+        const erholte = d.versuche.filter(v => v.erholt).length;
+        await this.ensureDiagObjects(deviceId);
+        await this.setStateAsync(`${deviceId}.info.pollTotal`, { val: gesamt, ack: true });
+        await this.setStateAsync(`${deviceId}.info.pollErrors`, { val: schlecht, ack: true });
+        await this.setStateAsync(`${deviceId}.info.pollRetries`, { val: erholte, ack: true });
+        await this.setStateAsync(`${deviceId}.info.pollErrorRate`, {
+            val: gesamt ? Math.round((schlecht / gesamt) * 1000) / 10 : 0, ack: true,
+        });
+        if (fehler) {
+            const t = new Date(jetzt);
+            const hh = String(t.getHours()).padStart(2, '0');
+            const mm = String(t.getMinutes()).padStart(2, '0');
+            const ss = String(t.getSeconds()).padStart(2, '0');
+            await this.setStateAsync(`${deviceId}.info.lastError`,
+                { val: `${hh}:${mm}:${ss} ${fehler.message}`, ack: true });
+        }
+    }
+
+    async ensureStatsObjects(deviceId) {
+        if (!this._statsCreated) this._statsCreated = {};
+        if (this._statsCreated[deviceId]) return;
+        const de = this.config.germanNames !== false;
+        const NAME = {
+            week: namen.text('Woche', 'Week', de), month: namen.text('Monat', 'Month', de), year: namen.text('Jahr', 'Year', de),
+            total: namen.text('Gesamt', 'Total', de),
+        };
+        const FELD = {
+            cycles: [namen.text('Programme', 'Cycles', de), '', 'value'],
+            energy: [namen.text('Energie', 'Energy', de), 'kWh', 'value.power.consumption'],
+            // Rolle 'value' statt 'value.volume': Letztere steht im ioBroker-Katalog
+            // fuer die Lautstaerke, nicht fuer eine Wassermenge - die Repository-
+            // Pruefung quittierte das 49-mal mit E1008. Eine eigene Rolle fuer
+            // Verbrauchsmengen gibt es nicht: 'value.water' ist ein Prozent-Fuellstand,
+            // 'value.fill' beschreibt einen Fuellstand statt eines Verbrauchs. Die
+            // Adapter mielecloudservice und clage-dsx nehmen fuer dieselbe Groesse
+            // ebenfalls 'value' mit Einheit 'l'.
+            water: [namen.text('Wasser', 'Water', de), 'l', 'value'],
+            runtimeHours: [namen.text('Laufzeit', 'Runtime', de), 'h', 'value.interval'],
+            avgEnergy: [namen.text('Energie je Programm', 'Energy per cycle', de), 'kWh', 'value.power.consumption'],
+            avgWater: [namen.text('Wasser je Programm', 'Water per cycle', de), 'l', 'value'],
+            prevCycles: [namen.text('Programme (Vorzeitraum)', 'Cycles (previous)', de), '', 'value'],
+            prevEnergy: [namen.text('Energie (Vorzeitraum)', 'Energy (previous)', de), 'kWh', 'value.power.consumption'],
+            prevWater: [namen.text('Wasser (Vorzeitraum)', 'Water (previous)', de), 'l', 'value'],
+            prevAvgEnergy: [namen.text('Energie je Programm (Vorzeitraum)', 'Energy per cycle (previous)', de), 'kWh', 'value.power.consumption'],
+            prevAvgWater: [namen.text('Wasser je Programm (Vorzeitraum)', 'Water per cycle (previous)', de), 'l', 'value'],
+        };
+        await this.extendObjectAsync(`${deviceId}.stats`, {
+            type: 'channel', common: { name: namen.text('Auswertung', 'Statistics', de) }, native: {},
+        });
+        for (const zeitraum of ['week', 'month', 'year', 'total']) {
+            await this.extendObjectAsync(`${deviceId}.stats.${zeitraum}`, {
+                type: 'channel', common: { name: NAME[zeitraum] }, native: {},
+            });
+            const felder = zeitraum === 'total'
+                ? ['cycles', 'energy', 'water', 'runtimeHours', 'avgEnergy', 'avgWater']
+                : Object.keys(FELD);
+            for (const sub of felder) {
+                const [name, einheit, rolle] = FELD[sub];
+                await this.extendObjectAsync(`${deviceId}.stats.${zeitraum}.${sub}`, {
+                    type: 'state',
+                    common: { name, type: 'number', role: rolle, unit: einheit || undefined,
+                        def: 0, read: true, write: false },
+                    native: {},
+                });
+            }
+            if (zeitraum !== 'total') {
+                await this.extendObjectAsync(`${deviceId}.stats.${zeitraum}.programsJson`, {
+                    type: 'state',
+                    common: { name: namen.text('Verbrauch je Programm (JSON)', 'Consumption per program (JSON)', de),
+                        type: 'string', role: 'json', def: '[]', read: true, write: false },
+                    native: {},
+                });
+                for (const [sub, name] of [['period', namen.text('Zeitraum', 'Period', de)],
+                    ['prevPeriod', namen.text('Vorzeitraum', 'Previous period', de)]]) {
+                    await this.extendObjectAsync(`${deviceId}.stats.${zeitraum}.${sub}`, {
+                        type: 'state',
+                        common: { name, type: 'string', role: 'text', def: '', read: true, write: false },
+                        native: {},
+                    });
+                }
+            }
+        }
+        await this.extendObjectAsync(`${deviceId}.stats.programsJson`, {
+            type: 'state',
+            common: { name: namen.text('Verbrauch je Programm (JSON)', 'Consumption per program (JSON)', de),
+                type: 'string', role: 'json', def: '[]', read: true, write: false },
+            native: {},
+        });
+        for (const [sub, name] of [
+            ['monthsJson', namen.text('Monate einzeln (JSON)', 'Individual months (JSON)', de)],
+            ['yearsJson', namen.text('Jahre einzeln (JSON)', 'Individual years (JSON)', de)],
+        ]) {
+            await this.extendObjectAsync(`${deviceId}.stats.${sub}`, {
+                type: 'state',
+                common: { name, type: 'string', role: 'json', def: '[]', read: true, write: false },
+                native: {},
+            });
+        }
+        this._statsCreated[deviceId] = true;
     }
 
     async ensureHistoryObjects(deviceId) {
@@ -437,17 +927,20 @@ class MieleLocal extends utils.Adapter {
         if (this._histCreated[deviceId]) return;
         const de = this.config.germanNames !== false;
         await this.extendObjectAsync(`${deviceId}.history`, {
-            type: 'channel', common: { name: de ? 'Verlauf' : 'History' }, native: {},
+            type: 'channel', common: { name: namen.text('Verlauf', 'History', de) }, native: {},
         });
         const defs = [
-            ['cyclesJson', de ? 'Letzte Programme (JSON)' : 'Recent cycles (JSON)', 'string', 'json', '', '[]'],
-            ['cycleCount', de ? 'Programme gesamt' : 'Cycles total', 'number', 'value', '', 0],
-            ['runtimeHours', de ? 'Laufzeit gesamt' : 'Runtime total', 'number', 'value.interval', 'h', 0],
-            ['energyTotal', de ? 'Energie gesamt' : 'Energy total', 'number', 'value.power.consumption', 'kWh', 0],
-            ['waterTotal', de ? 'Wasser gesamt' : 'Water total', 'number', 'value.volume', 'l', 0],
-            ['energyKwh', de ? 'Energie je Programm' : 'Energy per cycle', 'number', 'value.power.consumption', 'kWh', 0],
-            ['waterL', de ? 'Wasser je Programm' : 'Water per cycle', 'number', 'value.volume', 'l', 0],
-            ['durationMin', de ? 'Dauer je Programm' : 'Duration per cycle', 'number', 'value.interval', 'min', 0],
+            ['cyclesJson', namen.text('Letzte Programme (JSON)', 'Recent cycles (JSON)', de), 'string', 'json', '', '[]'],
+            ['cycleCount', namen.text('Programme gesamt', 'Cycles total', de), 'number', 'value', '', 0],
+            ['runtimeHours', namen.text('Laufzeit gesamt', 'Runtime total', de), 'number', 'value.interval', 'h', 0],
+            ['energyTotal', namen.text('Energie gesamt', 'Energy total', de), 'number', 'value.power.consumption', 'kWh', 0],
+            ['waterTotal', namen.text('Wasser gesamt', 'Water total', de), 'number', 'value', 'l', 0],
+            ['energyKwh', namen.text('Energie je Programm', 'Energy per cycle', de), 'number', 'value.power.consumption', 'kWh', 0],
+            ['waterL', namen.text('Wasser je Programm', 'Water per cycle', de), 'number', 'value', 'l', 0],
+            ['durationMin', namen.text('Dauer je Programm', 'Duration per cycle', de), 'number', 'value.interval', 'min', 0],
+            // Startzeitpunkt des laufenden Programms - er ueberlebt einen Neustart des Adapters,
+            // damit die Zyklusdauer danach nicht von vorn zaehlt (siehe trackCycle).
+            ['laufendSeit', namen.text('Laufendes Programm seit', 'Current cycle started', de), 'number', 'date', '', 0],
         ];
         for (const [sub, name, typ, rolle, einheit, def] of defs) {
             await this.extendObjectAsync(`${deviceId}.history.${sub}`, {
@@ -475,16 +968,70 @@ class MieleLocal extends utils.Adapter {
         this.pollTimer = this.setTimeout(run, effective);
     }
 
+    /**
+     * Wie oft ein Gerät den Eco-Leaf verneinen muss, bevor der Adapter aufhört zu fragen.
+     *
+     * Vorher fragte er unbeirrt weiter: an einem Vormittag 651 Absagen vom Backofen (HTTP 404)
+     * und 651 von der Spülmaschine (HTTP 500) - für Werte, die diese Modelle gar nicht führen.
+     * Jede Anfrage belegt das XKM-Modul, das ohnehin nur eine gleichzeitig beantwortet.
+     *
+     * Mehrfach und nicht sofort, weil ein einzelner Fehlschlag auch am Zeitpunkt liegen kann.
+     */
+    static get ECO_ABSAGEN_MAX() { return 3; }
+
+    /** Siehe lib/eco.js - die Regel steht dort, damit sie ohne Adapter pruefbar ist. */
+    ecoAbfragenSinnvoll(deviceId, dev) {
+        if (!this._ecoErkundet) this._ecoErkundet = {};
+        return ecoRegel.abfragenSinnvoll(this._ecoErkundet[deviceId], dev);
+    }
+
+    /**
+     * Sagt das Gerät "diesen Datenpunkt gibt es hier nicht"?
+     *
+     * Nur 404 (Leaf unbekannt) und 501 (nicht unterstützt) sind eine Aussage über das Modell.
+     * 500 dagegen heißt "beim Lesen ist etwas schiefgegangen" - die Spülmaschine liefert das
+     * im Aus-Zustand, im laufenden Betrieb kann derselbe Leaf antworten. Und Zeitüberschreitungen
+     * oder Verbindungsfehler sagen über die Fähigkeiten des Geräts gar nichts.
+     */
+    static kenntLeafNicht(status) {
+        return status === 404 || status === 501;
+    }
+
     /** EcoFeedback (Energie/Wasser) aus DOP2-Leaf 2/6195 lesen – nur wo verfügbar. */
     async pollEco() {
+        if (!this._ecoAbsagen) this._ecoAbsagen = {};
         for (const [deviceId, dev] of Object.entries(this.devices)) {
+            // Geräte ohne Eco-Leaf nicht endlos fragen. Der Zähler lebt nur im Arbeitsspeicher:
+            // nach einem Neustart wird erneut geprüft, falls ein Gerät inzwischen mehr kann.
+            if ((this._ecoAbsagen[deviceId] || 0) >= MieleLocal.ECO_ABSAGEN_MAX) continue;
+            // Schlafende Geraete nicht behelligen - siehe ecoAbfragenSinnvoll.
+            if (!this.ecoAbfragenSinnvoll(deviceId, dev)) continue;
+            this._ecoErkundet[deviceId] = true;
+            // Ein 500er sagt nichts über das Modell aus - die Spülmaschine antwortet so im
+            // Aus-Zustand. Solche Geräte werden weiter gefragt, nur eben seltener.
+            if (this._ecoSelten && this._ecoSelten[deviceId] && Date.now() < this._ecoSelten[deviceId]) continue;
             let plain;
             try {
                 const res = await dev.api.readDop2(dev.route, ECO_LEAF.unit, ECO_LEAF.attr);
                 if (res.status !== 200 || !res.headers['x-signature']) {
+                    // Nur eine echte Absage des Geräts zählt mit; ein Lesefehler bleibt ein
+                    // Lesefehler und darf die Abfrage nicht dauerhaft beenden.
+                    let schluss = '';
+                    if (MieleLocal.kenntLeafNicht(res.status)) {
+                        this._ecoAbsagen[deviceId] = (this._ecoAbsagen[deviceId] || 0) + 1;
+                        if (this._ecoAbsagen[deviceId] >= MieleLocal.ECO_ABSAGEN_MAX) {
+                            schluss = ' - dieses Modell führt kein EcoFeedback, wird nicht mehr abgefragt';
+                            await this.removeEcoObjects(deviceId);
+                        }
+                    }
                     // Ohne diese Meldung bricht die Eco-Abfrage lautlos ab, und man sucht die
                     // Ursache im Adapter statt beim Gerät. Nicht jedes Modell hat den Leaf.
-                    this.log.debug(`Eco ${deviceId}: no eco leaf (HTTP ${res.status})`);
+                    if (!MieleLocal.kenntLeafNicht(res.status)) {
+                        // Nicht ganz aufgeben, aber die nächsten fünf Minuten in Ruhe lassen.
+                        if (!this._ecoSelten) this._ecoSelten = {};
+                        this._ecoSelten[deviceId] = Date.now() + 5 * 60 * 1000;
+                    }
+                    this.log.debug(`Eco ${deviceId}: no eco leaf (HTTP ${res.status})${schluss}`);
                     continue;
                 }
                 plain = this.mc.decryptResponse(res.headers['x-signature'], res.body);
@@ -499,6 +1046,9 @@ class MieleLocal extends utils.Adapter {
                 this.log.debug(`Eco ${deviceId}: parse error ${e.message}`);
                 continue;
             }
+            // Antwortet das Gerät wieder, zählt die Absagenreihe von vorn.
+            this._ecoAbsagen[deviceId] = 0;
+            if (this._ecoSelten) delete this._ecoSelten[deviceId];
             const eco = dop2.ecoValues(fields, ECO_ENERGY_IDX, ECO_WATER_IDX);
             if (eco.energyWh == null && eco.waterL == null) continue;
 
@@ -510,6 +1060,51 @@ class MieleLocal extends utils.Adapter {
             if (eco.waterL != null) {
                 await this.setStateAsync(`${deviceId}.eco.water`, { val: eco.waterL, ack: true });
             }
+
+            // Im Nachlauf: Aendert sich nichts mehr, steht der Schlussstand fest.
+            const vorher = dev.ecoNachlaufBis;
+            Object.assign(dev, ecoRegel.nachlaufFortschreiben(dev, `${eco.energyWh}/${eco.waterL}`));
+            if (vorher && !dev.ecoNachlaufBis) {
+                this.log.debug(`Eco ${deviceId}: Schlussstand steht (${dev.ecoLetzter}), Nachlauf beendet`);
+            }
+        }
+    }
+
+    /**
+     * Eco-Datenpunkte eines Geräts entfernen, das den Leaf nachweislich nicht kennt.
+     *
+     * Sie entstehen sonst einmalig und bleiben für immer auf 0 stehen - in der Anzeige nicht von
+     * einem gemessenen "nichts verbraucht" zu unterscheiden. Entfernt wird nur, was der Adapter
+     * selbst angelegt hat und was leer geblieben ist: hat ein Gerät je einen Wert geliefert,
+     * bleiben die Punkte samt Historie erhalten.
+     */
+    async removeEcoObjects(deviceId) {
+        if (!this._ecoRemoved) this._ecoRemoved = {};
+        if (this._ecoRemoved[deviceId] || (this._ecoCreated && this._ecoCreated[deviceId])) return;
+        this._ecoRemoved[deviceId] = true;
+        for (const sub of ['energy', 'energyWh', 'water']) {
+            const id = `${deviceId}.eco.${sub}`;
+            try {
+                const obj = await this.getObjectAsync(id);
+                if (!obj) continue;
+                const state = await this.getStateAsync(id);
+                // Ein Wert ungleich 0 heißt: das Gerät konnte es doch einmal. Dann nichts löschen.
+                if (state && state.val) {
+                    this.log.debug(`Eco ${deviceId}: ${sub} hat Werte, bleibt erhalten`);
+                    continue;
+                }
+                await this.delObjectAsync(id);
+                this.log.debug(`Eco ${deviceId}: leeren Datenpunkt ${sub} entfernt`);
+            } catch (e) {
+                this.log.debug(`Eco ${deviceId}: ${sub} nicht entfernt (${e.message})`);
+            }
+        }
+        try {
+            const rest = await this.getAdapterObjectsAsync();
+            const kinder = Object.keys(rest).filter(id => id.includes(`${deviceId}.eco.`));
+            if (!kinder.length) await this.delObjectAsync(`${deviceId}.eco`);
+        } catch (e) {
+            this.log.debug(`Eco ${deviceId}: Kanal nicht entfernt (${e.message})`);
         }
     }
 
@@ -517,13 +1112,17 @@ class MieleLocal extends utils.Adapter {
         if (!this._ecoCreated) this._ecoCreated = {};
         if (this._ecoCreated[deviceId]) return;
         const german = this.config.germanNames !== false;
-        await this.setObjectNotExistsAsync(`${deviceId}.eco`, {
-            type: 'channel', common: { name: 'EcoFeedback' }, native: {},
+        await this.extendObjectAsync(`${deviceId}.eco`, {
+            // "EcoFeedback" ist Mieles eigener Begriff und bleibt in jeder Sprache gleich -
+            // das i18n-Objekt macht ihn trotzdem vollstaendig, damit die Pruefung nicht warnt.
+            type: 'channel',
+            common: { name: namen.SPRACHEN.reduce((o, sp) => (o[sp] = 'EcoFeedback', o), {}) },
+            native: {},
         });
         const defs = [
-            { sub: 'energy', name: german ? 'Energieverbrauch' : 'Energy consumption', role: 'value.power.consumption', type: 'number', unit: 'kWh', def: 0 },
-            { sub: 'energyWh', name: german ? 'Energieverbrauch (Rohwert Wh)' : 'Energy consumption (raw Wh)', role: 'value.power.consumption', type: 'number', unit: 'Wh', def: 0 },
-            { sub: 'water', name: german ? 'Wasserverbrauch' : 'Water consumption', role: 'value.volume', type: 'number', unit: 'l', def: 0 },
+            { sub: 'energy', name: namen.text('Energieverbrauch', 'Energy consumption', german), role: 'value.power.consumption', type: 'number', unit: 'kWh', def: 0 },
+            { sub: 'energyWh', name: namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german), role: 'value.power.consumption', type: 'number', unit: 'Wh', def: 0 },
+            { sub: 'water', name: namen.text('Wasserverbrauch', 'Water consumption', german), role: 'value', type: 'number', unit: 'l', def: 0 },
         ];
         for (const d of defs) {
             await this.extendObjectAsync(`${deviceId}.eco.${d.sub}`, {
@@ -578,12 +1177,12 @@ class MieleLocal extends utils.Adapter {
         const german = this.config.germanNames !== false;
         await this.extendObjectAsync(`${deviceId}.state.remainingSeconds`, {
             type: 'state',
-            common: { name: german ? 'Restzeit (Sekunden)' : 'Remaining time (seconds)', role: 'value.interval', type: 'number', unit: 's', def: 0, read: true, write: false },
+            common: { name: namen.text('Restzeit (Sekunden)', 'Remaining time (seconds)', german), role: 'value.interval', type: 'number', unit: 's', def: 0, read: true, write: false },
             native: {},
         });
         await this.extendObjectAsync(`${deviceId}.state.elapsedSeconds`, {
             type: 'state',
-            common: { name: german ? 'Laufzeit (Sekunden)' : 'Elapsed time (seconds)', role: 'value.interval', type: 'number', unit: 's', def: 0, read: true, write: false },
+            common: { name: namen.text('Laufzeit (Sekunden)', 'Elapsed time (seconds)', german), role: 'value.interval', type: 'number', unit: 's', def: 0, read: true, write: false },
             native: {},
         });
         this._secCreated[deviceId] = true;
@@ -610,20 +1209,48 @@ class MieleLocal extends utils.Adapter {
         }
     }
 
+    /**
+     * Wie lange nach einem gescheiterten Statusabruf gewartet wird, bevor es der zweite Versuch
+     * probiert. Kurz genug, um vor dem naechsten regulaeren Durchlauf fertig zu sein.
+     */
+    static get RETRY_PAUSE_MS() { return 1500; }
+
     async pollAll() {
         let ok = false;
         for (const [deviceId, dev] of Object.entries(this.devices)) {
-            try {
-                const state = await dev.api.getState(dev.route);
-                if (state) {
-                    await this.applyState(deviceId, state);
-                    await this.setStateAsync(`${deviceId}.info.connected`, { val: true, ack: true });
-                    ok = true;
+            // Zweiter Anlauf, bevor ein Abruf als Fehler gilt. Das XKM-Modul der Geraete legt im
+            // laufenden Betrieb sporadisch auf ("read ECONNRESET") oder antwortet kurz mit 404 -
+            // am 23.08.2026 an der laufenden Waschmaschine mit 21 % der Abrufe gemessen, waehrend
+            // die beiden anderen Geraete bei 0 % standen. Beim ersten Fehlversuch sofort
+            // info.connected fallen zu lassen liess die Verbindung im Minutentakt flackern,
+            // obwohl das Geraet die ganze Zeit erreichbar war.
+            let fehler = null;
+            let wiederholt = false;
+            for (let versuch = 1; versuch <= 2; versuch++) {
+                try {
+                    const state = await dev.api.getState(dev.route);
+                    if (state) {
+                        await this.applyState(deviceId, state);
+                        await this.setStateAsync(`${deviceId}.info.connected`, { val: true, ack: true });
+                        ok = true;
+                    }
+                    fehler = null;
+                    break;
+                } catch (e) {
+                    fehler = e;
+                    if (versuch === 1) {
+                        this.log.debug(`Polling ${deviceId} failed: ${e.message} - zweiter Versuch`);
+                        wiederholt = true;
+                        await new Promise(r => this.setTimeout(r, MieleLocal.RETRY_PAUSE_MS));
+                    } else {
+                        this.log.debug(`Polling ${deviceId} failed twice: ${e.message}`);
+                    }
                 }
-            } catch (e) {
-                this.log.debug(`Polling ${deviceId} failed: ${e.message}`);
+            }
+            if (fehler) {
                 await this.setStateAsync(`${deviceId}.info.connected`, { val: false, ack: true });
             }
+            await this.verbucheAbfrage(deviceId, fehler, wiederholt && !fehler);
         }
         await this.setStateAsync('info.connection', { val: ok, ack: true });
     }

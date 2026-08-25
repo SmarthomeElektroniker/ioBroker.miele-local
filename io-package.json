@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.4",
+    "version": "0.3.5",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -166,7 +166,19 @@
       "_id": "info",
       "type": "channel",
       "common": {
-        "name": "Information"
+        "name": {
+          "en": "Information",
+          "de": "Information",
+          "ru": "Информация",
+          "pt": "Informação",
+          "nl": "Informatie",
+          "fr": "Informations",
+          "it": "Informazioni",
+          "es": "Información",
+          "pl": "Informacje",
+          "uk": "Інформація",
+          "zh-cn": "信息"
+        }
       },
       "native": {}
     },
@@ -175,7 +187,19 @@
       "type": "state",
       "common": {
         "role": "indicator.connected",
-        "name": "Device or service connected",
+        "name": {
+          "en": "Device or service connected",
+          "de": "Gerät oder Dienst verbunden",
+          "ru": "Устройство или служба подключены",
+          "pt": "Dispositivo ou serviço ligado",
+          "nl": "Apparaat of dienst verbonden",
+          "fr": "Appareil ou service connecté",
+          "it": "Dispositivo o servizio connesso",
+          "es": "Dispositivo o servicio conectado",
+          "pl": "Urządzenie lub usługa połączone",
+          "uk": "Пристрій або служба підключені",
+          "zh-cn": "设备或服务已连接"
+        },
         "type": "boolean",
         "read": true,
         "write": false,
@@ -188,7 +212,19 @@
       "type": "state",
       "common": {
         "role": "json",
-        "name": "Discovered devices (mDNS)",
+        "name": {
+          "en": "Discovered devices (mDNS)",
+          "de": "Gefundene Geräte (mDNS)",
+          "ru": "Обнаруженные устройства (mDNS)",
+          "pt": "Dispositivos encontrados (mDNS)",
+          "nl": "Gevonden apparaten (mDNS)",
+          "fr": "Appareils détectés (mDNS)",
+          "it": "Dispositivi rilevati (mDNS)",
+          "es": "Dispositivos detectados (mDNS)",
+          "pl": "Wykryte urządzenia (mDNS)",
+          "uk": "Виявлені пристрої (mDNS)",
+          "zh-cn": "已发现的设备 (mDNS)"
+        },
         "type": "string",
         "read": true,
         "write": false,
