@@ -10,3 +10,6 @@ coverage/
 .commitinfo
 .dev-server/
 .agents/
+
+# Local documentation
+obsidian.md
