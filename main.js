@@ -15,6 +15,7 @@ const namen = require('./lib/names');
 const ecoRegel = require('./lib/eco');
 const sammler = require('./lib/sammler');
 const feldsuche = require('./lib/feldsuche');
+const kontrolle = require('./lib/kontrolle');
 const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
@@ -859,6 +860,42 @@ class MieleLocal extends utils.Adapter {
             });
             await this.setStateAsync(`${deviceId}.sammlung.befund`, { val: befund, ack: true });
 
+            /*
+             * Die laufende Kontrolle - siehe lib/kontrolle.js.
+             *
+             * Sie fragt etwas anderes als die Feldsuche darueber: nicht "welches Feld
+             * traegt die Groesse", sondern "liefert das eingestellte Feld weiterhin
+             * richtige Werte". Am 04.09.2026 wurde Feld 21 als Wasserzaehler belegt
+             * (0,49 % mittlere Abweichung ueber acht Zyklen) - ein Firmware-Update kann
+             * die Feldreihenfolge verschieben, ohne dass es jemand ankuendigt, und dann
+             * bleiben die Zahlen plausibel und sind trotzdem falsch.
+             */
+            const vergleich = kontrolle.vergleichen({
+                zeit: Date.now(),
+                programm: eintrag.program,
+                lokal: { waterL: eintrag.waterL, energyKwh: eintrag.energyKwh },
+                cloud,
+                manuell: satz.manuell,
+            });
+            if (vergleich) {
+                let bisherK = [];
+                try { bisherK = JSON.parse(await lies('sammlung.kontrolleJson')) || []; }
+                catch (e) { /* leer */ }
+                const verlauf = kontrolle.aufnehmen(bisherK, vergleich);
+                await this.setStateAsync(`${deviceId}.sammlung.kontrolleJson`,
+                    { val: JSON.stringify(verlauf), ack: true });
+                const text = kontrolle.bericht(verlauf);
+                await this.setStateAsync(`${deviceId}.sammlung.kontrolle`, { val: text, ack: true });
+                // Ins Log nur bei einer Reihe von Ausreissern - sonst stuende hier nach
+                // jedem Waschgang dieselbe Zeile.
+                for (const groesse of ['waterL', 'energyKwh']) {
+                    if (kontrolle.stand(verlauf, groesse).warnt) {
+                        this.log.warn(`${deviceId}: ${text}`);
+                        break;
+                    }
+                }
+            }
+
             this.log.info(`${deviceId}: Datensatz fuer die Feldzuordnung aufgenommen `
                 + `(${neu.length} gesammelt)`);
             // Ins Log nur, wenn die Suche der Einstellung widerspricht - sonst waere es
@@ -1480,6 +1517,11 @@ class MieleLocal extends utils.Adapter {
             // Feldzuordnung zu den Vergleichswerten passt.
             ['befund', 'Welches Feld passt (Auswertung)', 'Which field matches (analysis)',
              'string', 'text', '', false],
+            // Die laufende Kontrolle der eingestellten Zuordnung - siehe lib/kontrolle.js.
+            ['kontrolle', 'Stimmt die eingestellte Zuordnung noch?',
+             'Is the configured mapping still correct?', 'string', 'text', '', false],
+            ['kontrolleJson', 'Vergleiche im Verlauf (JSON)', 'Comparisons over time (JSON)',
+             'string', 'json', '', false],
             ['eingabeEnergie', 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
              'number', 'value.power.consumption', 'kWh', true],
             ['eingabeWasser', 'Wasser aus der Miele-App (l)', 'Water from the Miele app (l)',

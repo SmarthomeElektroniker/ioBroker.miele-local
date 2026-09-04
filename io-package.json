@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.14",
+    "version": "0.3.15",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.15": {
+        "de": "Laufende Kontrolle: vergleicht nach jedem Zyklus die gelieferten Werte mit Cloud oder App-Ablesung und meldet, wenn die Feldzuordnung wegläuft",
+        "en": "Ongoing check: compares delivered values against cloud or app readings after each cycle and reports when the field mapping drifts"
+      },
       "0.3.14": {
         "de": "Wasserverbrauch belegt: Feld 21 mit 5 ml je Zaehlschritt trifft auf 0,5 % genau (8 Zyklen gegen die Cloud) - bisher stand Feld 26 dort, das gar keine Messung traegt",
         "en": "Water consumption verified: field 21 at 5 ml per count matches within 0.5% (8 cycles against the cloud) - field 26 was configured before and carries no measurement at all"
