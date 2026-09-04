@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.16",
+    "version": "0.3.17",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.17": {
+        "de": "Leaf-Scan mit kurzem Zeitlimit und Zwischenspeicherung - ein Durchlauf dauert Minuten statt Stunden",
+        "en": "Leaf scan with short timeout and incremental saving - a full pass takes minutes instead of hours"
+      },
       "0.3.16": {
         "de": "Leaf-Scan: durchsucht das Geraet systematisch nach DOP2-Leafs und haelt deren Felder fest - zwei Durchgaenge (Leerlauf und Betrieb) zeigen, welche Felder sich mit dem Programm bewegen",
         "en": "Leaf scan: systematically probes the appliance for DOP2 leaves and records their fields - two passes (idle and running) reveal which fields move with the programme"

@@ -388,6 +388,17 @@ class MieleLocal extends utils.Adapter {
             await this.createDeviceTree(deviceId, techType, deviceType);
 
             this.devices[deviceId] = { ip: f.ip, route, deviceType, api, active: false };
+            /*
+             * Die Sammlungsobjekte schon beim Verbinden anlegen, nicht erst am Zyklusende.
+             *
+             * Sonst gibt es den Schalter fuer den Leaf-Scan erst, nachdem einmal ein
+             * Programm gelaufen ist - und genau davor moechte man ihn druecken, um den
+             * Leerlauf-Stand aufzunehmen.
+             */
+            if (this.config.sammlerAktiv) {
+                await this.ensureSammlungObjects(deviceId)
+                    .catch(e => this.log.debug(`${deviceId}: Sammlungsobjekte - ${e.message}`));
+            }
             await this.setStateAsync(`${deviceId}.info.connected`, { val: true, ack: true });
             if (ident) await this.applyIdent(deviceId, ident);
             const cat = objdef.deviceCategory(deviceType);
@@ -1549,6 +1560,9 @@ class MieleLocal extends utils.Adapter {
         // Cloud angebunden haben.
         this.subscribeStates(`${deviceId}.sammlung.eingabeEnergie`);
         this.subscribeStates(`${deviceId}.sammlung.eingabeWasser`);
+        // Ohne dieses Abonnement bleibt der Schalter wirkungslos: Er laesst sich druecken,
+        // der Adapter erfaehrt es nur nie.
+        this.subscribeStates(`${deviceId}.sammlung.leafScan`);
         this._sammlungCreated[deviceId] = true;
     }
 
@@ -1807,11 +1821,13 @@ class MieleLocal extends utils.Adapter {
         }
         this.log.info(`${deviceId}: Leaf-Scan - ${offen.length} Adressen in diesem Durchgang `
             + `(${leafscan.fortschritt(bisher).text})`);
+        let geprueft = 0;
 
         for (const { unit, attr } of offen) {
             let ergebnis = { status: null };
             try {
-                const res = await dev.api.readDop2(dev.route, unit, attr);
+                const res = await dev.api.readDop2(dev.route, unit, attr, 0, 0,
+                                                   leafscan.SCAN_TIMEOUT_MS);
                 if (res.status === 200 && res.headers['x-signature']) {
                     const plain = this.mc.decryptResponse(res.headers['x-signature'], res.body);
                     const { fields } = dop2.parseLeaf(plain);
@@ -1833,6 +1849,13 @@ class MieleLocal extends utils.Adapter {
                 ergebnis = { status: `Fehler: ${e.message}`.slice(0, 60) };
             }
             bisher = leafscan.aufnehmen(bisher, unit, attr, ergebnis);
+            // Zwischenspeichern, damit ein Abbruch nicht den ganzen Durchgang kostet.
+            if (++geprueft % leafscan.SICHERN_ALLE === 0) {
+                await this.setStateAsync(`${deviceId}.sammlung.leafScanJson`,
+                    { val: JSON.stringify(bisher), ack: true });
+                await this.setStateAsync(`${deviceId}.sammlung.leafScanStand`,
+                    { val: leafscan.fortschritt(bisher).text, ack: true });
+            }
             // Dem Geraet Luft lassen - es bedient immer nur eine Verbindung.
             await new Promise(r => this.setTimeout(r, leafscan.PAUSE_MS));
         }
