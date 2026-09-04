@@ -16,6 +16,7 @@ const ecoRegel = require('./lib/eco');
 const sammler = require('./lib/sammler');
 const feldsuche = require('./lib/feldsuche');
 const kontrolle = require('./lib/kontrolle');
+const leafscan = require('./lib/leafscan');
 const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
@@ -1522,6 +1523,13 @@ class MieleLocal extends utils.Adapter {
              'Is the configured mapping still correct?', 'string', 'text', '', false],
             ['kontrolleJson', 'Vergleiche im Verlauf (JSON)', 'Comparisons over time (JSON)',
              'string', 'json', '', false],
+            // Der Leaf-Scan - siehe lib/leafscan.js. Der Schalter startet einen Durchgang;
+            // er setzt sich selbst zurueck, damit man ihn erneut druecken kann.
+            ['leafScan', 'Leafs durchsuchen (ein Durchgang)', 'Scan leaves (one pass)',
+             'boolean', 'button', '', true],
+            ['leafScanStand', 'Wie weit ist die Suche?', 'Scan progress', 'string', 'text', '', false],
+            ['leafScanJson', 'Gefundene Leafs mit Feldern (JSON)', 'Found leaves with fields (JSON)',
+             'string', 'json', '', false],
             ['eingabeEnergie', 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
              'number', 'value.power.consumption', 'kWh', true],
             ['eingabeWasser', 'Wasser aus der Miele-App (l)', 'Water from the Miele app (l)',
@@ -1763,6 +1771,81 @@ class MieleLocal extends utils.Adapter {
         await this.setStateAsync('info.connection', { val: ok, ack: true });
     }
 
+    /**
+     * Einen Durchgang des Leaf-Scans fahren.
+     *
+     * WARUM IN DURCHGAENGEN. Der volle Suchraum sind rund 700 Adressen; bei 700 ms Pause
+     * waeren das acht Minuten am Stueck, in denen das Geraet nichts anderes tut. Ein
+     * Durchgang nimmt sich deshalb nur ein Stueck vor und merkt sich, wo er stand - beim
+     * naechsten Anstossen geht es dort weiter. Ein Abbruch mittendrin kostet nichts.
+     *
+     * WAS DABEI HERAUSKOMMT. Je Adresse wird festgehalten, ob sie antwortet und mit welchen
+     * Feldern. Der Sinn liegt im VERGLEICH zweier Durchlaeufe: einer im Leerlauf, einer
+     * waehrend eines Programms. Die Felder, die sich dazwischen bewegen, sind die
+     * Kandidaten fuer alles, was heute noch fehlt - allen voran die verbrauchte Energie,
+     * die im bekannten Leaf 2/6195 nachweislich nicht steht (04.09.2026, alle 47 Felder in
+     * vier Ableitungen gegen die Shelly-Messung geprueft, bestes Feld 51 % daneben).
+     */
+    async leafScanDurchgang(deviceId) {
+        const dev = this.devices && this.devices[deviceId];
+        if (!dev) { this.log.warn(`Leaf-Scan: ${deviceId} ist nicht verbunden`); return; }
+        await this.ensureSammlungObjects(deviceId);
+
+        let bisher = {};
+        try {
+            const s = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+            bisher = JSON.parse((s && s.val) || '{}') || {};
+        } catch (e) { bisher = {}; }
+
+        const offen = leafscan.naechste(bisher);
+        if (!offen.length) {
+            const f = leafscan.fortschritt(bisher);
+            this.log.info(`${deviceId}: Leaf-Scan abgeschlossen - ${f.text}`);
+            await this.setStateAsync(`${deviceId}.sammlung.leafScanStand`,
+                { val: f.text, ack: true });
+            return;
+        }
+        this.log.info(`${deviceId}: Leaf-Scan - ${offen.length} Adressen in diesem Durchgang `
+            + `(${leafscan.fortschritt(bisher).text})`);
+
+        for (const { unit, attr } of offen) {
+            let ergebnis = { status: null };
+            try {
+                const res = await dev.api.readDop2(dev.route, unit, attr);
+                if (res.status === 200 && res.headers['x-signature']) {
+                    const plain = this.mc.decryptResponse(res.headers['x-signature'], res.body);
+                    const { fields } = dop2.parseLeaf(plain);
+                    // Nur die reinen Werte behalten - der Typ interessiert bei der
+                    // Auswertung nicht und blaeht den Datenpunkt auf.
+                    const werte = {};
+                    for (const [idx, f] of Object.entries(fields || {})) {
+                        const v = f && f.value;
+                        werte[idx] = (typeof v === 'bigint') ? Number(v)
+                            : (Buffer.isBuffer(v) ? v.toString('latin1').replace(/\0+$/, '') : v);
+                    }
+                    ergebnis = { felder: werte };
+                } else {
+                    ergebnis = { status: res.status };
+                }
+            } catch (e) {
+                // Ein Lesefehler ist ein Ergebnis wie jedes andere: Die Adresse gilt als
+                // geprueft, sonst haengt der Scan ewig an derselben Stelle.
+                ergebnis = { status: `Fehler: ${e.message}`.slice(0, 60) };
+            }
+            bisher = leafscan.aufnehmen(bisher, unit, attr, ergebnis);
+            // Dem Geraet Luft lassen - es bedient immer nur eine Verbindung.
+            await new Promise(r => this.setTimeout(r, leafscan.PAUSE_MS));
+        }
+
+        await this.setStateAsync(`${deviceId}.sammlung.leafScanJson`,
+            { val: JSON.stringify(bisher), ack: true });
+        const f = leafscan.fortschritt(bisher);
+        await this.setStateAsync(`${deviceId}.sammlung.leafScanStand`, { val: f.text, ack: true });
+        const t = leafscan.treffer(bisher).slice(0, 12)
+            .map(x => `${x.leaf} (${x.felder} Felder)`).join(', ');
+        this.log.info(`${deviceId}: Leaf-Scan - ${f.text}${t ? '. Bisher: ' + t : ''}`);
+    }
+
     async onStateChange(id, state) {
         if (!state || state.ack) return; // nur echte Nutzerbefehle
         const parts = id.split('.'); // miele-local.0.<serial>.control.<sub>
@@ -1774,6 +1857,22 @@ class MieleLocal extends utils.Adapter {
          * deshalb vor der Steuerungspruefung und unabhaengig von allowControl. Wer Werte aus
          * der Miele-App nachtraegt, will nicht erst die Geraetesteuerung freischalten muessen.
          */
+        /*
+         * Den Leaf-Scan anstossen.
+         *
+         * Steht wie die Handeingaben unter "sammlung" und schaltet nichts am Geraet - der
+         * Scan liest ausschliesslich. Ausgeloest wird er von Hand, nicht von selbst: Er
+         * belegt das Geraet ueber Minuten, und wann das passt, weiss nur der Mensch davor.
+         */
+        const scanIdx = parts.indexOf('sammlung');
+        if (scanIdx > 0 && parts[scanIdx + 1] === 'leafScan' && state.val === true) {
+            const geraet = parts[scanIdx - 1];
+            this.leafScanDurchgang(geraet)
+                .catch(e => this.log.warn(`${geraet}: Leaf-Scan fehlgeschlagen - ${e.message}`));
+            await this.setStateAsync(id, { val: false, ack: true });
+            return;
+        }
+
         const sIdx = parts.indexOf('sammlung');
         if (sIdx > 0 && typeof state.val === 'number' && state.val > 0) {
             const feld = parts[sIdx + 1];

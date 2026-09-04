@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.15",
+    "version": "0.3.16",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.16": {
+        "de": "Leaf-Scan: durchsucht das Geraet systematisch nach DOP2-Leafs und haelt deren Felder fest - zwei Durchgaenge (Leerlauf und Betrieb) zeigen, welche Felder sich mit dem Programm bewegen",
+        "en": "Leaf scan: systematically probes the appliance for DOP2 leaves and records their fields - two passes (idle and running) reveal which fields move with the programme"
+      },
       "0.3.15": {
         "de": "Laufende Kontrolle: vergleicht nach jedem Zyklus die gelieferten Werte mit Cloud oder App-Ablesung und meldet, wenn die Feldzuordnung wegläuft",
         "en": "Ongoing check: compares delivered values against cloud or app readings after each cycle and reports when the field mapping drifts"
