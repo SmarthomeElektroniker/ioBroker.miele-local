@@ -8,26 +8,104 @@
 const utils = require('@iobroker/adapter-core');
 const { MieleCrypto } = require('./lib/crypto');
 const { MieleDeviceApi } = require('./lib/api');
-const { discover } = require('./lib/discovery');
+const { discover, scanSubnet, istMiele } = require('./lib/discovery');
 const cloud = require('./lib/cloud');
 const objdef = require('./lib/objects');
 const namen = require('./lib/names');
 const ecoRegel = require('./lib/eco');
+const sammler = require('./lib/sammler');
 const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
 const stats = require('./lib/stats');
 
-// EcoFeedback: DOP2-Leaf 2/6195 (bislang nur Waschmaschinen liefern ihn).
-// Feldindizes (1-based) empirisch gegen den Cloud-Adapter verifiziert (WCR860):
-//   #25 = Energie in Wh (1991 ≈ Cloud 1,9 kWh), #40 = Wasser in 0,1 l (953 ≈ Cloud 96 l).
-// Kann je Modell abweichen.
+/*
+ * EcoFeedback: DOP2-Leaf 2/6195 (bislang nur Waschmaschinen liefern ihn).
+ *
+ * Die Feldindizes sind 1-basiert und modellabhängig; für die WCR860 wurden sie gegen den
+ * Cloud-Adapter geprüft.
+ *
+ *   #25  Energie in Wh              2077 ≈ Cloud 1,9 kWh
+ *   #26  Wasser in Hundertstellitern 3703 ≈ Cloud 34 l
+ *
+ * WIE DIESE ZUORDNUNG ZUSTANDE KAM - UND WARUM SIE ZWEIMAL FALSCH WAR
+ *
+ * Beide Felder wurden waehrend eines laufenden Programms gegen den Cloud-Adapter geprueft, der
+ * denselben Verbrauch unabhaengig meldet. Davor standen zwei falsche Zuordnungen:
+ *
+ *   #40  Der urspruengliche Verdacht. Er stand ueber zehn Tage und drei voellig verschiedene
+ *        Programme hinweg unveraendert auf 953 - als 95,3 l gelesen, was fuer einen Waschgang
+ *        plausibel klang.
+ *   #4   Der zweite Verdacht, an einem kurzen Programm gefasst: Feld 4 zeigte 17, die Cloud
+ *        16 l. Es ist aber die LAUFZEIT IN MINUTEN. Bei einem Programm von 17 Minuten Laenge
+ *        haben Minuten und Liter dieselbe Groessenordnung; bei einem langen faellt es sofort
+ *        auf (130 Minuten gegen 34 Liter).
+ *
+ * Die Lehre: Ein einzelner Messpunkt beweist nichts. Erst der Verlauf ueber ein ganzes
+ * Programm - und besser noch ueber verschieden lange Programme - trennt Zufall von Ursache.
+ *
+ * WAS NOCH OFFEN IST
+ *
+ * Die Bibliothek asyncmiele (droman42/asyncmiele) kennt fuer denselben Leaf zwei Groessen, die
+ * hier bisher niemand gesucht hat: energy_wh_total und water_l_total, ausdruecklich als
+ * LEBENSDAUER-Zaehler. Ihr Parser liest den Payload allerdings flach (u32 an Position 0, 4, 8),
+ * waehrend dieses Geraet eine Feldstruktur mit Indizes liefert - beides gleichzeitig kann nicht
+ * stimmen, vermutlich unterscheiden sich die Firmware-Generationen.
+ *
+ * In den Rohfeldern gibt es einen Kandidaten fuer einen solchen Absolutzaehler: Feld 5 stand
+ * am 29.08.2026 auf 12007 und wuchs in vierzehn Stunden nur um 7 - das Verhalten eines
+ * Gesamtzaehlers, nicht eines Programmwerts. Als Zehntel-Kilowattstunden gelesen waeren es
+ * 1200 kWh Lebensverbrauch, was fuer eine Waschmaschine dieses Alters passt.
+ *
+ * Bestaetigt ist das nicht. Falls es sich bestaetigt, waere die Differenz zweier Staende der
+ * verlaesslichere Weg zum Programmverbrauch als Feld 25 - ein Absolutzaehler kann nicht
+ * versehentlich den Wert des Vorprogramms zeigen.
+ *
+ * ZUM WASSERFELD, WEIL DIE GESCHICHTE LEHRREICH IST
+ *
+ * Bis zum 28.08.2026 stand hier #40 als Wasser, gedeutet als Zehntelliter: Der Wert 953 wurde
+ * zu 95,3 l, was für einen Waschgang plausibel klingt. Er stand allerdings über zehn Tage und
+ * drei völlig verschiedene Programme hinweg unverändert da - Seide (36 min), Pflegeleicht
+ * (162 min) und Baumwolle (214 min) meldeten alle exakt 95,3 l.
+ *
+ * Aufgeklärt hat es der Vergleich mit dem Cloud-Adapter während eines laufenden Programms:
+ *
+ *   Zeit    Feld 4   Feld 26   Feld 40   Cloud
+ *   17:16        0      1593       953    ~6 l
+ *   17:29        7      1593       953   ~11 l
+ *   17:39       17      1593       953    16 l
+ *
+ * Nur #4 folgt dem Verbrauch, und zwar in ganzen Litern. #26 (15,93 bei /100) passte zufällig
+ * zum Endwert und war eine verlockende Fährte - es bewegt sich aber nie. Woher #40 und #26
+ * ihre Werte haben, ist weiterhin offen; sie sind jedenfalls nicht der Verbrauch dieses Laufs.
+ *
+ * Lehre daraus: Eine Zahl, die zufällig in der richtigen Größenordnung liegt, ist noch keine
+ * Messung. Erst der Verlauf entscheidet.
+ */
 const ECO_LEAF = { unit: 2, attr: 6195 };
-const ECO_ENERGY_IDX = 25; // Wh
-const ECO_WATER_IDX = 40; // 0,1 l
+const ECO_ENERGY_IDX = 25;   // Wh
+const ECO_WATER_IDX = 26;    // Hundertstelliter
+const ECO_WATER_DIV = 100;   // Teiler: 1 = ganze Liter, 10 = Zehntel, 100 = Hundertstel
 
 // Sekundengenaue Zeiten aus DOP2-Leaf 2/256 (verifiziert: #7 Restzeit s, #8 Laufzeit s).
 const SEC_LEAF = { unit: 2, attr: 256 };
+
+/*
+ * Betriebsstunden - DOP2-Leaf 2/119, Feld 1.
+ *
+ * Ein echter Lebensdauerzaehler: Am 29.08.2026 stand er bei einer WCR860 auf 6708 Stunden.
+ * Anders als die Werte im Eco-Leaf faellt er nie zurueck und wird bei keinem Programmwechsel
+ * genullt - er beantwortet damit die Frage, wie viel eine Maschine schon geleistet hat.
+ *
+ * Der Hinweis auf diesen Leaf stammt aus der Bibliothek asyncmiele (droman42/asyncmiele), die
+ * ihn als HoursOfOperation fuehrt. Ihr Parser liest den Payload flach; hier kommt er als
+ * Feldstruktur mit drei u32-Feldern, von denen nur das erste gefuellt ist.
+ *
+ * Das benachbarte Leaf 2/138 (CycleCounter, Programmzaehler) antwortet zwar, liefert bei
+ * diesem Modell aber durchgehend Nullen - es wird deshalb nicht abgefragt.
+ */
+const HOURS_LEAF = { unit: 2, attr: 119 };
+const HOURS_IDX = 1;
 /** Wartezeit, bevor ein Programm als beendet gilt - gegen kurzzeitige Statusaussetzer. */
 const CYCLE_END_GRACE_MS = 3 * 60000;
 const SEC_REMAINING_IDX = 7;
@@ -96,19 +174,15 @@ class MieleLocal extends utils.Adapter {
      */
     async aktualisiereEcoNamen(deviceId) {
         const german = this.config.germanNames !== false;
-        // Nicht nur der Name wird nachgezogen, sondern auch die Rolle: eco.water trug bis
-        // 0.3.5 value.volume, was der Repository-Pruefer beanstandet. Ein Geraet, das kein
-        // EcoFeedback mehr liefert, durchlaeuft ensureEcoObjects nie - dort waere die
-        // Korrektur sonst haengen geblieben.
-        const soll = {
-            'eco': { name: namen.SPRACHEN.reduce((o, sp) => (o[sp] = 'EcoFeedback', o), {}) },
-            'eco.energy': { name: namen.text('Energieverbrauch', 'Energy consumption', german),
-                            role: 'value.power.consumption', unit: 'kWh' },
-            'eco.energyWh': { name: namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german),
-                              role: 'value.power.consumption', unit: 'Wh' },
-            'eco.water': { name: namen.text('Wasserverbrauch', 'Water consumption', german),
-                           role: 'value', unit: 'l' },
-        };
+        /*
+         * Die Definition steht in lib/objects.js - siehe ecoCommon.
+         *
+         * Nicht nur der Name wird nachgezogen, sondern auch Rolle und Einheit: eco.water
+         * trug bis 0.3.5 value.volume, was der Repository-Pruefer beanstandet. Ein Geraet,
+         * das kein EcoFeedback mehr liefert, durchlaeuft ensureEcoObjects nie - dort waere
+         * die Korrektur sonst haengen geblieben.
+         */
+        const soll = objdef.ecoCommon(german);
         for (const sub of Object.keys(soll)) {
             const id = `${deviceId}.${sub}`;
             try {
@@ -173,6 +247,10 @@ class MieleLocal extends utils.Adapter {
             this.ecoTimer = this.setInterval(() => this.pollEco(), (this.config.ecoInterval || 60) * 1000);
         }
 
+        // Betriebsstunden: einmal beim Start, danach stuendlich - siehe pollHours().
+        this.pollHours();
+        this.hoursTimer = this.setInterval(() => this.pollHours(), 60 * 60 * 1000);
+
         // Sekundengenaue Rest-/Laufzeit per DOP2 2/256 – schneller 10s-Poll
         if (this.config.secondsTime !== false) {
             this.pollSeconds();
@@ -197,11 +275,54 @@ class MieleLocal extends utils.Adapter {
                 this.log.debug(`mDNS background discovery failed: ${e.message}`);
             }
         }
+        const konfigurierte = [];
         for (const entry of this.config.devices || []) {
             const ip = typeof entry === 'string' ? entry : entry && entry.ip;
             if (ip && !seenIp.has(ip)) {
                 found.push({ ip, techType: '', deviceType: null });
                 seenIp.add(ip);
+                konfigurierte.push(ip);
+            }
+        }
+
+        /*
+         * Ein konfiguriertes Geraet antwortet nicht - hat es die IP gewechselt?
+         *
+         * Die Geraete haengen am DHCP. Ohne feste Zuordnung im Router bekommt eines nach einem
+         * Stromausfall oder langem Standby eine andere Adresse und ist damit verschwunden,
+         * obwohl es eingeschaltet nebenan steht. Erst dann - und nur dann - wird das Subnetz
+         * abgeklopft; im Normalbetrieb passiert hier nichts.
+         *
+         * Die Zuordnung danach macht nicht die IP, sondern die Seriennummer: initDevice() liest
+         * sie signiert aus und legt das Geraet unter derselben ID wieder an. Objekte, Verlauf
+         * und Statistik bleiben also dieselben, nur die Adresse ist neu.
+         */
+        if (this.config.ipFallbackScan !== false && konfigurierte.length) {
+            const erreichbar = await Promise.all(konfigurierte.map(ip => istMiele(ip, 1500)));
+            const vermisst = konfigurierte.filter((_, i) => !erreichbar[i]);
+            /*
+             * Hoechstens alle 30 Minuten.
+             *
+             * Ist ein Geraet schlicht ausgeschaltet - der Backofen ist es die meiste Zeit -,
+             * bleibt es "vermisst", und ohne diese Sperre liefe bei jedem Discovery-Lauf ein
+             * Subnetz-Scan, der nichts Neues findet.
+             */
+            const seitLetztem = Date.now() - (this.letzterScan || 0);
+            if (vermisst.length && seitLetztem < 30 * 60 * 1000) {
+                this.log.debug(`${vermisst.length} Gerät(e) nicht erreichbar, letzter Subnetz-Scan ` +
+                               `vor ${Math.round(seitLetztem / 60000)} min - warte noch`);
+            } else if (vermisst.length) {
+                this.letzterScan = Date.now();
+                this.log.info(`${vermisst.length} konfigurierte(s) Gerät(e) antworten nicht ` +
+                              `(${vermisst.join(', ')}) - suche im Subnetz nach der neuen Adresse`);
+                const imNetz = await scanSubnet(konfigurierte[0], m => this.log.info(m));
+                for (const ip of imNetz) {
+                    if (!seenIp.has(ip)) {
+                        found.push({ ip, techType: '', deviceType: null });
+                        seenIp.add(ip);
+                        this.log.info(`Neue Adresse gefunden: ${ip}`);
+                    }
+                }
             }
         }
 
@@ -534,6 +655,7 @@ class MieleLocal extends utils.Adapter {
                 dev.ecoStabil = 0;
                 this.log.debug(`Eco ${deviceId}: Programm beendet, Nachlauf bis `
                     + `${new Date(dev.ecoNachlaufBis).toLocaleTimeString('de-DE')}`);
+                this.ecoSchlussstandHolen(deviceId);
             }
             dev.ecoLaeuft = laeuftJetzt;
         }
@@ -660,6 +782,90 @@ class MieleLocal extends utils.Adapter {
             waterL: await frisch(`${deviceId}.eco.water`, offen.ecoWasserStart),
         };
         await this.appendCycle(deviceId, eintrag);
+        await this.sammlungAufnehmen(deviceId, eintrag);
+    }
+
+    /**
+     * Einen Datensatz fuer die Feldzuordnung mitschreiben - freiwillig, standardmaessig aus.
+     *
+     * Wozu: Die Feldindizes des Eco-Leaf unterscheiden sich je Baureihe. Wer ein anderes Modell
+     * hat und mithelfen moechte, schaltet diese Sammlung ein; aus zehn Zyklen mit bekannten
+     * Vergleichswerten laesst sich ablesen, welches Feld welche Groesse traegt.
+     *
+     * Datenschutz: Die Daten bleiben in der eigenen Instanz. Der Adapter versendet nichts und
+     * wertet nichts aus. Die Seriennummer wird bewusst nicht mitgeschrieben - sie benennt einen
+     * Haushalt, und fuer die Feldzuordnung genuegt das Modell. Siehe lib/sammler.js.
+     */
+    async sammlungAufnehmen(deviceId, eintrag) {
+        if (!this.config.sammlerAktiv) return;
+        try {
+            const lies = async (pfad) => {
+                const s = await this.getStateAsync(`${deviceId}.${pfad}`);
+                return s ? s.val : null;
+            };
+            let felder = {};
+            try { felder = JSON.parse(await lies('eco.felderJson')) || {}; } catch (e) { /* leer */ }
+
+            let cloud = null;
+            if (this.config.sammlerCloud) cloud = await this.cloudWerteLesen(deviceId);
+
+            const satz = sammler.datensatzBauen({
+                modell: {
+                    techType: await lies('info.techType'),
+                    matNumber: await lies('info.matNumber'),
+                    xkmType: await lies('info.xkmType'),
+                    xkmVersion: await lies('info.xkmVersion'),
+                    protocolVersion: await lies('info.protocolVersion'),
+                },
+                programm: {
+                    id: await lies('state.programId'),
+                    text: eintrag.program,
+                    art: await lies('state.programType'),
+                    artText: eintrag.programType,
+                    dauerMin: Math.round((eintrag.dauerS || 0) / 60),
+                    temperatur: await lies('state.targetTemperature'),
+                },
+                felder,
+                cloud,
+            });
+
+            let bisher = [];
+            try { bisher = JSON.parse(await lies('sammlung.datenJson')) || []; } catch (e) { /* leer */ }
+            const neu = sammler.aufnehmen(bisher, satz);
+            await this.setStateAsync(`${deviceId}.sammlung.datenJson`,
+                { val: JSON.stringify(neu), ack: true });
+            await this.setStateAsync(`${deviceId}.sammlung.zyklen`, { val: neu.length, ack: true });
+            await this.setStateAsync(`${deviceId}.sammlung.fortschritt`,
+                { val: sammler.fortschritt(neu), ack: true });
+            this.log.info(`${deviceId}: Datensatz fuer die Feldzuordnung aufgenommen `
+                + `(${neu.length} gesammelt)`);
+        } catch (e) {
+            // Die Sammlung darf den Zyklus nie stoeren - sie ist eine Zugabe, kein Kernstueck.
+            this.log.warn(`${deviceId}: Datensatz konnte nicht aufgenommen werden - ${e.message}`);
+        }
+    }
+
+    /**
+     * Energie und Wasser aus dem Cloud-Adapter lesen, wenn der Nutzer den Vergleich einschaltet.
+     *
+     * Ohne einen Vergleichswert ist ein Datensatz wertlos: Man saehe zwar, welche Felder sich
+     * bewegen, aber nicht, welches davon die Kilowattstunden sind. Die Cloud liefert ihn
+     * automatisch; wer sie nicht angebunden hat, traegt die Werte von Hand aus der Miele-App
+     * nach (sammlung.eingabeEnergie / eingabeWasser).
+     *
+     * Der Wert wird waehrend des Programms mitgefuehrt und beim Ende zurueckgesetzt - deshalb
+     * der Hoechstwert der letzten Stunde und nicht der Augenblickswert.
+     */
+    async cloudWerteLesen(deviceId) {
+        const instanz = this.config.sammlerCloudInstanz || 'mielecloudservice.0';
+        const holen = async (feld) => {
+            const s = await this.getForeignStateAsync(
+                `${instanz}.${deviceId}.EcoFeedback.${feld}`).catch(() => null);
+            return s && typeof s.val === 'number' && s.val > 0 ? s.val : null;
+        };
+        const energyKwh = await holen('currentEnergyConsumption');
+        const waterL = await holen('currentWaterConsumption');
+        return (energyKwh != null || waterL != null) ? { energyKwh, waterL } : null;
     }
 
     /** Haengt einen Zyklus an Ringpuffer und Summen an und schreibt ihn in die Historie. */
@@ -925,6 +1131,14 @@ class MieleLocal extends utils.Adapter {
     async ensureHistoryObjects(deviceId) {
         if (!this._histCreated) this._histCreated = {};
         if (this._histCreated[deviceId]) return;
+        /*
+         * Die Sammlung gleich mit anlegen.
+         *
+         * Sie haengt nicht am Eco-Abruf: Der findet nur waehrend eines laufenden Programms
+         * statt, und bis dahin gaebe es die Eingabefelder nicht - wer Werte aus der Miele-App
+         * nachtragen will, faende nichts vor. Die Historie entsteht dagegen beim Start.
+         */
+        await this.ensureSammlungObjects(deviceId);
         const de = this.config.germanNames !== false;
         await this.extendObjectAsync(`${deviceId}.history`, {
             type: 'channel', common: { name: namen.text('Verlauf', 'History', de) }, native: {},
@@ -998,6 +1212,37 @@ class MieleLocal extends utils.Adapter {
     }
 
     /** EcoFeedback (Energie/Wasser) aus DOP2-Leaf 2/6195 lesen – nur wo verfügbar. */
+    /**
+     * Den Schlussstand direkt nach dem Programmende abholen.
+     *
+     * Der regulaere Eco-Takt reicht dafuer nicht. Er laeuft in ecoInterval-Abstaenden - hier
+     * 600 Sekunden -, der Nachlauf dauert zehn Minuten: In das Fenster faellt hoechstens eine
+     * Abfrage, und die kommt oft zu spaet. Die Maschine schaltet nach dem Programm ab, und ein
+     * schlafendes Geraet beantwortet das Leaf gar nicht mehr (HTTP 500). Der Schlusswert war
+     * damit regelmaessig nicht zu holen: Beim Waschgang vom 29.08.2026 stammte der letzte
+     * Feldsatz von 09:15, das Programm endete um 09:20 - der Endstand wurde nie gelesen, und
+     * in der Historie stand weiter das Ergebnis des Vorlaufs.
+     *
+     * Deshalb hier ein eigener, kurzer Takt, ausgeloest vom Statuswechsel selbst. Drei
+     * Versuche in den ersten zwei Minuten, solange das Geraet sicher noch wach ist. Das sind
+     * drei zusaetzliche Anfragen je Waschgang - die Stelle, an der sie den Unterschied machen.
+     */
+    ecoSchlussstandHolen(deviceId) {
+        const dev = this.devices && this.devices[deviceId];
+        if (!dev || dev.ecoSchlussLaeuft) return;
+        dev.ecoSchlussLaeuft = true;
+        const abstaende = [15000, 45000, 120000];
+        abstaende.forEach((ms, i) => {
+            this.setTimeout(() => {
+                // Hat der Nachlauf inzwischen einen stabilen Wert gesehen, ist nichts mehr zu holen.
+                if (!dev.ecoNachlaufBis) return;
+                this.log.debug(`Eco ${deviceId}: Schlussstand-Versuch ${i + 1} von ${abstaende.length}`);
+                this.pollEco().catch(e => this.log.debug(`Eco ${deviceId}: Versuch fehlgeschlagen - ${e.message}`));
+                if (i === abstaende.length - 1) dev.ecoSchlussLaeuft = false;
+            }, ms);
+        });
+    }
+
     async pollEco() {
         if (!this._ecoAbsagen) this._ecoAbsagen = {};
         for (const [deviceId, dev] of Object.entries(this.devices)) {
@@ -1049,16 +1294,89 @@ class MieleLocal extends utils.Adapter {
             // Antwortet das Gerät wieder, zählt die Absagenreihe von vorn.
             this._ecoAbsagen[deviceId] = 0;
             if (this._ecoSelten) delete this._ecoSelten[deviceId];
-            const eco = dop2.ecoValues(fields, ECO_ENERGY_IDX, ECO_WATER_IDX);
+            // Indizes und Teiler lassen sich je Anlage überschreiben - bei einem anderen
+            // Modell sitzen die Felder woanders, und niemand soll dafür den Adapter ändern
+            // müssen.
+            const eco = dop2.ecoValues(fields,
+                this.config.ecoEnergyIdx || ECO_ENERGY_IDX,
+                this.config.ecoWaterIdx || ECO_WATER_IDX,
+                this.config.ecoWaterDiv || ECO_WATER_DIV);
             if (eco.energyWh == null && eco.waterL == null) continue;
 
             await this.ensureEcoObjects(deviceId);
+            await this.ensureSammlungObjects(deviceId);
+            /*
+             * Rohfelder mitschreiben - freiwillig, standardmäßig aus.
+             *
+             * Warum es das gibt: Die Feldindizes des Eco-Leaf unterscheiden sich je Baureihe.
+             * Bei der WCR860 stehen Energie auf 25 und Wasser auf 40; ob das bei anderen
+             * Modellen ebenso ist, weiß niemand, der das Gerät nicht hat. Diese Waschmaschine
+             * meldete über drei völlig verschiedene Programme hinweg denselben Wasserwert -
+             * 95,3 l bei Seide (36 min), Pflegeleicht (162 min) und Baumwolle (214 min). Ein
+             * Programmverbrauch ist das nicht; entweder steht in Feld 40 etwas anderes, oder
+             * das Gerät schreibt es nicht fort.
+             *
+             * Nachsehen lässt sich das nur im laufenden Programm - im Standby beantwortet das
+             * Gerät den Leaf gar nicht (HTTP 500). Mit dieser Option schreibt der Adapter bei
+             * jedem Abruf alle Felder mit; nach einem Programmlauf ist ablesbar, welches Feld
+             * mitsteigt und danach stehen bleibt.
+             *
+             * Datenschutz: Die Zahlen bleiben in der eigenen ioBroker-Instanz. Der Adapter
+             * versendet nichts und wertet nichts aus. Wer sie teilen möchte, kopiert den
+             * Datenpunkt selbst - deshalb ist die Option abschaltbar und aus, solange niemand
+             * sie einschaltet.
+             */
+            if (this.config.ecoRawFields) {
+                const alleFelder = {};
+                for (const idx of Object.keys(fields)) {
+                    const v = dop2.interpValue(fields, Number(idx));
+                    if (v != null) alleFelder[idx] = Number(v);
+                }
+                await this.setStateAsync(`${deviceId}.eco.felderJson`,
+                    { val: JSON.stringify(alleFelder), ack: true });
+            }
             if (eco.energyWh != null) {
                 await this.setStateAsync(`${deviceId}.eco.energyWh`, { val: eco.energyWh, ack: true });
                 await this.setStateAsync(`${deviceId}.eco.energy`, { val: eco.energyKwh, ack: true });
             }
+            /*
+             * Den Wasserwert festhalten, wenn das Programm endet.
+             *
+             * Feld 4 traegt den Verbrauch des LAUFENDEN Programms und faellt beim Programmende
+             * schlagartig auf 0 zurueck. Wer den Wert einfach durchschreibt, hat am Ende jedes
+             * Waschgangs eine Null stehen - genau dann, wenn man wissen will, wie viel er
+             * gebraucht hat. Am 28.08.2026 beobachtet: 17 l waehrend des Spuelens, 0 l zwei
+             * Minuten spaeter.
+             *
+             * Deshalb wird eine Null nur uebernommen, wenn das Geraet auch wirklich laeuft.
+             * Steht es, bleibt der letzte Wert groesser null stehen, bis das naechste Programm
+             * beginnt und selbst hochzaehlt. Der Datenpunkt bedeutet damit: "Verbrauch des
+             * laufenden oder zuletzt beendeten Programms" - dieselbe Lesart wie beim
+             * Cloud-Adapter.
+             */
             if (eco.waterL != null) {
-                await this.setStateAsync(`${deviceId}.eco.water`, { val: eco.waterL, ack: true });
+                /*
+                 * "Laeuft" aus zwei Quellen.
+                 *
+                 * dev.ecoLaeuft wird erst gesetzt, wenn der Status einmal gepollt wurde - nach
+                 * einem Neustart oder einer Konfigurationsaenderung steht dort zunaechst
+                 * nichts. Die Festhalte-Regel griff dann faelschlich und liess einen veralteten
+                 * Wert stehen, obwohl das Geraet mitten im Programm war. Der Statuscode aus dem
+                 * Datenpunkt ist unabhaengig davon vorhanden (5 = in Betrieb, 6 = Pause).
+                 */
+                const st = await this.getStateAsync(`${deviceId}.state.status`);
+                const laeuftLautStatus = st && (st.val === 5 || st.val === 6);
+                const laeuft = !!(dev && dev.ecoLaeuft) || !!laeuftLautStatus;
+                const bisher = await this.getStateAsync(`${deviceId}.eco.water`);
+                const alterWert = bisher && typeof bisher.val === 'number' ? bisher.val : 0;
+                const behalten = !laeuft && eco.waterL === 0 && alterWert > 0;
+                if (!behalten) {
+                    await this.setStateAsync(`${deviceId}.eco.water`,
+                        { val: eco.waterL, ack: true });
+                } else {
+                    this.log.debug(`Eco ${deviceId}: Wasserfeld auf 0 zurueckgesetzt, `
+                        + `${alterWert} l des letzten Programms bleiben stehen`);
+                }
             }
 
             // Im Nachlauf: Aendert sich nichts mehr, steht der Schlussstand fest.
@@ -1108,26 +1426,93 @@ class MieleLocal extends utils.Adapter {
         }
     }
 
+    /**
+     * Die Datenpunkte der Sammlung anlegen - nur, wenn sie eingeschaltet ist.
+     *
+     * Zwei davon sind beschreibbar: Wer keine Cloud angebunden hat, traegt Energie und Wasser
+     * nach jedem Programm von Hand aus der Miele-App ein. Der Adapter uebernimmt sie in den
+     * zuletzt aufgenommenen Datensatz, sobald sie gesetzt werden.
+     */
+    async ensureSammlungObjects(deviceId) {
+        if (!this.config.sammlerAktiv) return;
+        if (!this._sammlungCreated) this._sammlungCreated = {};
+        if (this._sammlungCreated[deviceId]) return;
+        const de = this.config.germanNames !== false;
+
+        await this.extendObjectAsync(`${deviceId}.sammlung`, {
+            type: 'channel',
+            common: { name: namen.text('Datensammlung (Feldzuordnung)',
+                                       'Data collection (field mapping)', de) },
+            native: {},
+        });
+        const felder = [
+            ['datenJson', 'Gesammelte Datensaetze (JSON)', 'Collected records (JSON)',
+             'string', 'json', '', false],
+            ['zyklen', 'Anzahl gesammelter Zyklen', 'Collected cycles', 'number', 'value', '', false],
+            ['fortschritt', 'Was noch fehlt', 'What is still missing', 'string', 'text', '', false],
+            ['eingabeEnergie', 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
+             'number', 'value.power.consumption', 'kWh', true],
+            ['eingabeWasser', 'Wasser aus der Miele-App (l)', 'Water from the Miele app (l)',
+             'number', 'value.volume', 'l', true],
+        ];
+        for (const [k, nameDe, nameEn, typ, rolle, einheit, schreibbar] of felder) {
+            await this.setObjectNotExistsAsync(`${deviceId}.sammlung.${k}`, {
+                type: 'state',
+                common: {
+                    name: namen.text(nameDe, nameEn, de), type: typ, role: rolle,
+                    unit: einheit || undefined, read: true, write: schreibbar,
+                },
+                native: {},
+            });
+        }
+        // Die beiden Eingabefelder beobachten - sie sind der einzige Weg fuer alle, die keine
+        // Cloud angebunden haben.
+        this.subscribeStates(`${deviceId}.sammlung.eingabeEnergie`);
+        this.subscribeStates(`${deviceId}.sammlung.eingabeWasser`);
+        this._sammlungCreated[deviceId] = true;
+    }
+
+    /**
+     * Handeingaben aus der Miele-App in den zuletzt gesammelten Datensatz uebernehmen.
+     *
+     * Aufgerufen aus onStateChange. Beide Felder koennen einzeln kommen - wer nur den
+     * Wasserwert kennt, traegt eben nur den ein.
+     */
+    async sammlungHandeingabe(deviceId, feld, wert) {
+        const s = await this.getStateAsync(`${deviceId}.sammlung.datenJson`);
+        let liste = [];
+        try { liste = JSON.parse(s && s.val) || []; } catch (e) { return; }
+        if (!liste.length) {
+            this.log.warn(`${deviceId}: Handeingabe ohne Datensatz - erst ein Programm abwarten`);
+            return;
+        }
+        const werte = feld === 'eingabeEnergie' ? { energyKwh: wert } : { waterL: wert };
+        const neu = sammler.manuellNachtragen(liste, werte);
+        await this.setStateAsync(`${deviceId}.sammlung.datenJson`,
+            { val: JSON.stringify(neu), ack: true });
+        await this.setStateAsync(`${deviceId}.sammlung.fortschritt`,
+            { val: sammler.fortschritt(neu), ack: true });
+        this.log.info(`${deviceId}: Handeingabe uebernommen (${feld} = ${wert})`);
+    }
+
     async ensureEcoObjects(deviceId) {
         if (!this._ecoCreated) this._ecoCreated = {};
         if (this._ecoCreated[deviceId]) return;
         const german = this.config.germanNames !== false;
         await this.extendObjectAsync(`${deviceId}.eco`, {
-            // "EcoFeedback" ist Mieles eigener Begriff und bleibt in jeder Sprache gleich -
-            // das i18n-Objekt macht ihn trotzdem vollstaendig, damit die Pruefung nicht warnt.
             type: 'channel',
-            common: { name: namen.SPRACHEN.reduce((o, sp) => (o[sp] = 'EcoFeedback', o), {}) },
+            common: objdef.ecoCommon(german)['eco'],
             native: {},
         });
-        const defs = [
-            { sub: 'energy', name: namen.text('Energieverbrauch', 'Energy consumption', german), role: 'value.power.consumption', type: 'number', unit: 'kWh', def: 0 },
-            { sub: 'energyWh', name: namen.text('Energieverbrauch (Rohwert Wh)', 'Energy consumption (raw Wh)', german), role: 'value.power.consumption', type: 'number', unit: 'Wh', def: 0 },
-            { sub: 'water', name: namen.text('Wasserverbrauch', 'Water consumption', german), role: 'value', type: 'number', unit: 'l', def: 0 },
-        ];
+        // Dieselbe Quelle wie aktualisiereEcoNamen - siehe lib/objects.js, ecoStates.
+        // Zwei getrennte Tabellen fuer dieselben Punkte waren bis 0.3.10 der Grund dafuer,
+        // dass die Umbenennung der Energiefelder wirkungslos blieb: Diese Stelle setzte
+        // beim naechsten laufenden Programm die alten Namen zurueck.
+        const defs = objdef.ecoStates(german, this.config.ecoRawFields);
         for (const d of defs) {
             await this.extendObjectAsync(`${deviceId}.eco.${d.sub}`, {
                 type: 'state',
-                common: { name: d.name, role: d.role, type: d.type, unit: d.unit, read: true, write: false, def: d.def },
+                common: d.common,
                 native: {},
             });
         }
@@ -1135,6 +1520,57 @@ class MieleLocal extends utils.Adapter {
     }
 
     /** Sekundengenaue Rest-/Laufzeit aus DOP2 2/256 (#7 Rest s, #8 Lauf s) – nur wo verfügbar. */
+    /**
+     * Betriebsstunden lesen - selten, weil sie sich selten aendern.
+     *
+     * Einmal beim Start und danach stuendlich: Ein Zaehler, der pro Programm um ein paar
+     * Stunden steigt, braucht keine engere Abfrage. Jede gesparte Anfrage kommt dem Geraet
+     * zugute, das nur eine Verbindung gleichzeitig bedienen kann.
+     */
+    async pollHours() {
+        for (const [deviceId, dev] of Object.entries(this.devices)) {
+            if (this._hoursUnbekannt && this._hoursUnbekannt[deviceId]) continue;
+            let fields;
+            try {
+                const res = await dev.api.readDop2(dev.route, HOURS_LEAF.unit, HOURS_LEAF.attr);
+                if (res.status !== 200 || !res.headers['x-signature']) {
+                    // Kennt das Geraet den Leaf nicht, wird er nicht wieder gefragt - anders als
+                    // beim Eco-Leaf gibt es hier keinen Grund, es spaeter noch einmal zu
+                    // versuchen: Ein Zaehler taucht nicht mit dem naechsten Programm auf.
+                    if (MieleLocal.kenntLeafNicht(res.status)) {
+                        if (!this._hoursUnbekannt) this._hoursUnbekannt = {};
+                        this._hoursUnbekannt[deviceId] = true;
+                        this.log.debug(`Betriebsstunden ${deviceId}: Leaf 2/119 unbekannt `
+                            + `(HTTP ${res.status}), wird nicht mehr abgefragt`);
+                    }
+                    continue;
+                }
+                ({ fields } = dop2.parseLeaf(
+                    this.mc.decryptResponse(res.headers['x-signature'], res.body)));
+            } catch (e) {
+                this.log.debug(`Betriebsstunden ${deviceId}: ${e.message}`);
+                continue;
+            }
+            const f = fields[HOURS_IDX];
+            const stunden = f && typeof f.value === 'number' ? f.value : null;
+            // Null nicht uebernehmen: Ein Zaehler, der bei 0 steht, ist bei einem Geraet in
+            // Betrieb kein Messwert, sondern ein Zeichen, dass dieses Modell ihn nicht fuehrt.
+            if (stunden === null || stunden <= 0) continue;
+            await this.extendObjectAsync(`${deviceId}.info.operatingHours`, {
+                type: 'state',
+                common: {
+                    name: namen.text('Betriebsstunden gesamt', 'Total operating hours',
+                                     this.config.germanNames !== false),
+                    role: 'value.interval', type: 'number', unit: 'h',
+                    read: true, write: false, def: 0,
+                },
+                native: {},
+            });
+            await this.setStateAsync(`${deviceId}.info.operatingHours`,
+                { val: stunden, ack: true });
+        }
+    }
+
     async pollSeconds() {
         for (const [deviceId, dev] of Object.entries(this.devices)) {
             // Läuft kein Programm (Status ≠ In Betrieb/Pause), die Sekundenwerte auf 0 zurücksetzen -
@@ -1258,6 +1694,25 @@ class MieleLocal extends utils.Adapter {
     async onStateChange(id, state) {
         if (!state || state.ack) return; // nur echte Nutzerbefehle
         const parts = id.split('.'); // miele-local.0.<serial>.control.<sub>
+
+        /*
+         * Handeingaben der Datensammlung.
+         *
+         * Sie stehen unter "sammlung", nicht unter "control", und schalten nichts am Geraet -
+         * deshalb vor der Steuerungspruefung und unabhaengig von allowControl. Wer Werte aus
+         * der Miele-App nachtraegt, will nicht erst die Geraetesteuerung freischalten muessen.
+         */
+        const sIdx = parts.indexOf('sammlung');
+        if (sIdx > 0 && typeof state.val === 'number' && state.val > 0) {
+            const feld = parts[sIdx + 1];
+            if (feld === 'eingabeEnergie' || feld === 'eingabeWasser') {
+                await this.sammlungHandeingabe(parts[sIdx - 1], feld, state.val)
+                    .catch(e => this.log.warn(`Handeingabe fehlgeschlagen: ${e.message}`));
+                await this.setStateAsync(id, { val: state.val, ack: true });
+            }
+            return;
+        }
+
         const idx = parts.indexOf('control');
         if (idx < 0) return;
         const deviceId = parts[idx - 1];
@@ -1386,6 +1841,7 @@ class MieleLocal extends utils.Adapter {
             if (this.discoveryTimer) this.clearInterval(this.discoveryTimer);
             if (this.enrollTimer) this.clearInterval(this.enrollTimer);
             if (this.ecoTimer) this.clearInterval(this.ecoTimer);
+            if (this.hoursTimer) this.clearInterval(this.hoursTimer);
             if (this.secTimer) this.clearInterval(this.secTimer);
             if (this.push) await this.push.stop();
             await this.setStateAsync('info.connection', { val: false, ack: true });

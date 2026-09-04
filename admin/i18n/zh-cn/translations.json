@@ -60,5 +60,16 @@
   "Zusätzlich in den History-Adapter schreiben": "同时写入 history 适配器",
   "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "每个程序的能耗、用水量和时长，时间戳取程序结束时刻——便于生成任意时间范围的图表。",
   "History-Instanz": "history 实例",
-  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "适配器会记录每个已完成的程序：时长、程序、能耗和用水量。设备本身不保存已完成的程序，因此历史记录从启用此功能时开始，无法追溯填充。最近的程序以 JSON 形式存放在 <序列号>.history.cyclesJson，旁边是汇总值。"
+  "Der Adapter schreibt jedes abgeschlossene Programm mit: Dauer, Programm, Energie und Wasser. Die Geräte selbst heben abgeschlossene Programme nicht auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion – rückwirkend lässt er sich nicht füllen. Die letzten Programme stehen als JSON unter <Seriennummer>.history.cyclesJson, die Summen daneben.": "适配器会记录每个已完成的程序：时长、程序、能耗和用水量。设备本身不保存已完成的程序，因此历史记录从启用此功能时开始，无法追溯填充。最近的程序以 JSON 形式存放在 <序列号>.history.cyclesJson，旁边是汇总值。",
+  "Rohfelder mitschreiben (nur zur Fehlersuche)": "记录原始字段（仅用于诊断）",
+  "Freiwillig und standardmäßig aus. Legt je Gerät den Datenpunkt eco.felderJson an und schreibt alle Felder des Eco-Leaf hinein statt nur der zwei ausgewerteten. Hilft, wenn Energie oder Wasser bei Ihrem Modell falsch oder gar nicht ankommen: Die Feldindizes unterscheiden sich je Baureihe, und aus einem aufgezeichneten Programmlauf lassen sich die richtigen ablesen. Die Werte bleiben in Ihrer ioBroker-Instanz - es wird nichts versendet und nichts ausgewertet.": "可选，默认关闭。为每台设备创建 eco.felderJson 状态，并将 eco 叶节点的所有字段写入其中，而不仅是已解析的两个字段。当您的型号能耗或用水数值有误或缺失时很有帮助：字段索引因系列而异，通过记录一次程序运行即可读出正确的索引。这些数值仅保存在您自己的 ioBroker 实例中 - 不会发送，也不会被分析。",
+  "Feldindex Energie": "能耗字段索引",
+  "Feldindex Wasser": "用水字段索引",
+  "Einheit Wasserfeld": "用水字段单位",
+  "ganze Liter": "整升",
+  "Zehntelliter": "十分之一升",
+  "Hundertstelliter": "百分之一升",
+  "Die Vorgaben stammen von einer WCR860 und stimmen dort. Bei einem anderen Modell können die Felder woanders sitzen - dann meldet der Adapter unplausible Werte, etwa eine Zahl, die sich über verschiedene Programme hinweg nie ändert. Mit dem Haken \"Rohfelder mitschreiben\" lässt sich der richtige Index finden: Das Feld, dessen Wert während eines laufenden Programms mitwächst, ist das gesuchte.": "默认值来自 WCR860，在该机型上是正确的。其他型号的字段位置可能不同——此时适配器会给出不合理的数值，例如在不同程序之间从不变化的数字。启用「记录原始字段」有助于找到正确的索引：在程序运行期间数值持续增长的那个字段就是所需的。",
+  "Bei Ausfall die neue IP im Subnetz suchen": "设备失联时在子网中查找新的 IP",
+  "Antwortet ein manuell eingetragenes Gerät nicht mehr, wird das eigene /24-Netz einmal abgeklopft (höchstens alle 30 Minuten). Nötig, wenn die Geräte ihre IP per DHCP bekommen und mDNS nicht durchkommt – etwa im Docker-Bridge-Netz.": "如果手动录入的设备不再应答，适配器会对自己的 /24 网段扫描一次（最多每 30 分钟一次）。当设备通过 DHCP 获取 IP 且 mDNS 无法穿透时需要此功能——例如在 Docker bridge 网络中。"
 }

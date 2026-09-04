@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.5",
+    "version": "0.3.11",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,75 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.11": {
+        "de": "Umbenennung der Energiefelder wirkt jetzt wirklich - sie wurde von der Objektanlage zurueckgesetzt, sobald ein Programm lief",
+        "en": "Renaming of the energy fields now actually takes effect - it was reset by object creation as soon as a programme was running"
+      },
+      "0.3.10": {
+        "en": "Total operating hours from DOP2 leaf 2/119",
+        "de": "Betriebsstunden gesamt aus DOP2-Leaf 2/119",
+        "ru": "Общее время работы из DOP2-листа 2/119",
+        "pt": "Horas de funcionamento totais do leaf DOP2 2/119",
+        "nl": "Totale bedrijfsuren uit DOP2-leaf 2/119",
+        "fr": "Heures de fonctionnement totales depuis le leaf DOP2 2/119",
+        "it": "Ore di funzionamento totali dal leaf DOP2 2/119",
+        "es": "Horas de funcionamiento totales del leaf DOP2 2/119",
+        "pl": "Łączne godziny pracy z liścia DOP2 2/119",
+        "uk": "Загальний час роботи з листа DOP2 2/119",
+        "zh-cn": "来自 DOP2 叶节点 2/119 的总运行小时数"
+      },
+      "0.3.9": {
+        "en": "Water field corrected (#26); hold rule no longer keeps stale values during a run",
+        "de": "Wasserfeld berichtigt (#26); Haltelogik behaelt keine veralteten Werte mehr im Betrieb",
+        "ru": "Исправлено поле воды (#26); удержание больше не сохраняет устаревшие значения",
+        "pt": "Campo de água corrigido (#26); a retenção já não mantém valores desatualizados",
+        "nl": "Waterveld gecorrigeerd (#26); vasthouden bewaart geen verouderde waarden meer",
+        "fr": "Champ eau corrigé (#26) ; la rétention ne conserve plus de valeurs périmées",
+        "it": "Campo acqua corretto (#26); la ritenzione non conserva più valori obsoleti",
+        "es": "Campo de agua corregido (#26); la retención ya no conserva valores obsoletos",
+        "pl": "Poprawione pole wody (#26); przytrzymanie nie zachowuje już nieaktualnych wartości",
+        "uk": "Виправлено поле води (#26); утримання більше не зберігає застарілі значення",
+        "zh-cn": "修正用水字段（#26）；保持逻辑不再保留过时数值"
+      },
+      "0.3.8": {
+        "en": "Water value of a finished programme is kept instead of falling back to zero",
+        "de": "Wasserwert eines beendeten Programms bleibt stehen statt auf null zurueckzufallen",
+        "ru": "Значение воды завершённой программы сохраняется, а не сбрасывается в ноль",
+        "pt": "O valor de água de um programa terminado mantém-se em vez de voltar a zero",
+        "nl": "Waterwaarde van een beeindigd programma blijft staan in plaats van naar nul te vallen",
+        "fr": "La valeur d'eau d'un programme terminé est conservée au lieu de retomber à zéro",
+        "it": "Il valore dell'acqua di un programma terminato resta invece di tornare a zero",
+        "es": "El valor de agua de un programa terminado se mantiene en lugar de volver a cero",
+        "pl": "Wartość wody zakończonego programu pozostaje zamiast wracać do zera",
+        "uk": "Значення води завершеної програми зберігається, а не скидається до нуля",
+        "zh-cn": "已完成程序的用水量保持显示，而不是归零"
+      },
+      "0.3.7": {
+        "en": "Water consumption read from the correct field; eco field indices are now configurable",
+        "de": "Wasserverbrauch aus dem richtigen Feld gelesen; Eco-Feldindizes jetzt einstellbar",
+        "ru": "Расход воды считывается из правильного поля; индексы полей eco теперь настраиваются",
+        "pt": "Consumo de água lido do campo correto; índices dos campos eco agora configuráveis",
+        "nl": "Waterverbruik uit het juiste veld gelezen; eco-veldindices nu instelbaar",
+        "fr": "Consommation d'eau lue depuis le bon champ ; index des champs eco configurables",
+        "it": "Consumo d'acqua letto dal campo corretto; indici dei campi eco ora configurabili",
+        "es": "Consumo de agua leído del campo correcto; índices de campos eco ahora configurables",
+        "pl": "Zużycie wody odczytywane z właściwego pola; indeksy pól eco teraz konfigurowalne",
+        "uk": "Витрата води зчитується з правильного поля; індекси полів eco тепер налаштовуються",
+        "zh-cn": "从正确的字段读取用水量；eco 字段索引现在可配置"
+      },
+      "0.3.6": {
+        "en": "Optional raw eco field recording for diagnosing model-specific field indices",
+        "de": "Optionales Mitschreiben der Eco-Rohfelder zur Klaerung modellabhaengiger Feldindizes",
+        "ru": "Дополнительная запись необработанных полей eco для выяснения индексов полей модели",
+        "pt": "Registo opcional de campos eco brutos para esclarecer índices específicos do modelo",
+        "nl": "Optioneel vastleggen van ruwe eco-velden om modelafhankelijke veldindices te bepalen",
+        "fr": "Enregistrement optionnel des champs eco bruts pour déterminer les indices par modèle",
+        "it": "Registrazione opzionale dei campi eco grezzi per chiarire gli indici specifici del modello",
+        "es": "Registro opcional de campos eco sin procesar para aclarar índices propios de cada modelo",
+        "pl": "Opcjonalne zapisywanie surowych pól eco w celu ustalenia indeksów zależnych od modelu",
+        "uk": "Додатковий запис необроблених полів eco для визначення індексів залежно від моделі",
+        "zh-cn": "可选记录 eco 原始字段，用于确定各型号的字段索引"
+      },
       "0.3.4": {
         "en": "Login instructions translated into all supported languages",
         "de": "Login-Anleitung in alle unterstuetzten Sprachen uebersetzt",
@@ -142,6 +211,7 @@
     "groupKey": "",
     "refreshToken": "",
     "autoDiscover": true,
+    "ipFallbackScan": true,
     "devices": [],
     "pollInterval": 30,
     "activePollInterval": 30,
@@ -150,6 +220,10 @@
     "allowControl": false,
     "germanNames": true,
     "ecoFeedback": true,
+    "ecoRawFields": false,
+    "ecoEnergyIdx": 25,
+    "ecoWaterIdx": 26,
+    "ecoWaterDiv": 100,
     "ecoInterval": 60,
     "secondsTime": true,
     "secondsInterval": 30,
