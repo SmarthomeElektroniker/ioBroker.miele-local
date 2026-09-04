@@ -14,6 +14,7 @@ const objdef = require('./lib/objects');
 const namen = require('./lib/names');
 const ecoRegel = require('./lib/eco');
 const sammler = require('./lib/sammler');
+const feldsuche = require('./lib/feldsuche');
 const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
@@ -837,8 +838,32 @@ class MieleLocal extends utils.Adapter {
             await this.setStateAsync(`${deviceId}.sammlung.zyklen`, { val: neu.length, ack: true });
             await this.setStateAsync(`${deviceId}.sammlung.fortschritt`,
                 { val: sammler.fortschritt(neu), ack: true });
+
+            /*
+             * Sammeln allein beantwortet nichts - deshalb gleich die Auswertung.
+             *
+             * Sie haelt jedes Feld gegen die Vergleichswerte und sagt, welches der
+             * gesuchten Groesse folgt. Genau das haette den Fehler vom 28.08.2026 am Tag
+             * seines Entstehens gezeigt: Feld 40 meldete zehn Tage lang konstant 95,3 l,
+             * und ein Feld, das sich nie aendert, kann keine Groesse sein, die sich
+             * aendert. Siehe lib/feldsuche.js.
+             *
+             * Uebernommen wird nichts von selbst. Der Befund ist ein Text zum Lesen; ob
+             * eine Feldzuordnung geaendert wird, entscheidet der Mensch davor. Eine
+             * Zuordnung, die sich unbemerkt selbst umstellt, waere genau die Art Aenderung,
+             * die erst auffaellt, wenn die Jahresstatistik nicht mehr stimmt.
+             */
+            const befund = feldsuche.befund(neu, {
+                energie: this.config.ecoEnergyIdx,
+                wasser: this.config.ecoWaterIdx,
+            });
+            await this.setStateAsync(`${deviceId}.sammlung.befund`, { val: befund, ack: true });
+
             this.log.info(`${deviceId}: Datensatz fuer die Feldzuordnung aufgenommen `
                 + `(${neu.length} gesammelt)`);
+            // Ins Log nur, wenn die Suche der Einstellung widerspricht - sonst waere es
+            // bei jedem Waschgang dieselbe Zeile.
+            if (/eingestellt ist aber/.test(befund)) this.log.warn(`${deviceId}: ${befund}`);
         } catch (e) {
             // Die Sammlung darf den Zyklus nie stoeren - sie ist eine Zugabe, kein Kernstueck.
             this.log.warn(`${deviceId}: Datensatz konnte nicht aufgenommen werden - ${e.message}`);
@@ -1450,6 +1475,11 @@ class MieleLocal extends utils.Adapter {
              'string', 'json', '', false],
             ['zyklen', 'Anzahl gesammelter Zyklen', 'Collected cycles', 'number', 'value', '', false],
             ['fortschritt', 'Was noch fehlt', 'What is still missing', 'string', 'text', '', false],
+            // Das Ergebnis der Auswertung im Klartext - siehe lib/feldsuche.js. Der einzige
+            // Datenpunkt hier, den man wirklich lesen muss: Er sagt, ob die eingestellte
+            // Feldzuordnung zu den Vergleichswerten passt.
+            ['befund', 'Welches Feld passt (Auswertung)', 'Which field matches (analysis)',
+             'string', 'text', '', false],
             ['eingabeEnergie', 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
              'number', 'value.power.consumption', 'kWh', true],
             ['eingabeWasser', 'Wasser aus der Miele-App (l)', 'Water from the Miele app (l)',

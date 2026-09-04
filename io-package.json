@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.11",
+    "version": "0.3.12",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.12": {
+        "de": "Feldsuche: wertet die gesammelten Zyklen aus und sagt, welches Feld Energie und Wasser traegt - ein Feld, das konstant bleibt, wird verworfen",
+        "en": "Field analysis: evaluates collected cycles and reports which field carries energy and water - a field that stays constant is rejected"
+      },
       "0.3.11": {
         "de": "Umbenennung der Energiefelder wirkt jetzt wirklich - sie wurde von der Objektanlage zurueckgesetzt, sobald ein Programm lief",
         "en": "Renaming of the energy fields now actually takes effect - it was reset by object creation as soon as a programme was running"
