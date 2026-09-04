@@ -1822,6 +1822,7 @@ class MieleLocal extends utils.Adapter {
         this.log.info(`${deviceId}: Leaf-Scan - ${offen.length} Adressen in diesem Durchgang `
             + `(${leafscan.fortschritt(bisher).text})`);
         let geprueft = 0;
+        let stoerungen = 0;
 
         for (const { unit, attr } of offen) {
             let ergebnis = { status: null };
@@ -1848,7 +1849,36 @@ class MieleLocal extends utils.Adapter {
                 // geprueft, sonst haengt der Scan ewig an derselben Stelle.
                 ergebnis = { status: `Fehler: ${e.message}`.slice(0, 60) };
             }
-            bisher = leafscan.aufnehmen(bisher, unit, attr, ergebnis);
+            /*
+             * Nur festhalten, was das Geraet WIRKLICH beantwortet hat.
+             *
+             * Ein 503 oder ein abgebrochener Socket ist keine Auskunft ueber die Adresse,
+             * sondern ueber den Zustand des Moduls. Wer ihn als Ergebnis ablegt, hakt eine
+             * Adresse ab, die nie gefragt wurde - siehe leafscan.beantwortet.
+             */
+            if (leafscan.beantwortet(ergebnis)) {
+                bisher = leafscan.aufnehmen(bisher, unit, attr, ergebnis);
+            }
+
+            /*
+             * Aufhoeren, bevor das Modul aufgibt.
+             *
+             * Am 04.09.2026 warf die Waschmaschine nach rund 170 Adressen ihre Verbindung
+             * ab - lokal und zur Cloud, und beide kamen von selbst nicht zurueck. Die
+             * Vorboten standen im Ergebnis: abgebrochene Sockets und Zeitueberschreitungen
+             * zwischen ansonsten sauberen Absagen. Genau die zaehlt dieser Zaehler.
+             */
+            if (leafscan.ueberlastet(ergebnis)) {
+                if (++stoerungen >= leafscan.ABBRUCH_FEHLER) {
+                    this.log.warn(`${deviceId}: Leaf-Scan abgebrochen - ${stoerungen} `
+                        + 'Verbindungsstoerungen in Folge. Das Geraet kommt nicht mit; '
+                        + 'spaeter weitermachen, der Fortschritt ist gesichert.');
+                    break;
+                }
+            } else {
+                stoerungen = 0;
+            }
+
             // Zwischenspeichern, damit ein Abbruch nicht den ganzen Durchgang kostet.
             if (++geprueft % leafscan.SICHERN_ALLE === 0) {
                 await this.setStateAsync(`${deviceId}.sammlung.leafScanJson`,

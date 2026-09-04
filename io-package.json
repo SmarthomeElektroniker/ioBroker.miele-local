@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.17",
+    "version": "0.3.18",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.18": {
+        "de": "Leaf-Scan unterscheidet jetzt eine echte Absage des Geraets von einer Stoerung - ein 503 oder abgebrochener Socket hakt keine Adresse mehr ab, die nie gefragt wurde",
+        "en": "Leaf scan now separates a genuine refusal from a fault - a 503 or dropped socket no longer marks an address as checked that was never really asked"
+      },
       "0.3.17": {
         "de": "Leaf-Scan mit kurzem Zeitlimit und Zwischenspeicherung - ein Durchlauf dauert Minuten statt Stunden",
         "en": "Leaf scan with short timeout and incremental saving - a full pass takes minutes instead of hours"

@@ -137,3 +137,76 @@ describe('Leaf-Scan: Unterschiede zwischen zwei Scans', () => {
         expect(ls.unterschiede({}, imLauf)).to.be.empty;
     });
 });
+
+describe('Leaf-Scan: Ueberlastung erkennen', () => {
+    /*
+     * Am 04.09.2026 warf die Waschmaschine nach rund 170 Adressen ihre Verbindung ab -
+     * lokal und zur Cloud, beide kamen von selbst nicht zurueck. Die Vorboten standen im
+     * Ergebnis: 23 abgebrochene Sockets und ein Dutzend Zeitueberschreitungen zwischen
+     * ansonsten sauberen Absagen mit Status 101.
+     */
+    it('erkennt einen abgebrochenen Socket als Stoerung', () => {
+        expect(ls.ueberlastet({ status: 'Fehler: socket hang up' })).to.be.true;
+    });
+
+    it('erkennt eine Zeitueberschreitung als Stoerung', () => {
+        expect(ls.ueberlastet({ status: 'Fehler: Timeout 192.168.10.127/Devices/…' })).to.be.true;
+    });
+
+    it('haelt eine saubere Absage NICHT fuer eine Stoerung', () => {
+        // 101 ist die haeufigste Antwort des Moduls auf "gibt es nicht" - wer die als
+        // Stoerung zaehlt, bricht den Scan nach der ersten Handvoll Adressen ab.
+        expect(ls.ueberlastet({ status: 101 })).to.be.false;
+        expect(ls.ueberlastet({ status: 500 })).to.be.false;
+        expect(ls.ueberlastet({ status: 404 })).to.be.false;
+    });
+
+    it('haelt einen Treffer nicht fuer eine Stoerung', () => {
+        expect(ls.ueberlastet({ felder: { 1: 5 } })).to.be.false;
+        expect(ls.ueberlastet(null)).to.be.false;
+    });
+
+    it('gibt dem Geraet genug Luft zwischen zwei Anfragen', () => {
+        // Zwei Sekunden - siehe den Vorfall oben. 400 ms waren zu wenig.
+        expect(ls.PAUSE_MS).to.be.at.least(2000);
+    });
+});
+
+describe('Leaf-Scan: Antwort gegen Stoerung', () => {
+    /*
+     * DER FEHLER, DER DEN ZWEITEN SCANLAUF WERTLOS MACHTE.
+     *
+     * Am 04.09.2026 lief er, waehrend die Maschine wusch. Von 239 unbeantworteten Adressen
+     * kamen 132 mit HTTP 503 zurueck und 46 mit abgebrochener Verbindung. Alles wurde als
+     * "geprueft" abgelegt - und damit Adressen abgehakt, die nie wirklich gefragt wurden.
+     * Zwei Leafs, die im ersten Lauf Daten geliefert hatten (2/122 und 2/123), standen
+     * danach als erledigt im Ergebnis.
+     */
+    it('haelt 503 nicht fuer eine Antwort', () => {
+        expect(ls.beantwortet({ status: 503 })).to.be.false;
+        expect(ls.ueberlastet({ status: 503 })).to.be.true;
+    });
+
+    it('haelt eine echte Absage fuer eine Antwort', () => {
+        // 101 ist die normale "gibt es nicht"-Antwort des Moduls, 404 und 500 ebenso.
+        for (const st of [101, 404, 500]) {
+            expect(ls.beantwortet({ status: st }), String(st)).to.be.true;
+            expect(ls.ueberlastet({ status: st }), String(st)).to.be.false;
+        }
+    });
+
+    it('haelt einen abgebrochenen Socket nicht fuer eine Antwort', () => {
+        expect(ls.beantwortet({ status: 'Fehler: socket hang up' })).to.be.false;
+        expect(ls.beantwortet({ status: 'Fehler: connect ECONNREFUSED 192.168.10.127:80' })).to.be.false;
+        expect(ls.beantwortet({ status: 'Fehler: Parse Error: Expected HTTP/' })).to.be.false;
+    });
+
+    it('haelt gelieferte Felder immer fuer eine Antwort', () => {
+        expect(ls.beantwortet({ felder: { 1: 5 } })).to.be.true;
+    });
+
+    it('haelt gar nichts nicht fuer eine Antwort', () => {
+        expect(ls.beantwortet(null)).to.be.false;
+        expect(ls.beantwortet({})).to.be.false;
+    });
+});
