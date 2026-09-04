@@ -411,7 +411,7 @@
           "label": "Feldindex Wasser",
           "min": 1,
           "max": 200,
-          "default": 26,
+          "default": 21,
           "hidden": "!data.ecoFeedback",
           "xs": 12,
           "sm": 4,
@@ -436,7 +436,7 @@
               "value": 100
             }
           ],
-          "default": 100,
+          "default": 200,
           "hidden": "!data.ecoFeedback",
           "xs": 12,
           "sm": 4,

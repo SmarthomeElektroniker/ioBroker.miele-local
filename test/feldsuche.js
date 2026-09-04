@@ -257,3 +257,53 @@ describe('Feldsuche: Warnung im Befund', () => {
         expect(fs.befund(frei, { energie: 1, wasser: 2 })).to.not.match(/Achtung/);
     });
 });
+
+describe('Feldsuche: krumme Teiler', () => {
+    /*
+     * DER FALL, DER DIE FESTE TEILERLISTE ZU FALL BRACHTE.
+     *
+     * Feld 21 der WCR860 traegt den Wasserverbrauch mit dem Teiler 200 - fuenf Milliliter je
+     * Zaehlschritt. Gegen 1/10/100/1000 geprueft kam es auf 80 Prozent Abweichung und galt
+     * als untauglich. Mit dem aus den Daten geschaetzten Teiler trifft es auf unter einem
+     * Prozent. Die Zahlen unten sind die echten Messwerte vom 28.08. bis 03.09.2026.
+     */
+    const echt = [
+        zyklus({ 21: 13341 }, { waterL: 67 }),
+        zyklus({ 21: 5177 }, { waterL: 26 }),
+        zyklus({ 21: 19440 }, { waterL: 97 }),
+        zyklus({ 21: 11982 }, { waterL: 60 }),
+        zyklus({ 21: 5027 }, { waterL: 25 }),
+        zyklus({ 21: 3330 }, { waterL: 17 }),
+        zyklus({ 21: 16215 }, { waterL: 81 }),
+        zyklus({ 21: 12401 }, { waterL: 62 }),
+    ];
+
+    it('findet den Teiler 200, den keine Zehnerliste enthaelt', () => {
+        const b = fs.felderBewerten(echt, 'waterL')[0];
+        expect(b.index).to.equal('21');
+        expect(b.teiler).to.be.closeTo(200, 2);
+        expect(b.taugt).to.be.true;
+    });
+
+    it('trifft damit auf unter einem Prozent genau', () => {
+        const b = fs.felderBewerten(echt, 'waterL')[0];
+        expect(b.abweichung).to.be.below(0.01);
+    });
+
+    it('nennt den Fund im Befund', () => {
+        const text = fs.befund(echt, { wasser: 26 });
+        expect(text).to.match(/Feld 21/);
+        expect(text).to.match(/eingestellt ist aber Feld 26/);
+    });
+
+    it('bevorzugt weiter den glatten Teiler, wo er passt', () => {
+        // Ein Feld in Zehntellitern soll "10" ergeben und nicht "9.98" - sonst laese sich
+        // aus dem Befund keine Einstellung ablesen.
+        const zehntel = [
+            zyklus({ 3: 670 }, { waterL: 67 }),
+            zyklus({ 3: 310 }, { waterL: 31 }),
+            zyklus({ 3: 970 }, { waterL: 97 }),
+        ];
+        expect(fs.felderBewerten(zehntel, 'waterL')[0].teiler).to.equal(10);
+    });
+});
