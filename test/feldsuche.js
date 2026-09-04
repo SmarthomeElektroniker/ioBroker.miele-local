@@ -145,3 +145,115 @@ describe('Feldsuche: Robustheit', () => {
         expect(b.taugt).to.be.true;
     });
 });
+
+describe('Feldsuche: Nullwerte', () => {
+    /*
+     * Am 04.09.2026 an der WCR860 nachgezaehlt: F25 und F26 standen in sieben von elf
+     * Zyklen auf 0, obwohl die Cloud fuer denselben Lauf Werte hatte. Wer diese Nullen
+     * mitrechnet, gibt jedem Feld 100 Prozent Abweichung - auch dem richtigen.
+     */
+    const saetze = [
+        zyklus({ 26: 0, 9: 670 }, { waterL: 67 }),
+        zyklus({ 26: 0, 9: 310 }, { waterL: 31 }),
+        zyklus({ 26: 970, 9: 970 }, { waterL: 97 }),
+        zyklus({ 26: 600, 9: 600 }, { waterL: 60 }),
+        zyklus({ 26: 810, 9: 810 }, { waterL: 81 }),
+    ];
+
+    it('rechnet Nullwerte nicht als Messwerte mit', () => {
+        const neun = fs.felderBewerten(saetze, 'waterL').find(b => b.index === '9');
+        expect(neun.taugt).to.be.true;
+        expect(neun.zyklen).to.equal(5);
+        expect(neun.leer).to.equal(0);
+    });
+
+    it('weist aus, wie oft ein Feld leer blieb', () => {
+        const sechsundzwanzig = fs.felderBewerten(saetze, 'waterL').find(b => b.index === '26');
+        expect(sechsundzwanzig.leer).to.equal(2);
+        expect(sechsundzwanzig.zyklen).to.equal(3);
+    });
+
+    it('vermerkt ein Feld, das fast immer leer ist, statt es zu verschweigen', () => {
+        const meistLeer = [
+            zyklus({ 7: 0 }, { waterL: 67 }),
+            zyklus({ 7: 0 }, { waterL: 31 }),
+            zyklus({ 7: 0 }, { waterL: 97 }),
+            zyklus({ 7: 500 }, { waterL: 50 }),
+        ];
+        const b = fs.felderBewerten(meistLeer, 'waterL')[0];
+        expect(b.taugt).to.be.false;
+        expect(b.grund).to.match(/auf 0/);
+    });
+});
+
+describe('Feldsuche: starr gekoppelte Felder', () => {
+    /*
+     * Der Befund vom 04.09.2026: Feld 26 war exakt das 1,782-fache von Feld 25, ueber alle
+     * Zyklen hinweg. Ein Feld, das starr am Energiefeld haengt, kann nicht das Wasser sein -
+     * dieselben Zyklen brauchten 48,5 und 73,6 l/kWh.
+     */
+    const echt = [
+        zyklus({ 25: 319, 26: 568 }, { energyKwh: 0.7, waterL: 67 }),
+        zyklus({ 25: 386, 26: 688 }, {}),
+        zyklus({ 25: 2071, 26: 3692 }, { energyKwh: 2, waterL: 97 }),
+        zyklus({ 25: 1593, 26: 2840 }, { energyKwh: 1.4, waterL: 60 }),
+        zyklus({ 25: 770, 26: 1372 }, { energyKwh: 1.1, waterL: 81 }),
+    ];
+
+    it('findet das feste Verhaeltnis zwischen Feld 25 und 26', () => {
+        const paare = fs.starrGekoppelt(echt);
+        expect(paare).to.have.lengthOf(1);
+        expect(paare[0].a).to.equal('25');
+        expect(paare[0].b).to.equal('26');
+        expect(paare[0].verhaeltnis).to.be.closeTo(1.782, 0.002);
+    });
+
+    it('meldet nichts, wo kein festes Verhaeltnis besteht', () => {
+        // Echte Wasser- und Energiewerte schwanken gegeneinander - genau daran erkennt man
+        // zwei unabhaengige Messungen.
+        const frei = [
+            zyklus({ 1: 700, 2: 670 }, {}),
+            zyklus({ 1: 2000, 2: 970 }, {}),
+            zyklus({ 1: 1100, 2: 810 }, {}),
+        ];
+        expect(fs.starrGekoppelt(frei)).to.be.empty;
+    });
+
+    it('uebergeht Nullen - sie ergaeben ein Verhaeltnis von null', () => {
+        const mitNull = [
+            zyklus({ 1: 0, 2: 0 }, {}),
+            zyklus({ 1: 100, 2: 178 }, {}),
+            zyklus({ 1: 200, 2: 356 }, {}),
+            zyklus({ 1: 300, 2: 534 }, {}),
+        ];
+        const paare = fs.starrGekoppelt(mitNull);
+        expect(paare).to.have.lengthOf(1);
+        expect(paare[0].zyklen).to.equal(3);
+    });
+});
+
+describe('Feldsuche: Warnung im Befund', () => {
+    it('warnt, wenn das eingestellte Feld nur eine Umrechnung ist', () => {
+        // Der reale Zustand am 04.09.2026: Feld 26 war als Wasser eingestellt und ist das
+        // 1,782-fache des Energiefelds 25.
+        const echt = [
+            zyklus({ 25: 319, 26: 568 }, { energyKwh: 0.7, waterL: 67 }),
+            zyklus({ 25: 2071, 26: 3692 }, { energyKwh: 2, waterL: 97 }),
+            zyklus({ 25: 1593, 26: 2840 }, { energyKwh: 1.4, waterL: 60 }),
+            zyklus({ 25: 770, 26: 1372 }, { energyKwh: 1.1, waterL: 81 }),
+        ];
+        const text = fs.befund(echt, { energie: 25, wasser: 26 });
+        expect(text).to.match(/Achtung/);
+        expect(text).to.match(/Feld 26 steht in festem Verhaeltnis zu Feld 25/);
+        expect(text).to.match(/keine eigene Messung/);
+    });
+
+    it('warnt nicht, wo die Felder unabhaengig sind', () => {
+        const frei = [
+            zyklus({ 1: 700, 2: 670 }, { energyKwh: 0.7, waterL: 67 }),
+            zyklus({ 1: 2000, 2: 970 }, { energyKwh: 2, waterL: 97 }),
+            zyklus({ 1: 1100, 2: 810 }, { energyKwh: 1.1, waterL: 81 }),
+        ];
+        expect(fs.befund(frei, { energie: 1, wasser: 2 })).to.not.match(/Achtung/);
+    });
+});

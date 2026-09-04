@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.12",
+    "version": "0.3.13",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.13": {
+        "de": "Feldsuche erkennt leere Felder und starr gekoppelte Werte - ein Feld, das ein festes Vielfaches eines anderen ist, traegt keine eigene Messung",
+        "en": "Field analysis detects empty fields and rigidly coupled values - a field that is a fixed multiple of another carries no measurement of its own"
+      },
       "0.3.12": {
         "de": "Feldsuche: wertet die gesammelten Zyklen aus und sagt, welches Feld Energie und Wasser traegt - ein Feld, das konstant bleibt, wird verworfen",
         "en": "Field analysis: evaluates collected cycles and reports which field carries energy and water - a field that stays constant is rejected"
