@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.18",
+    "version": "0.3.35",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -260,7 +260,8 @@
     "cycleRingSize": 50,
     "historyDays": 730,
     "historyWrite": true,
-    "historyInstance": "history.0"
+    "historyInstance": "history.0",
+    "leafScanAuto": false
   },
   "objects": [],
   "instanceObjects": [

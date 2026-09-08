@@ -115,6 +115,18 @@ Per device under `<serial>.info` (static/connectivity), `<serial>.state` (live) 
 With control enabled, additionally `<serial>.control.*` (start, stop, pause, powerOn,
 powerOff, lightOn, lightOff).
 
+## Exploring an unknown device
+
+DOP2 addresses data as `unit/attribute`, and only a handful of those addresses are documented
+anywhere. The adapter carries the tools to find the rest: a leaf scanner that works through the
+address space without overwhelming the module, and a value recorder that shows which fields
+actually move while the appliance runs.
+
+**[docs/geraet-erkunden.md](docs/geraet-erkunden.md)** (German) describes the procedure in
+order — when to scan, how to tell a refusal from a busy signal, how to read a series of numbers
+once you have one, and what a newly understood field needs before it becomes a state. It also
+records what did *not* work, so nobody repeats it.
+
 ## Compatibility / limits
 
 - Tested against a washing machine (WCR860/EK037), dishwasher (G5840/EK037) and oven

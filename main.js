@@ -17,6 +17,26 @@ const sammler = require('./lib/sammler');
 const feldsuche = require('./lib/feldsuche');
 const kontrolle = require('./lib/kontrolle');
 const leafscan = require('./lib/leafscan');
+const leafverlauf = require('./lib/leafverlauf');
+
+/**
+ * Verschnaufpause zwischen zwei Scan-Durchgaengen.
+ *
+ * Eine Minute. Ein Durchgang sind vierzig Anfragen am Stueck; danach gehoert das Modul wieder
+ * sich selbst, bevor der naechste Schwung kommt.
+ */
+const PAUSE_ZWISCHEN_DURCHGAENGEN_MS = 60000;
+/**
+ * Nach einem Abbruch wegen Verbindungsstoerungen - siehe leafScanDauerlauf.
+ *
+ * EINE Minute - so lange braucht das Modul, um wieder ansprechbar zu sein, und keine Sekunde
+ * laenger. Zwischenzeitlich standen hier zwanzig Minuten; das war zweimal falsch gedacht:
+ * Erstens ist die eigentliche Stellschraube gegen Ueberlastung die Pause ZWISCHEN den
+ * Anfragen (leafscan.PAUSE_MS, seit 07.09.2026 fuenf Sekunden), zweitens wartet ein Scan,
+ * der bei jedem Aussetzer minutenlang blockiert, am Ende laenger als er scannt - und wird
+ * ueber 882 Adressen nie fertig. Ein Modul, das wieder kann, soll auch wieder gefragt werden.
+ */
+const PAUSE_NACH_UEBERLASTUNG_MS = 60000;
 const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
@@ -111,6 +131,42 @@ const HOURS_LEAF = { unit: 2, attr: 119 };
 const HOURS_IDX = 1;
 /** Wartezeit, bevor ein Programm als beendet gilt - gegen kurzzeitige Statusaussetzer. */
 const CYCLE_END_GRACE_MS = 3 * 60000;
+/** So viele Fehlschlaege in Folge drosseln die Feinaufzeichnung - siehe feinFehlschlag. */
+const FEIN_FEHLSCHLAEGE_MAX = 5;
+/** Der Anfangstakt der Feinaufzeichnung; bei Fehlschlaegen wird verdoppelt. */
+const FEIN_TAKT_MS = 20000;
+/** Darueber hinaus lohnt es nicht - die normale Runde laeuft ohnehin alle drei Minuten. */
+const FEIN_TAKT_MAX_MS = 120000;
+/**
+ * Die Adresse fuer die Kontrollfrage vor jedem Scan-Durchgang - siehe gespraechsbereit.
+ *
+ * 2/1583 liegt in der Umgebung der Benutzeranfrage - dem einzigen Bereich, in dem BEIDE
+ * bekannten Geraete ueberhaupt differenziert antworten: die Waschmaschine mit einem Treffer,
+ * die Spuelmaschine mit 404. Beides heisst "ich gebe Auskunft".
+ *
+ * Zuerst stand hier 2/6196 (neben dem EcoFeedback). Das war ein Fehlgriff: Die Spuelmaschine
+ * kennt den gesamten 6000er-Bereich nicht und beantwortet ihn ausnahmslos mit 500 - die
+ * Kontrollfrage haette sie dauerhaft fuer ausgelastet gehalten und nie wieder gescannt. Eine
+ * Kontrolladresse muss in einem Bereich liegen, den das Geraet kennt, sonst misst sie die
+ * Adresse statt das Modul.
+ */
+const KONTROLL_ADRESSE = [2, 1583];
+
+/*
+ * Nach so vielen erfolglosen Kontrollfragen wird es trotzdem versucht.
+ *
+ * Die Kontrollfrage setzt voraus, dass das Geraet den Adressbereich der Kontrolladresse
+ * ueberhaupt kennt - sonst antwortet es mit 500 statt mit 404, und das ist von "gerade
+ * beschaeftigt" nicht zu unterscheiden. Bei der Spuelmaschine war 2/6196 aus genau diesem
+ * Grund ein Fehlgriff. Ein Geraet, das die Adresse nicht kennt, wuerde also nie gescannt.
+ *
+ * Deshalb: Hat ein Geraet die Kontrollfrage noch NIE beantwortet und ist es eingeschaltet,
+ * wird nach zehn Anlaeufen - rund zehn Minuten - trotzdem ein Durchgang gewagt. Der Durchgang
+ * schuetzt sich selbst: Haeufen sich Abbrueche, endet er von allein und der Dauerlauf legt
+ * eine lange Pause ein. Sobald die Kontrollfrage einmal geantwortet hat, gilt sie fuer dieses
+ * Geraet und der Rueckfall entfaellt.
+ */
+const KONTROLLE_TAUB_MAX = 10;
 const SEC_REMAINING_IDX = 7;
 const SEC_ELAPSED_IDX = 8;
 
@@ -253,6 +309,43 @@ class MieleLocal extends utils.Adapter {
         // Betriebsstunden: einmal beim Start, danach stuendlich - siehe pollHours().
         this.pollHours();
         this.hoursTimer = this.setInterval(() => this.pollHours(), 60 * 60 * 1000);
+
+        /*
+         * Den Werteverlauf der gefundenen Leafs mitschreiben.
+         *
+         * Alle drei Minuten, und nur bei Geraeten, die gerade etwas tun - siehe
+         * leafVerlaufSchreiben. Waehrend eines Waschgangs entsteht so die Spur, an der sich
+         * ablesen laesst, welches Feld welchen Verbrauch traegt; im Standby waere es dieselbe
+         * Zahl in Endlosschleife.
+         */
+        this.verlaufTimer = this.setInterval(() => this.leafVerlaufRunde(), 3 * 60 * 1000);
+
+        /*
+         * Eine laufende Feinaufzeichnung nach einem Neustart fortsetzen.
+         *
+         * Der Timer dafuer entsteht in onStateChange - und den ruft niemand auf, wenn der
+         * Adapter neu startet: Der Datenpunkt steht dann zwar noch auf seiner Leaf-Adresse,
+         * gelesen wird aber nichts mehr. Am 06.09.2026 waehrend eines Waschgangs passiert,
+         * ausgeloest von einer Konfigurationsaenderung, die den Adapter neu startete. Die
+         * Aufzeichnung schwieg still weiter - im Log stand nichts, und der Datenpunkt sah
+         * unveraendert richtig aus.
+         */
+        this.feinFortsetzen().catch(() => {});
+
+        /*
+         * Einen laufenden Leaf-Scan nach einem Neustart fortsetzen.
+         *
+         * Dieselbe Falle wie bei der Feinaufzeichnung, nur laenger unbemerkt: Der Dauerlauf
+         * ist eine Schleife im Speicher, der Schalter `sammlung.leafScan` ein Datenpunkt auf
+         * der Platte. Ein Neustart nimmt die Schleife mit und laesst den Schalter stehen -
+         * der Scan liest sich danach als "laeuft", fragt aber nie wieder etwas.
+         *
+         * Am 06.09.2026 an der Spuelmaschine passiert: Der Scan kam ueber vier von 882
+         * Adressen nicht hinaus, weil eine Konfigurationsaenderung (ein eingetragener
+         * Energiezaehler) die Instanz neu startete. Im Log stand nichts, der Schalter stand
+         * auf true, und der Fortschritt bewegte sich vierzehn Stunden lang nicht.
+         */
+        this.scanFortsetzen().catch(() => {});
 
         // Sekundengenaue Rest-/Laufzeit per DOP2 2/256 – schneller 10s-Poll
         if (this.config.secondsTime !== false) {
@@ -595,6 +688,9 @@ class MieleLocal extends utils.Adapter {
         // Unmoegliche Sprünge nach "Aus" gar nicht erst in die Datenpunkte lassen - sonst
         // schreiben Status, Restzeit und Laufzeit gemeinsam Unsinn (siehe statusPlausibel).
         if ('Status' in state && !(await this.statusPlausibel(deviceId, state.Status))) return;
+        // Fuer die Einschalt-Erkennung: was stand vorher da?
+        const statusVorher = 'Status' in state
+            ? ((await this.getStateAsync(`${deviceId}.state.status`)) || {}).val : null;
         let statusVal = null;
         for (const [key, def] of Object.entries(objdef.STATE_FIELDS)) {
             if (!(key in state)) continue;
@@ -612,6 +708,8 @@ class MieleLocal extends utils.Adapter {
             }
             if (key === 'Status') statusVal = state.Status;
         }
+        if (statusVal != null) await this.leafScanBeimEinschalten(deviceId, statusVorher, statusVal);
+
         // Zeitvorwahl: das Geraet meldet nur die Restdauer bis zum Start ([7,20] = in 7:20).
         // Sie wird vor dem Programmende ausgewertet, denn wartet das Geraet noch, faengt die
         // Restzeit erst beim Start an zu laufen - das Ende liegt dann um die Vorwahl spaeter.
@@ -709,7 +807,27 @@ class MieleLocal extends utils.Adapter {
                 if (gemerkt && typeof gemerkt.val === 'number' && gemerkt.val > 0) start = gemerkt.val;
             }
             if (start) {
-                this._cycles[deviceId] = { start };
+                /*
+                 * Auch den Zaehlerstand vom Programmstart zurueckholen.
+                 *
+                 * Er lebte frueher nur in this._cycles, also im Speicher. Ein Neustart
+                 * mitten im Programm nahm ihn mit, und am Ende gab gemessenerVerbrauch
+                 * mangels Startwert null zurueck - der gemessene Verbrauch blieb 0, ohne
+                 * dass irgendwo ein Fehler stand. Am 06.09.2026 genau so passiert.
+                 */
+                const gemerkterZaehler = await this.getStateAsync(`${deviceId}.history.zaehlerStart`);
+                let zaehlerStart = gemerkterZaehler && typeof gemerkterZaehler.val === 'number'
+                    && gemerkterZaehler.val > 0 ? gemerkterZaehler.val : null;
+                /*
+                 * Kein gemerkter Stand, aber das Programm hat gerade erst begonnen? Dann ist
+                 * der aktuelle Stand der richtige. Das ist der Normalfall eines neuen Laufs -
+                 * dieser Zweig faengt ihn mit ab, weil das Geraet nach einer Minute bereits
+                 * elapsedMinutes = 1 meldet und der Lauf damit wie eine Fortsetzung aussieht.
+                 */
+                if (zaehlerStart == null && Date.now() - start < 5 * 60000) {
+                    zaehlerStart = await this.zaehlerStand(deviceId);
+                }
+                this._cycles[deviceId] = { start, zaehlerStart };
                 offen = this._cycles[deviceId];
                 await this.ensureHistoryObjects(deviceId);
                 await this.setStateAsync(`${deviceId}.history.laufendSeit`, { val: start, ack: true });
@@ -730,10 +848,15 @@ class MieleLocal extends utils.Adapter {
                     start: Date.now(),
                     ecoEnergieStart: await stand(`${deviceId}.eco.energy`),
                     ecoWasserStart: await stand(`${deviceId}.eco.water`),
+                    // Der Stand der Messsteckdose beim Start - siehe gemessenerVerbrauch.
+                    zaehlerStart: await this.zaehlerStand(deviceId),
                 };
                 await this.ensureHistoryObjects(deviceId);
                 await this.setStateAsync(`${deviceId}.history.laufendSeit`,
                     { val: this._cycles[deviceId].start, ack: true });
+                // Damit ein Neustart mitten im Programm die Messung nicht verliert.
+                await this.setStateAsync(`${deviceId}.history.zaehlerStart`,
+                    { val: this._cycles[deviceId].zaehlerStart, ack: true });
             } else if (offen.endeSeit) {
                 // War nur ein Aussetzer - das Geraet meldete kurz "Aus" und laeuft weiter.
                 delete offen.endeSeit;
@@ -759,6 +882,17 @@ class MieleLocal extends utils.Adapter {
 
         delete this._cycles[deviceId];
         await this.setStateAsync(`${deviceId}.history.laufendSeit`, { val: 0, ack: true });
+        /*
+         * Den Zaehlerstand mit wegraeumen - sonst erbt ihn das naechste Programm.
+         *
+         * Der Wiederaufnahme-Zweig in trackCycle greift auch bei einem frisch gestarteten
+         * Programm: Nach einer Minute meldet das Geraet elapsedMinutes = 1, und der Adapter
+         * haelt den neuen Lauf fuer die Fortsetzung eines Neustarts. Blieb hier der alte
+         * Startstand stehen, rechnete er am Ende beide Laeufe zusammen. Am 07.09.2026 an der
+         * Waschmaschine gesehen: Der zweite Waschgang des Tages startete mit dem
+         * Zaehlerstand des ersten, was 1400 statt 2700 Wh ergeben haette.
+         */
+        await this.setStateAsync(`${deviceId}.history.zaehlerStart`, { val: 0, ack: true });
         // Als Ende gilt der Zeitpunkt, an dem das Geraet zuerst nicht mehr lief - nicht das
         // Ende der Karenzzeit.
         const ende = offen.endeSeit;
@@ -786,6 +920,25 @@ class MieleLocal extends utils.Adapter {
             }
             return wert;
         };
+        /*
+         * DER GEMESSENE VERBRAUCH - aus der Messsteckdose, nicht aus dem Geraet.
+         *
+         * WARUM DAS NOETIG IST. Das Geraet nennt zwar eine Energie (eco.energyWh), aber die
+         * ist eine ERWARTUNG fuer das Programm, gesetzt beim Start - keine Messung. Am
+         * 03.09.2026 belegt: Der Wert stand 2:40 Stunden unveraendert auf 770 Wh, waehrend die
+         * Steckdose von 0 auf 847 Wh stieg; ueber den ganzen Lauf mass sie 1158 Wh.
+         *
+         * Gesucht wurde die echte Zahl auch in den Feldern - vergeblich. Am 06.09.2026 wurden
+         * die vier monoton steigenden Felder von 2/6195 gegen drei gemessene Waschgaenge
+         * gehalten; kein Verhaeltnis war konstant (Feld 15 kam auf 0,86 / 1,30 / 1,71). Sie
+         * steht in keinem Leaf, das dieses Geraet hergibt.
+         *
+         * Deshalb dieser Weg: Wer eine Messsteckdose davor hat, traegt ihren Zaehler in der
+         * Konfiguration ein. Der Adapter merkt sich den Stand bei Programmstart und rechnet
+         * am Ende die Differenz - das ist der einzige belastbare Wert, den es gibt.
+         */
+        const gemessen = await this.gemessenerVerbrauch(deviceId, offen.zaehlerStart);
+
         const eintrag = {
             start: offen.start,
             ende,
@@ -794,9 +947,63 @@ class MieleLocal extends utils.Adapter {
             programType: offen.programType || null,
             energyKwh: await frisch(`${deviceId}.eco.energy`, offen.ecoEnergieStart),
             waterL: await frisch(`${deviceId}.eco.water`, offen.ecoWasserStart),
+            gemessenWh: gemessen,
         };
         await this.appendCycle(deviceId, eintrag);
         await this.sammlungAufnehmen(deviceId, eintrag);
+
+        // Den gemessenen Verbrauch sichtbar machen - fuer die App und fuer die Auswertung.
+        if (eintrag.gemessenWh != null) {
+            await this.setStateAsync(`${deviceId}.history.gemessenLetzter`,
+                { val: eintrag.gemessenWh, ack: true });
+            const bisher = await this.getStateAsync(`${deviceId}.history.gemessenTotal`);
+            const summe = ((bisher && bisher.val) || 0) + eintrag.gemessenWh / 1000;
+            await this.setStateAsync(`${deviceId}.history.gemessenTotal`,
+                { val: Math.round(summe * 1000) / 1000, ack: true });
+            this.log.info(`${deviceId}: gemessener Verbrauch ${eintrag.gemessenWh} Wh `
+                + `(${eintrag.program || 'Programm'})`);
+        }
+    }
+
+    /**
+     * Der Datenpunkt der Messsteckdose zu diesem Geraet - oder null.
+     *
+     * Zugeordnet wird ueber die Seriennummer, weil sie im Objektbaum ohnehin der
+     * Geraeteschluessel ist. Fehlt der Eintrag, gibt es eben keinen gemessenen Verbrauch;
+     * alles andere laeuft unveraendert weiter.
+     */
+    zaehlerDatenpunkt(deviceId) {
+        const liste = this.config.zaehler || [];
+        const treffer = liste.find(z => z && String(z.serial || '').trim() === String(deviceId));
+        const dp = treffer && String(treffer.datenpunkt || '').trim();
+        return dp || null;
+    }
+
+    /** Den aktuellen Zaehlerstand lesen - null, wenn es keinen gibt. */
+    async zaehlerStand(deviceId) {
+        const dp = this.zaehlerDatenpunkt(deviceId);
+        if (!dp) return null;
+        try {
+            const st = await this.getForeignStateAsync(dp);
+            return st && typeof st.val === 'number' ? st.val : null;
+        } catch (e) {
+            this.log.debug(`${deviceId}: Zaehler ${dp} nicht lesbar - ${e.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Was zwischen Programmstart und jetzt verbraucht wurde.
+     *
+     * Ein Zaehler laeuft immer aufwaerts; faellt er, wurde er zurueckgesetzt oder die
+     * Steckdose getauscht. Dann ist die Differenz unbrauchbar und es gibt lieber keinen Wert
+     * als einen falschen.
+     */
+    async gemessenerVerbrauch(deviceId, standBeimStart) {
+        if (standBeimStart == null) return null;
+        const jetzt = await this.zaehlerStand(deviceId);
+        if (jetzt == null || jetzt < standBeimStart) return null;
+        return Math.round((jetzt - standBeimStart) * 10) / 10;
     }
 
     /**
@@ -841,6 +1048,8 @@ class MieleLocal extends utils.Adapter {
                 },
                 felder,
                 cloud,
+                // Der gemessene Verbrauch - die einzige belastbare Energiezahl, die es gibt.
+                gemessenWh: eintrag.gemessenWh ?? null,
             });
 
             let bisher = [];
@@ -1222,6 +1431,21 @@ class MieleLocal extends utils.Adapter {
             ['cycleCount', namen.text('Programme gesamt', 'Cycles total', de), 'number', 'value', '', 0],
             ['runtimeHours', namen.text('Laufzeit gesamt', 'Runtime total', de), 'number', 'value.interval', 'h', 0],
             ['energyTotal', namen.text('Energie gesamt', 'Energy total', de), 'number', 'value.power.consumption', 'kWh', 0],
+            /*
+             * Der GEMESSENE Verbrauch - aus der Messsteckdose, nicht aus dem Geraet.
+             *
+             * Getrennt von 'energyTotal' gefuehrt, weil beide Zahlen verschiedene Dinge sind:
+             * energyTotal summiert, was das Geraet meldet - und das ist seine Erwartung fuer
+             * das Programm, keine Messung (am 03.09.2026 belegt: 770 Wh gemeldet, 1158 Wh
+             * gemessen). Wer beides in einen Topf wuerfe, bekaeme eine Summe, die nichts mehr
+             * bedeutet.
+             *
+             * Bleibt leer, solange kein Zaehler konfiguriert ist.
+             */
+            ['gemessenLetzter', namen.text('Gemessener Verbrauch (letztes Programm)',
+                'Measured consumption (last cycle)', de), 'number', 'value.power.consumption', 'Wh', 0],
+            ['gemessenTotal', namen.text('Gemessener Verbrauch gesamt',
+                'Measured consumption total', de), 'number', 'value.power.consumption', 'kWh', 0],
             ['waterTotal', namen.text('Wasser gesamt', 'Water total', de), 'number', 'value', 'l', 0],
             ['energyKwh', namen.text('Energie je Programm', 'Energy per cycle', de), 'number', 'value.power.consumption', 'kWh', 0],
             ['waterL', namen.text('Wasser je Programm', 'Water per cycle', de), 'number', 'value', 'l', 0],
@@ -1229,6 +1453,10 @@ class MieleLocal extends utils.Adapter {
             // Startzeitpunkt des laufenden Programms - er ueberlebt einen Neustart des Adapters,
             // damit die Zyklusdauer danach nicht von vorn zaehlt (siehe trackCycle).
             ['laufendSeit', namen.text('Laufendes Programm seit', 'Current cycle started', de), 'number', 'date', '', 0],
+            // Der Zaehlerstand der Messsteckdose beim Programmstart - aus demselben Grund
+            // dauerhaft: Ohne ihn kann am Programmende kein Verbrauch gebildet werden.
+            ['zaehlerStart', namen.text('Zaehlerstand bei Programmstart', 'Meter reading at cycle start', de),
+             'number', 'value.power.consumption', 'Wh', 0],
         ];
         for (const [sub, name, typ, rolle, einheit, def] of defs) {
             await this.extendObjectAsync(`${deviceId}.history.${sub}`, {
@@ -1379,6 +1607,24 @@ class MieleLocal extends utils.Adapter {
 
             await this.ensureEcoObjects(deviceId);
             await this.ensureSammlungObjects(deviceId);
+
+            /*
+             * Hat das Geraet seine Zaehler schon zurueckgesetzt?
+             *
+             * "Laeuft" aus zwei Quellen: dev.ecoLaeuft wird erst gesetzt, wenn der Status
+             * einmal gepollt wurde - nach einem Neustart oder einer Konfigurationsaenderung
+             * steht dort zunaechst nichts. Die Festhalte-Regel griff dann faelschlich und liess
+             * einen veralteten Wert stehen, obwohl das Geraet mitten im Programm war. Der
+             * Statuscode aus dem Datenpunkt ist unabhaengig davon vorhanden (5 = in Betrieb,
+             * 6 = Pause).
+             *
+             * Steht das Geraet und meldet das Wasserfeld 0, dann ist der Zaehler zurueckgesetzt
+             * und diese Ablesung traegt den Verbrauch des Laufs nicht mehr.
+             */
+            const st = await this.getStateAsync(`${deviceId}.state.status`);
+            const laeuftLautStatus = !!(st && (st.val === 5 || st.val === 6));
+            const laeuft = !!(dev && dev.ecoLaeuft) || laeuftLautStatus;
+            const zurueckgesetzt = !laeuft && eco.waterL === 0;
             /*
              * Rohfelder mitschreiben - freiwillig, standardmäßig aus.
              *
@@ -1401,13 +1647,37 @@ class MieleLocal extends utils.Adapter {
              * sie einschaltet.
              */
             if (this.config.ecoRawFields) {
-                const alleFelder = {};
-                for (const idx of Object.keys(fields)) {
-                    const v = dop2.interpValue(fields, Number(idx));
-                    if (v != null) alleFelder[idx] = Number(v);
+                /*
+                 * Dieselbe Halteregel wie fuer eco.water - und aus demselben Grund.
+                 *
+                 * Am 08.09.2026 an 25 gesammelten Zyklen der WCR860 nachgezaehlt: In vier davon
+                 * stand das Wasser-Rohfeld auf 0, waehrend die Cloud fuer denselben Lauf 17 bis
+                 * 31 Liter meldete. Es waren nicht alle Felder leer - die Beschreibungsfelder
+                 * standen weiter da, nur die Verbrauchsfelder waren zurueckgesetzt. Der Abruf
+                 * hatte das Programmende getroffen.
+                 *
+                 * eco.water war dagegen geschuetzt und stand richtig. Die Sammlung liest aber
+                 * eco.felderJson, nicht eco.water - und bekam so vier Datensaetze der Form
+                 * "Rohwert 0 gegen 31 Liter". Das sind achtzehn Prozent der eigenen Daten, und
+                 * sie sind nicht nur wertlos, sondern schaedlich: Feld 60 der WCR860 ist genau
+                 * in diesen vier Zyklen ungleich null und sah dadurch wie ein perfekter
+                 * Energiezaehler aus (drei Zyklen, 0,0 Prozent). Es ist keiner.
+                 */
+                const vorherige = await this.getStateAsync(`${deviceId}.eco.felderJson`);
+                const hatteWerte = !!(vorherige && typeof vorherige.val === 'string'
+                                      && vorherige.val.length > 2 && vorherige.val !== '{}');
+                if (zurueckgesetzt && hatteWerte) {
+                    this.log.debug(`Eco ${deviceId}: Rohfelder zurueckgesetzt, `
+                        + 'die des letzten Programms bleiben stehen');
+                } else {
+                    const alleFelder = {};
+                    for (const idx of Object.keys(fields)) {
+                        const v = dop2.interpValue(fields, Number(idx));
+                        if (v != null) alleFelder[idx] = Number(v);
+                    }
+                    await this.setStateAsync(`${deviceId}.eco.felderJson`,
+                        { val: JSON.stringify(alleFelder), ack: true });
                 }
-                await this.setStateAsync(`${deviceId}.eco.felderJson`,
-                    { val: JSON.stringify(alleFelder), ack: true });
             }
             if (eco.energyWh != null) {
                 await this.setStateAsync(`${deviceId}.eco.energyWh`, { val: eco.energyWh, ack: true });
@@ -1429,21 +1699,9 @@ class MieleLocal extends utils.Adapter {
              * Cloud-Adapter.
              */
             if (eco.waterL != null) {
-                /*
-                 * "Laeuft" aus zwei Quellen.
-                 *
-                 * dev.ecoLaeuft wird erst gesetzt, wenn der Status einmal gepollt wurde - nach
-                 * einem Neustart oder einer Konfigurationsaenderung steht dort zunaechst
-                 * nichts. Die Festhalte-Regel griff dann faelschlich und liess einen veralteten
-                 * Wert stehen, obwohl das Geraet mitten im Programm war. Der Statuscode aus dem
-                 * Datenpunkt ist unabhaengig davon vorhanden (5 = in Betrieb, 6 = Pause).
-                 */
-                const st = await this.getStateAsync(`${deviceId}.state.status`);
-                const laeuftLautStatus = st && (st.val === 5 || st.val === 6);
-                const laeuft = !!(dev && dev.ecoLaeuft) || !!laeuftLautStatus;
                 const bisher = await this.getStateAsync(`${deviceId}.eco.water`);
                 const alterWert = bisher && typeof bisher.val === 'number' ? bisher.val : 0;
-                const behalten = !laeuft && eco.waterL === 0 && alterWert > 0;
+                const behalten = zurueckgesetzt && alterWert > 0;
                 if (!behalten) {
                     await this.setStateAsync(`${deviceId}.eco.water`,
                         { val: eco.waterL, ack: true });
@@ -1536,9 +1794,16 @@ class MieleLocal extends utils.Adapter {
              'string', 'json', '', false],
             // Der Leaf-Scan - siehe lib/leafscan.js. Der Schalter startet einen Durchgang;
             // er setzt sich selbst zurueck, damit man ihn erneut druecken kann.
-            ['leafScan', 'Leafs durchsuchen (ein Durchgang)', 'Scan leaves (one pass)',
+            ['leafScan', 'Leafs durchsuchen (laeuft bis fertig)', 'Scan leaves (until done)',
              'boolean', 'button', '', true],
             ['leafScanStand', 'Wie weit ist die Suche?', 'Scan progress', 'string', 'text', '', false],
+            ['leafVerlaufJson', 'Werteverlauf der gefundenen Leafs (JSON)',
+             'Value history of found leaves (JSON)', 'string', 'json', '', false],
+            ['leafVerlaufStand', 'Umfang des Verlaufs', 'History size', 'string', 'text', '', false],
+            // Die Feinaufzeichnung - siehe leafVerlaufFeinRunde. Eintragen, was genau
+            // beobachtet werden soll ("2/6192"); leer schaltet sie ab.
+            ['leafVerlaufFein', 'Ein Leaf engmaschig mitschreiben (z. B. 2/6192)',
+             'Record one leaf closely (e.g. 2/6192)', 'string', 'text', '', true],
             ['leafScanJson', 'Gefundene Leafs mit Feldern (JSON)', 'Found leaves with fields (JSON)',
              'string', 'json', '', false],
             ['eingabeEnergie', 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
@@ -1563,6 +1828,8 @@ class MieleLocal extends utils.Adapter {
         // Ohne dieses Abonnement bleibt der Schalter wirkungslos: Er laesst sich druecken,
         // der Adapter erfaehrt es nur nie.
         this.subscribeStates(`${deviceId}.sammlung.leafScan`);
+        // Ohne dieses Abonnement bliebe die Feinaufzeichnung ein Feld, das niemand liest.
+        this.subscribeStates(`${deviceId}.sammlung.leafVerlaufFein`);
         this._sammlungCreated[deviceId] = true;
     }
 
@@ -1800,6 +2067,58 @@ class MieleLocal extends utils.Adapter {
      * die im bekannten Leaf 2/6195 nachweislich nicht steht (04.09.2026, alle 47 Felder in
      * vier Ableitungen gegen die Shelly-Messung geprueft, bestes Feld 51 % daneben).
      */
+    /**
+     * Gibt das Modul ueberhaupt Auskunft? Eine einzige Frage klaert das.
+     *
+     * WARUM NICHT AM STATUS. Erst haben wir das am Geraetestatus festgemacht: nur scannen,
+     * wenn "Standby". Das war zu grob - der Status sagt nichts darueber, ob das Modul gerade
+     * Kapazitaet hat. Eine Spuelmaschine im Trocknen steht auf "In Betrieb" und tut dabei
+     * nichts als warten (17 W); sie ist der beste Gespraechspartner, den es gibt. Umgekehrt
+     * gibt es Geraete, die nach dem Programm sofort abschalten und nie einen Leerlauf zeigen,
+     * in dem gescannt werden koennte.
+     *
+     * WIE ES STATTDESSEN GEHT. Gefragt wird eine Adresse, die es nicht gibt. Ein
+     * gespraechsbereites Modul beantwortet sie mit 404 - "kenne ich nicht" ist eine Auskunft.
+     * Ein ausgelastetes Modul antwortet auf ALLES mit 500 oder gar nicht. Damit ist die
+     * Unterscheidung gemessen statt geraten, und zwar mit genau einer Anfrage je Durchgang.
+     *
+     * Antwortet die Adresse mit 200, existiert sie bei diesem Modell eben doch - auch das
+     * heisst "gespraechsbereit". Nur 500 und Stoerungen sprechen dagegen.
+     */
+    async gespraechsbereit(deviceId) {
+        const dev = this.devices && this.devices[deviceId];
+        if (!dev) return false;
+        this._kontrollTaub = this._kontrollTaub || {};
+        this._kontrollKennt = this._kontrollKennt || {};
+        const [unit, attr] = KONTROLL_ADRESSE;
+        try {
+            const res = await dev.api.readDop2(dev.route, unit, attr, 0, 0,
+                                               leafscan.SCAN_TIMEOUT_MS);
+            if (res.status !== 500) {
+                // Das Geraet kennt den Bereich und gibt Auskunft.
+                this._kontrollKennt[deviceId] = true;
+                this._kontrollTaub[deviceId] = 0;
+                return true;
+            }
+        } catch (e) {
+            this.log.debug(`${deviceId}: Kontrollfrage ${unit}/${attr} - ${e.message}`);
+        }
+
+        // Ein Geraet, das die Kontrolladresse kennt, ist jetzt eben beschaeftigt.
+        if (this._kontrollKennt[deviceId]) return false;
+
+        this._kontrollTaub[deviceId] = (this._kontrollTaub[deviceId] || 0) + 1;
+        if (!leafscan.trotzdemVersuchen({ kennt: false, taub: this._kontrollTaub[deviceId],
+                                          grenze: KONTROLLE_TAUB_MAX })) return false;
+
+        if (this._kontrollTaub[deviceId] === KONTROLLE_TAUB_MAX) {
+            this.log.info(`${deviceId}: Kontrolladresse ${unit}/${attr} blieb ${KONTROLLE_TAUB_MAX} mal `
+                + 'ohne Antwort - dieses Modell kennt den Bereich offenbar nicht. Der Scan wird '
+                + 'trotzdem versucht und bricht von selbst ab, wenn das Geraet nicht mag.');
+        }
+        return true;
+    }
+
     async leafScanDurchgang(deviceId) {
         const dev = this.devices && this.devices[deviceId];
         if (!dev) { this.log.warn(`Leaf-Scan: ${deviceId} ist nicht verbunden`); return; }
@@ -1823,6 +2142,8 @@ class MieleLocal extends utils.Adapter {
             + `(${leafscan.fortschritt(bisher).text})`);
         let geprueft = 0;
         let stoerungen = 0;
+        let absagen = 0;
+        let ueberlastet = false;
 
         for (const { unit, attr } of offen) {
             let ergebnis = { status: null };
@@ -1830,17 +2151,7 @@ class MieleLocal extends utils.Adapter {
                 const res = await dev.api.readDop2(dev.route, unit, attr, 0, 0,
                                                    leafscan.SCAN_TIMEOUT_MS);
                 if (res.status === 200 && res.headers['x-signature']) {
-                    const plain = this.mc.decryptResponse(res.headers['x-signature'], res.body);
-                    const { fields } = dop2.parseLeaf(plain);
-                    // Nur die reinen Werte behalten - der Typ interessiert bei der
-                    // Auswertung nicht und blaeht den Datenpunkt auf.
-                    const werte = {};
-                    for (const [idx, f] of Object.entries(fields || {})) {
-                        const v = f && f.value;
-                        werte[idx] = (typeof v === 'bigint') ? Number(v)
-                            : (Buffer.isBuffer(v) ? v.toString('latin1').replace(/\0+$/, '') : v);
-                    }
-                    ergebnis = { felder: werte };
+                    ergebnis = { felder: this.leafFelder(res) };
                 } else {
                     ergebnis = { status: res.status };
                 }
@@ -1868,11 +2179,38 @@ class MieleLocal extends utils.Adapter {
              * Vorboten standen im Ergebnis: abgebrochene Sockets und Zeitueberschreitungen
              * zwischen ansonsten sauberen Absagen. Genau die zaehlt dieser Zaehler.
              */
+            if (leafscan.beschaeftigt(ergebnis)) {
+                /*
+                 * "Gerade nicht" ist keine Niederlage.
+                 *
+                 * Waehrend eines Programms beantwortet das Modul fast jede Frage mit 503 -
+                 * frueher brach der Durchgang danach ab, und der Scan kam ueber 23 von 882
+                 * Adressen nicht hinaus. Jetzt wird gewartet, immer laenger, und dieselbe
+                 * Adresse noch einmal gefragt. Der Zaehler steht still: Ein beschaeftigtes
+                 * Geraet ist kein ueberlastetes.
+                 */
+                if (++absagen <= leafscan.ABSAGEN_JE_ADRESSE) {
+                    const warten = leafscan.wartezeitMs(absagen);
+                    this.log.debug(`${deviceId}: ${unit}/${attr} ist beschaeftigt - `
+                        + `${warten / 1000}s warten und erneut fragen`);
+                    await new Promise(r => this.setTimeout(r, warten));
+                    continue;                       // dieselbe Adresse noch einmal
+                }
+                // Nach mehreren Anlaeufen weiterziehen - die Adresse bleibt offen.
+                this.log.info(`${deviceId}: ${unit}/${attr} bleibt beschaeftigt, `
+                    + 'spaeter noch einmal');
+                absagen = 0;
+                stoerungen = 0;
+                continue;
+            }
+            absagen = 0;
+
             if (leafscan.ueberlastet(ergebnis)) {
                 if (++stoerungen >= leafscan.ABBRUCH_FEHLER) {
                     this.log.warn(`${deviceId}: Leaf-Scan abgebrochen - ${stoerungen} `
                         + 'Verbindungsstoerungen in Folge. Das Geraet kommt nicht mit; '
                         + 'spaeter weitermachen, der Fortschritt ist gesichert.');
+                    ueberlastet = true;
                     break;
                 }
             } else {
@@ -1897,6 +2235,456 @@ class MieleLocal extends utils.Adapter {
         const t = leafscan.treffer(bisher).slice(0, 12)
             .map(x => `${x.leaf} (${x.felder} Felder)`).join(', ');
         this.log.info(`${deviceId}: Leaf-Scan - ${f.text}${t ? '. Bisher: ' + t : ''}`);
+        return { ueberlastet };
+    }
+
+    /**
+     * Durchgang um Durchgang, bis der Scan fertig ist.
+     *
+     * WANN ER LAEUFT: solange der Schalter `sammlung.leafScan` steht. Der Nutzer legt ihn um,
+     * wenn Zeit ist - typisch nach einem Programm, wenn das Geraet noch wach im Leerlauf steht
+     * und stundenlang nichts anderes zu tun hat. Ein Adapterneustart beendet den Dauerlauf; der
+     * Fortschritt ist gesichert, und ein erneutes Umlegen macht dort weiter, wo er stand.
+     *
+     * WARUM DIE PAUSE DAZWISCHEN so viel groesser ist als die zwischen zwei Adressen: Ein
+     * Durchgang sind vierzig Anfragen am Stueck. Danach bekommt das Modul eine Minute fuer
+     * sich - Zeit genug, um Cloud, App und die eigene Steuerung zu bedienen, bevor der naechste
+     * Schwung kommt. Am 04.09.2026 hatte es ohne solche Pausen die Verbindung abgeworfen.
+     */
+    /**
+     * Eine Runde ueber alle Geraete, die gerade arbeiten.
+     *
+     * Ein Geraet im Standby liefert dieselben Zahlen wie vor einer Stunde - es zu fragen kostet
+     * nur Aufmerksamkeit, die es waehrend eines Programms nicht mehr hat. Die Statusnummern
+     * stammen aus der Miele-Beschreibung: 1 ist "aus", 7 "Standby". Alles darueber heisst,
+     * dass etwas laeuft.
+     */
+    async leafVerlaufRunde() {
+        for (const deviceId of Object.keys(this.devices || {})) {
+            const st = await this.getStateAsync(`${deviceId}.state.status`);
+            const nr = st && Number(st.val);
+            if (!nr || nr === 1 || nr === 7) continue;
+            // Waehrend einer Feinaufzeichnung schweigt die normale Runde - beide zusammen
+            // waeren die doppelte Last auf einem Modul, das nur eine Verbindung bedient.
+            if (this.feinTimer && this.feinTimer[deviceId]) continue;
+            try {
+                await this.leafVerlaufSchreiben(deviceId);
+            } catch (e) {
+                this.log.debug(`${deviceId}: Verlauf nicht geschrieben - ${e.message}`);
+            }
+        }
+    }
+
+    /**
+     * Die reinen Werte eines Leafs - ohne Typangaben.
+     *
+     * Der Typ interessiert bei der Auswertung nicht und blaeht jeden Datenpunkt auf. Grosse
+     * Ganzzahlen kommen als BigInt und muessen fuer JSON umgewandelt werden; Zeichenketten
+     * stehen als Puffer mit Nullen am Ende, die abgeschnitten gehoeren.
+     *
+     * Stand hier zweimal - im Scan und beim Verlaufschreiben. Eine Kopie haette bedeutet, dass
+     * beide Ablagen bei der naechsten Aenderung auseinanderlaufen.
+     */
+    leafFelder(res) {
+        const plain = this.mc.decryptResponse(res.headers['x-signature'], res.body);
+        const { fields } = dop2.parseLeaf(plain);
+        const werte = {};
+        for (const [idx, f] of Object.entries(fields || {})) {
+            werte[idx] = MieleLocal.reinerWert(f && f.value);
+        }
+        return werte;
+    }
+
+    /**
+     * Aus dem geparsten Feld den blossen Wert holen - notfalls durch mehrere Schichten.
+     *
+     * WARUM DAS NOETIG IST. dop2.parseLeaf liefert je Feld ein Paar aus Typ und Wert. Bei
+     * einfachen Zahlen ist das harmlos, bei Listen aber nicht: Deren Wert ist selbst wieder
+     * eine Liste solcher Paare. Wer nur die oberste Schicht abstreift, speichert am Ende
+     * "[{'type':'u8','value':3},...]" statt "[3,...]".
+     *
+     * Am 05.09.2026 im Verlauf der Waschmaschine gesehen: Die aufgezeichneten Werte waren
+     * unlesbar und damit fuer jede Auswertung wertlos - man konnte nicht einmal erkennen, ob
+     * sich ein Feld ueberhaupt geaendert hatte oder nur die Reihenfolge im Objekt.
+     *
+     * BigInt wird zu Number, weil JSON es sonst nicht darstellen kann; Puffer werden zu Text
+     * ohne die Nullen am Ende.
+     */
+    static reinerWert(v) {
+        if (typeof v === 'bigint') return Number(v);
+        if (Buffer.isBuffer(v)) return v.toString('latin1').replace(/\0+$/, '');
+        if (Array.isArray(v)) return v.map(x => MieleLocal.reinerWert(x));
+        // Ein Paar aus Typ und Wert - die Schale abstreifen und weitersuchen.
+        if (v && typeof v === 'object' && 'value' in v) return MieleLocal.reinerWert(v.value);
+        return v;
+    }
+
+    /**
+     * EIN Leaf engmaschig mitschreiben - fuer Vorgaenge, die schneller sind als drei Minuten.
+     *
+     * WARUM ES DAS BRAUCHT
+     * Der normale Verlauf tastet alle drei Minuten alle gefundenen Leafs ab. Fuer die Frage,
+     * welches Feld sich mit dem Programm bewegt, reicht das. Fuer schaltende Verbraucher
+     * reicht es nicht: Am 06.09.2026 zeigte die Messsteckdose, dass das Heizelement der
+     * Waschmaschine im Minutentakt zwischen 2337 W und Standby springt. Ein Feld, das diesen
+     * Zustand traegt, ist bei Drei-Minuten-Abtastung nicht von Rauschen zu unterscheiden -
+     * jede Messung faellt in einen zufaelligen Takt.
+     *
+     * WAS ES KOSTET: nichts zusaetzlich. Statt zehn Leafs alle drei Minuten wird eines alle
+     * zwanzig Sekunden gelesen - dieselbe Anzahl Anfragen je Minute, aber neunfach feiner
+     * aufgeloest. Die normale Runde setzt derweil fuer dieses Geraet aus (siehe
+     * leafVerlaufRunde); ohne das waere es die doppelte Last.
+     *
+     * Sie laeuft nur, solange das Geraet arbeitet, und schaltet sich selbst ab, wenn das
+     * Programm endet - eine vergessene Feinaufzeichnung wuerde das Modul sonst im Standby
+     * mit einer Anfrage alle zwanzig Sekunden beschaeftigen.
+     */
+    async leafVerlaufFeinRunde(deviceId, schluessel) {
+        const dev = this.devices && this.devices[deviceId];
+        if (!dev) return;
+        const st = await this.getStateAsync(`${deviceId}.state.status`);
+        const nr = st && Number(st.val);
+        if (!nr || nr === 1 || nr === 7) {
+            this.log.info(`${deviceId}: Feinaufzeichnung ${schluessel} beendet - Geraet im Ruhezustand`);
+            await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufFein`, { val: '', ack: true });
+            this.feinAbschalten(deviceId);
+            return;
+        }
+
+        const [unit, attr] = String(schluessel).split('/').map(Number);
+        if (!unit || !attr) return;
+
+        const alt = await this.getStateAsync(`${deviceId}.sammlung.leafVerlaufJson`);
+        let verlauf = {};
+        try { verlauf = JSON.parse((alt && alt.val) || '{}') || {}; } catch (e) { verlauf = {}; }
+
+        const jetzt = Date.now();
+        const lies = async (was) => {
+            const s2 = await this.getStateAsync(`${deviceId}.state.${was}`);
+            return s2 ? s2.val : null;
+        };
+        verlauf = leafverlauf.zustandAufnehmen(verlauf, {
+            programm: await lies('programText'),
+            phase: await lies('programPhaseText'),
+            status: await lies('statusText'),
+            sollTemp: await lies('targetTemperature'),
+            drehzahl: await lies('spinningSpeed'),
+        }, jetzt);
+
+        try {
+            const res = await dev.api.readDop2(dev.route, unit, attr, 0, 0, leafscan.SCAN_TIMEOUT_MS);
+            /*
+             * Eine Absage zaehlt wie ein Fehlschlag.
+             *
+             * Ein 503 heisst "gerade beschaeftigt" und ist fuer sich harmlos - die naechste
+             * Runde kommt ohnehin erst in zwanzig Sekunden. Kommt er aber dauerhaft, ist das
+             * Geraet fuer diese Aufzeichnung nicht zu haben, und weiterzufragen kostet es nur
+             * Aufmerksamkeit, die es fuer sein Programm braucht.
+             */
+            if (res.status !== 200) {
+                await this.feinFehlschlag(deviceId, schluessel, `HTTP ${res.status}`);
+            }
+            if (res.status === 200 && res.headers['x-signature']) {
+                const felder = this.leafFelder(res);
+                if (felder && Object.keys(felder).length) {
+                    if (this.feinFehler) this.feinFehler[deviceId] = 0;
+                    verlauf = leafverlauf.aufnehmen(verlauf, schluessel, felder, jetzt);
+                    await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufJson`,
+                        { val: JSON.stringify(verlauf), ack: true });
+                    const u = leafverlauf.umfang(verlauf);
+                    await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufStand`,
+                        { val: `${u.leafs} Leafs, ${u.felder} Felder, ${u.wechsel} Wechsel`,
+                          ack: true });
+                }
+            }
+        } catch (e) {
+            this.log.debug(`${deviceId}: Feinaufzeichnung ${schluessel} - ${e.message}`);
+            await this.feinFehlschlag(deviceId, schluessel, e.message);
+        }
+    }
+
+    /**
+     * Nach mehreren Fehlschlaegen in Folge aufhoeren zu fragen.
+     *
+     * WARUM DAS NOETIG IST. Der Leaf-Scan kennt diese Bremse seit jeher (leafscan,
+     * ABSAGEN_JE_ADRESSE) - die Feinaufzeichnung fragte stur weiter. Am 07.09.2026 waehrend
+     * eines langen Baumwollprogramms beobachtet: Nach einem Adapterneustart beantwortete die
+     * Waschmaschine die Abfrage auf 2/6192 nicht mehr, und alle zwanzig Sekunden lief eine
+     * weitere in einen Timeout. Das Modul war mit dem laufenden Programm ausgelastet; jede
+     * zusaetzliche Anfrage machte es schlimmer, und aufgezeichnet wurde ohnehin nichts mehr.
+     *
+     * Fuenf Fehlschlaege in Folge sind die Grenze - dieselbe wie beim Scan. Ein einzelner
+     * Aussetzer kommt vor und darf die Aufzeichnung nicht beenden; fuenf hintereinander
+     * heissen, dass das Geraet gerade nicht kann.
+     *
+     * Abgeschaltet wird sichtbar: Der Datenpunkt wird geleert, damit niemand eine
+     * Aufzeichnung vermutet, die nicht laeuft - genau diese stille Taeuschung war der Fehler,
+     * der in 0.3.26 und 0.3.27 dreimal auftrat.
+     */
+    async feinFehlschlag(deviceId, schluessel, grund) {
+        if (!this.feinFehler) this.feinFehler = {};
+        this.feinFehler[deviceId] = (this.feinFehler[deviceId] || 0) + 1;
+        if (this.feinFehler[deviceId] < FEIN_FEHLSCHLAEGE_MAX) return;
+        this.feinFehler[deviceId] = 0;
+
+        /*
+         * Langsamer werden, nicht aufgeben.
+         *
+         * Zuerst schaltete die Bremse die Aufzeichnung nach fuenf Fehlschlaegen ab. Das war zu
+         * grob: Ein Modul, das den Zwanzig-Sekunden-Takt nicht mitmacht, schafft den
+         * Vierzig-Sekunden-Takt oft muehelos - und eine gedehnte Aufzeichnung ist immer noch
+         * feiner als die normale Runde alle drei Minuten. Erst wenn auch der laengste Takt
+         * nichts liefert, wird abgeschaltet.
+         */
+        if (!this.feinTakt) this.feinTakt = {};
+        const alt = this.feinTakt[deviceId] || FEIN_TAKT_MS;
+        const neu = alt * 2;
+        if (neu <= FEIN_TAKT_MAX_MS) {
+            this.feinTakt[deviceId] = neu;
+            this.log.info(`${deviceId}: Feinaufzeichnung ${schluessel} gedrosselt auf `
+                + `${neu / 1000} Sekunden (zuletzt: ${grund}).`);
+            this.feinAbschalten(deviceId);
+            this.feinTimer[deviceId] = this.setInterval(
+                () => this.leafVerlaufFeinRunde(deviceId, schluessel).catch(() => {}), neu);
+            return;
+        }
+        this.log.warn(`${deviceId}: Feinaufzeichnung ${schluessel} beendet - auch im `
+            + `${alt / 1000}-Sekunden-Takt keine Antwort (zuletzt: ${grund}).`);
+        delete this.feinTakt[deviceId];
+        await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufFein`, { val: '', ack: true });
+        this.feinAbschalten(deviceId);
+    }
+
+    /**
+     * Nach einem Adapterstart die Feinaufzeichnung wieder anwerfen, wo eine eingetragen ist.
+     *
+     * Der Datenpunkt ueberlebt den Neustart, der Timer nicht - ohne das hier bleibt eine
+     * Aufzeichnung stehen, die laut Datenpunkt laeuft.
+     */
+    async feinFortsetzen() {
+        if (!this.feinTimer) this.feinTimer = {};
+        for (const deviceId of Object.keys(this.devices || {})) {
+            const st = await this.getStateAsync(`${deviceId}.sammlung.leafVerlaufFein`);
+            const wunsch = String((st && st.val) || '').trim();
+            if (!wunsch || this.feinTimer[deviceId]) continue;
+            this.log.info(`${deviceId}: Feinaufzeichnung ${wunsch} nach Neustart fortgesetzt`);
+            this.feinTimer[deviceId] = this.setInterval(
+                () => this.leafVerlaufFeinRunde(deviceId, wunsch).catch(() => {}), 20000);
+        }
+    }
+
+    /**
+     * Nach einem Adapterstart die Leaf-Scans wieder anwerfen, deren Schalter noch steht.
+     *
+     * Der Schalter ueberlebt den Neustart, die Schleife nicht.
+     */
+    async scanFortsetzen() {
+        for (const deviceId of Object.keys(this.devices || {})) {
+            const st = await this.getStateAsync(`${deviceId}.sammlung.leafScan`);
+            if (!st || st.val !== true) continue;
+            this.log.info(`${deviceId}: Leaf-Scan nach Neustart fortgesetzt`);
+            this.leafScanDauerlauf(deviceId)
+                .catch(e => this.log.warn(`${deviceId}: Leaf-Scan fehlgeschlagen - ${e.message}`));
+        }
+    }
+
+    /** Die Feinaufzeichnung eines Geraets anhalten. */
+    feinAbschalten(deviceId) {
+        if (this.feinTimer && this.feinTimer[deviceId]) {
+            this.clearInterval(this.feinTimer[deviceId]);
+            delete this.feinTimer[deviceId];
+        }
+    }
+
+    /**
+     * Die gefundenen Leafs erneut lesen und jede Wertaenderung festhalten.
+     *
+     * WARUM DAS NOETIG IST
+     * Der Scan sagt nur, WELCHE Adressen antworten. Ein Leaf mit siebenundvierzig Feldern ist
+     * damit noch immer eine Wand aus Zahlen. Erst der Verlauf zeigt, welche davon sich mit der
+     * Maschine bewegen - und nur solche Felder koennen eine Messung tragen. Die Energie, die
+     * in 2/6195 nachweislich nicht steckt, koennte in einem der neu gefundenen Nachbarn liegen
+     * (2/6192 und 2/6193, gefunden am 05.09.2026); sichtbar wird das nur, wenn man sie
+     * waehrend eines Programms mitschreibt.
+     *
+     * WIE OFT: Alle paar Minuten, und nur solange etwas laeuft. Ein Geraet im Standby liefert
+     * ohnehin dieselben Zahlen, und jede Anfrage dorthin ist eine, die es waehrend eines
+     * Programms nicht beantworten kann.
+     *
+     * WAS ES KOSTET: eine Anfrage je gefundenem Leaf. Das sind derzeit sechs - deutlich
+     * weniger als ein Scan-Durchgang, und mit derselben Pause dazwischen.
+     */
+    async leafVerlaufSchreiben(deviceId) {
+        const dev = this.devices && this.devices[deviceId];
+        if (!dev) return;
+        // Die Datenpunkte anlegen, falls es sie noch nicht gibt - der Verlauf laeuft auch
+        // ohne vorherigen Scan an, sobald Treffer gespeichert sind.
+        await this.ensureSammlungObjects(deviceId);
+
+        const stand = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+        let gefunden = {};
+        try { gefunden = JSON.parse((stand && stand.val) || '{}') || {}; } catch (e) { return; }
+        const leafs = Object.entries(gefunden).filter(([, v]) => v && v.antwortet).map(([k]) => k);
+        if (!leafs.length) return;
+
+        const alt = await this.getStateAsync(`${deviceId}.sammlung.leafVerlaufJson`);
+        let verlauf = {};
+        try { verlauf = JSON.parse((alt && alt.val) || '{}') || {}; } catch (e) { verlauf = {}; }
+
+        const jetzt = Date.now();
+        /*
+         * Den Zustand mitschreiben - ohne ihn ist keine Zahlenreihe zu deuten.
+         *
+         * "608, 368, -378" wird erst zur Aussage, wenn danebensteht, ob die Maschine wusch,
+         * spuelte oder schleuderte.
+         */
+        const lies = async (was) => {
+            const st = await this.getStateAsync(`${deviceId}.state.${was}`);
+            return st ? st.val : null;
+        };
+        verlauf = leafverlauf.zustandAufnehmen(verlauf, {
+            programm: await lies('programText'),
+            phase: await lies('programPhaseText'),
+            status: await lies('statusText'),
+            sollTemp: await lies('targetTemperature'),
+            drehzahl: await lies('spinningSpeed'),
+        }, jetzt);
+
+        let gelesen = 0;
+        for (const schluessel of leafs) {
+            const [unit, attr] = schluessel.split('/').map(Number);
+            if (!unit || !attr) continue;
+            try {
+                const res = await dev.api.readDop2(dev.route, unit, attr, 0, 0,
+                    leafscan.SCAN_TIMEOUT_MS);
+                if (res.status !== 200 || !res.headers['x-signature']) continue;
+                const felder = this.leafFelder(res);
+                if (felder && Object.keys(felder).length) {
+                    verlauf = leafverlauf.aufnehmen(verlauf, schluessel, felder, jetzt);
+                    gelesen++;
+                }
+            } catch (e) { /* ein Fehlschlag beendet die Runde nicht */ }
+            await new Promise(r => this.setTimeout(r, leafscan.PAUSE_MS));
+        }
+        if (!gelesen) return;
+
+        await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufJson`,
+            { val: JSON.stringify(verlauf), ack: true });
+        const u = leafverlauf.umfang(verlauf);
+        await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufStand`,
+            { val: `${u.leafs} Leafs, ${u.felder} Felder, ${u.wechsel} Wertwechsel`, ack: true });
+    }
+
+    /**
+     * Die Leaf-Suche anwerfen, sobald ein Geraet eingeschaltet wird.
+     *
+     * WOZU. Ein Geraet, das die meiste Zeit aus ist, wird sonst nie durchsucht: Der Scan
+     * braucht ein waches Modul, und wer soll den Schalter genau dann umlegen? Beim Backofen
+     * ist das der Regelfall - er stand am 08.09.2026 als einziges der drei Geraete mit einer
+     * voellig leeren Suche da, waehrend Wasch- und Spuelmaschine laengst Treffer hatten.
+     *
+     * WANN. Beim Uebergang von "Aus" (Status 1) auf alles andere, und nur bei einem Geraet,
+     * dessen Suche noch NIE gelaufen ist. Damit kann diese Automatik keine Entscheidung
+     * ueberstimmen: Wer den Schalter bewusst ausmacht, hat dann schon Adressen im Ergebnis,
+     * und es bleibt aus. Der Dauerlauf selbst parkt sich, sobald das Geraet wieder aus ist.
+     *
+     * WARUM ABSCHALTBAR UND AUS. Der Adapter laeuft auch bei anderen Leuten. Deren Geraete
+     * ungefragt zu befragen, waere nicht in Ordnung - auch wenn der Scan nur liest.
+     */
+    async leafScanBeimEinschalten(deviceId, vorher, nachher) {
+        if (!this.config.leafScanAuto) return;
+        const schalter = await this.getStateAsync(`${deviceId}.sammlung.leafScan`);
+        const bisher = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+        let stand = {};
+        try { stand = JSON.parse((bisher && bisher.val) || '{}') || {}; } catch (e) { stand = {}; }
+
+        if (!leafscan.beimEinschaltenStarten({
+            an: true, vorher, nachher,
+            schalter: schalter && schalter.val,
+            geprueft: Object.keys(stand).length > 0,
+        })) return;
+
+        this.log.info(`${deviceId}: eingeschaltet - die Leaf-Suche wird gestartet `
+            + `(${leafscan.adressen().length} Adressen, laeuft ueber viele Durchgaenge).`);
+        await this.ensureSammlungObjects(deviceId);
+        await this.setStateAsync(`${deviceId}.sammlung.leafScan`, { val: true, ack: true });
+        this.leafScanDauerlauf(deviceId)
+            .catch(e => this.log.warn(`${deviceId}: Leaf-Scan fehlgeschlagen - ${e.message}`));
+    }
+
+    async leafScanDauerlauf(deviceId) {
+        for (;;) {
+            const laeuft = await this.getStateAsync(`${deviceId}.sammlung.leafScan`);
+            if (!laeuft || laeuft.val !== true) {
+                this.log.info(`${deviceId}: Leaf-Scan angehalten.`);
+                return;
+            }
+
+            /*
+             * Ein ausgeschaltetes Geraet nicht befragen - es antwortet auf ALLES mit 500.
+             *
+             * Das ist die teuerste Falle des ganzen Verfahrens: Diese 500er sehen aus wie
+             * "gibt es nicht" und werden als geprueft abgelegt. Ein Scan, der am schlafenden
+             * Geraet durchlaeuft, meldet danach "882 von 882 geprueft" und hat in Wahrheit
+             * keine einzige Adresse ernsthaft gefragt.
+             *
+             * Am 06.09.2026 an der Spuelmaschine G5840 genau so geschehen: 875 Adressen mit
+             * 500 abgehakt, ein einziger Treffer - waehrend die baugleich angebundene
+             * Waschmaschine zehn Leafs lieferte.
+             *
+             * EIN LAUFENDES PROGRAMM IST GENAUSO SCHLECHT. Das war zuerst uebersehen: Am
+             * 07.09.2026 lief der Scan an der arbeitenden Spuelmaschine und lieferte 102
+             * Adressen, davon 102 mit 500 - ausnahmslos, ohne ein einziges 404 dazwischen.
+             * Ein Geraet, das wirklich antwortet, unterscheidet (die Waschmaschine lieferte
+             * 500er UND 404er UND Treffer). Zur selben Zeit beantwortete die ebenfalls
+             * arbeitende Waschmaschine Anfragen auf ein Leaf, das sie nachweislich hat, nur
+             * noch mit Timeouts. Waehrend eines Programms hat das Modul schlicht keine
+             * Kapazitaet, und seine Absagen bedeuten nichts.
+             *
+             * Gescannt wird deshalb nur im Leerlauf: Status 7 heisst "Standby" und ist der
+             * beste Zeitpunkt ueberhaupt, 1 heisst "aus". Alles dazwischen heisst, dass ein
+             * Programm laeuft.
+             */
+            const zustand = await this.getStateAsync(`${deviceId}.state.status`);
+            if (zustand && Number(zustand.val) === 1) {
+                this.log.debug(`${deviceId}: Leaf-Scan wartet - Geraet ist aus`);
+                await new Promise(r => this.setTimeout(r, PAUSE_ZWISCHEN_DURCHGAENGEN_MS));
+                continue;
+            }
+            if (!await this.gespraechsbereit(deviceId)) {
+                this.log.debug(`${deviceId}: Leaf-Scan wartet - Modul gibt keine Auskunft`);
+                await new Promise(r => this.setTimeout(r, PAUSE_ZWISCHEN_DURCHGAENGEN_MS));
+                continue;
+            }
+
+            const vorher = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+            let stand = {};
+            try { stand = JSON.parse((vorher && vorher.val) || '{}') || {}; } catch (e) { stand = {}; }
+            if (!leafscan.naechste(stand, 1).length) {
+                this.log.info(`${deviceId}: Leaf-Scan abgeschlossen - nichts mehr offen.`);
+                await this.setStateAsync(`${deviceId}.sammlung.leafScan`, { val: false, ack: true });
+                return;
+            }
+
+            const lauf = await this.leafScanDurchgang(deviceId);
+            /*
+             * Nach einer Ueberlastung nicht nach einer Minute wieder anklopfen.
+             *
+             * Die Bremse im Durchgang beendet nur DIESEN Durchgang - der Dauerlauf startete
+             * danach den naechsten nach der ueblichen Minute, und das Ganze von vorn: vierzig
+             * Adressen, fuenf Stoerungen, Abbruch, eine Minute Pause. Am 07.09.2026 lief das
+             * eine halbe Stunde so, waehrend beide Maschinen arbeiteten; die Waschmaschine
+             * beantwortete daraufhin nicht einmal mehr ihr Eco-Leaf. Ein Geraet, das gerade
+             * nicht kann, braucht Ruhe und keinen neuen Anlauf im Minutentakt.
+             */
+            const pause = lauf && lauf.ueberlastet
+                ? PAUSE_NACH_UEBERLASTUNG_MS : PAUSE_ZWISCHEN_DURCHGAENGEN_MS;
+            if (lauf && lauf.ueberlastet) {
+                this.log.info(`${deviceId}: Leaf-Scan pausiert `
+                    + `${pause / 60000} Minuten - das Geraet braucht Ruhe.`);
+            }
+            await new Promise(r => this.setTimeout(r, pause));
+        }
     }
 
     async onStateChange(id, state) {
@@ -1918,11 +2706,59 @@ class MieleLocal extends utils.Adapter {
          * belegt das Geraet ueber Minuten, und wann das passt, weiss nur der Mensch davor.
          */
         const scanIdx = parts.indexOf('sammlung');
-        if (scanIdx > 0 && parts[scanIdx + 1] === 'leafScan' && state.val === true) {
+
+        /*
+         * Die Feinaufzeichnung ein- und ausschalten.
+         *
+         * Eingetragen wird die Leaf-Adresse, die beobachtet werden soll ("2/6192"); ein leeres
+         * Feld schaltet ab. Zwanzig Sekunden sind kein frei gewaehlter Wert: Sie sind die
+         * Grenze, bis zu der die Last der normalen Runde entspricht (siehe
+         * leafVerlaufFeinRunde).
+         */
+        if (scanIdx > 0 && parts[scanIdx + 1] === 'leafVerlaufFein') {
             const geraet = parts[scanIdx - 1];
-            this.leafScanDurchgang(geraet)
-                .catch(e => this.log.warn(`${geraet}: Leaf-Scan fehlgeschlagen - ${e.message}`));
-            await this.setStateAsync(id, { val: false, ack: true });
+            const wunsch = String(state.val || '').trim();
+            if (!this.feinTimer) this.feinTimer = {};
+            this.feinAbschalten(geraet);
+            await this.setStateAsync(id, { val: wunsch, ack: true });
+            if (wunsch) {
+                if (!this.feinFehler) this.feinFehler = {};
+                if (!this.feinTakt) this.feinTakt = {};
+                this.feinFehler[geraet] = 0;
+                this.feinTakt[geraet] = FEIN_TAKT_MS;
+                this.log.info(`${geraet}: Feinaufzeichnung ${wunsch} laeuft, alle `
+                    + `${FEIN_TAKT_MS / 1000} Sekunden`);
+                this.leafVerlaufFeinRunde(geraet, wunsch).catch(() => {});
+                this.feinTimer[geraet] = this.setInterval(
+                    () => this.leafVerlaufFeinRunde(geraet, wunsch).catch(() => {}), FEIN_TAKT_MS);
+            } else {
+                this.log.info(`${geraet}: Feinaufzeichnung abgeschaltet`);
+            }
+            return;
+        }
+
+        if (scanIdx > 0 && parts[scanIdx + 1] === 'leafScan') {
+            const geraet = parts[scanIdx - 1];
+            if (state.val === true) {
+                /*
+                 * DER SCHALTER BLEIBT STEHEN - er bedeutet "scanne, bis fertig".
+                 *
+                 * Frueher war er ein Knopf fuer EINEN Durchgang von 40 Adressen und wurde
+                 * sofort zurueckgesetzt. Bei 882 Adressen und einem Geraet, das nur im
+                 * Leerlauf antwortet, haette jemand zwei Dutzend Mal danebenstehen muessen -
+                 * der Scan kam in vier Wochen ueber 23 Adressen nicht hinaus.
+                 *
+                 * Jetzt laeuft er weiter, Durchgang um Durchgang, bis nichts mehr offen ist
+                 * oder der Schalter umgelegt wird. Zwischen den Durchgaengen liegt eine
+                 * Verschnaufpause; wird das Geraet in dieser Zeit gebraucht, sagt es mit 503
+                 * ab, und der Scan wartet geduldig (siehe leafscan.beschaeftigt).
+                 */
+                await this.setStateAsync(id, { val: true, ack: true });
+                this.leafScanDauerlauf(geraet)
+                    .catch(e => this.log.warn(`${geraet}: Leaf-Scan fehlgeschlagen - ${e.message}`));
+            } else {
+                await this.setStateAsync(id, { val: false, ack: true });
+            }
             return;
         }
 
@@ -2066,6 +2902,7 @@ class MieleLocal extends utils.Adapter {
             if (this.enrollTimer) this.clearInterval(this.enrollTimer);
             if (this.ecoTimer) this.clearInterval(this.ecoTimer);
             if (this.hoursTimer) this.clearInterval(this.hoursTimer);
+            if (this.verlaufTimer) this.clearInterval(this.verlaufTimer);
             if (this.secTimer) this.clearInterval(this.secTimer);
             if (this.push) await this.push.stop();
             await this.setStateAsync('info.connection', { val: false, ack: true });

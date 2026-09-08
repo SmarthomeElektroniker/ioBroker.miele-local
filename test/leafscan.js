@@ -210,3 +210,126 @@ describe('Leaf-Scan: Antwort gegen Stoerung', () => {
         expect(ls.beantwortet({})).to.be.false;
     });
 });
+
+describe('Leaf-Scan: Reihenfolge', () => {
+    /*
+     * WARUM DAS GEPRUEFT WIRD. Bis zum 05.09.2026 stand Unit 1 vorn, und der Scan kam nie
+     * darueber hinaus: 20 von 882 Adressen geprueft, alle in einem Bereich, der nachweislich
+     * nicht antwortet. Die Reihenfolge ist hier kein Schoenheitsfehler, sondern entscheidet,
+     * ob der Scan je etwas findet.
+     */
+    it('faengt bei den bekannten Leafs an, nicht bei Unit 1', () => {
+        const ersten = ls.adressen().slice(0, 40);
+        expect(ersten.every(a => a.unit === 2), 'die ersten 40 Adressen liegen in Unit 2')
+            .to.be.true;
+    });
+
+    it('erreicht das EcoFeedback im ERSTEN Durchgang', () => {
+        const ersten = ls.naechste({}, ls.JE_DURCHGANG);
+        const schluessel = ersten.map(a => ls.schluessel(a.unit, a.attr));
+        expect(schluessel).to.include('2/6100');
+    });
+
+    it('gibt Unit 1 und 3 nicht auf, stellt sie nur zurueck', () => {
+        const alle = new Set(ls.adressen().map(a => ls.schluessel(a.unit, a.attr)));
+        expect(alle.has('1/1'), '1/1').to.be.true;
+        expect(alle.has('3/1'), '3/1').to.be.true;
+    });
+});
+
+describe('Leaf-Scan: Geduld statt Abbruch', () => {
+    /*
+     * WARUM DAS ZAEHLT. Am 05.09.2026 stand der Scan seit vier Wochen bei 23 von 882
+     * Adressen. Der Grund war nicht das Geraet, sondern die Behandlung seiner Antwort:
+     * Waehrend eines Programms sagt das Modul fast jede Anfrage mit 503 ab, und fuenf davon
+     * in Folge beendeten den Durchgang. Ein 503 ist aber eine Antwort - das Modul hat gehoert
+     * und bittet um Geduld.
+     */
+    it('haelt 503 fuer beschaeftigt, nicht fuer gestoert', () => {
+        expect(ls.beschaeftigt({ status: 503 })).to.be.true;
+        expect(ls.beschaeftigt({ status: '503' })).to.be.true;
+    });
+
+    it('haelt einen Verbindungsabbruch NICHT fuer blosse Beschaeftigung', () => {
+        // Hier ist Abbrechen richtig - so kuendigte sich der Ausfall vom 04.09.2026 an.
+        expect(ls.beschaeftigt({ status: 'Fehler: socket hang up' })).to.be.false;
+        expect(ls.beschaeftigt({ status: 'Fehler: Timeout' })).to.be.false;
+        expect(ls.beschaeftigt({ status: 101 })).to.be.false;
+    });
+
+    it('wartet nach jeder Absage laenger', () => {
+        const zeiten = [1, 2, 3, 4].map(n => ls.wartezeitMs(n));
+        for (let i = 1; i < zeiten.length; i++) {
+            expect(zeiten[i], `${i}. Absage`).to.be.above(zeiten[i - 1]);
+        }
+    });
+
+    it('wartet nie laenger als eine Minute', () => {
+        // Sonst haengt ein Durchgang an einer einzigen Adresse fest.
+        expect(ls.wartezeitMs(20)).to.be.at.most(60000);
+    });
+
+    it('gibt eine Adresse nach mehreren Anlaeufen frei', () => {
+        // Sie bleibt offen und kommt im naechsten Durchgang wieder dran.
+        expect(ls.ABSAGEN_JE_ADRESSE).to.be.within(3, 8);
+    });
+
+    it('haelt eine Absage weiterhin nicht fuer eine Antwort', () => {
+        // Sonst waere die Adresse abgehakt, ohne je gefragt worden zu sein.
+        expect(ls.beantwortet({ status: 503 })).to.be.false;
+    });
+});
+
+describe('Leaf-Scan: Start beim Einschalten', () => {
+    const lage = (x) => ({ an: true, vorher: 1, nachher: 7, schalter: false, geprueft: false, ...x });
+
+    it('startet, wenn ein nie durchsuchtes Geraet eingeschaltet wird', () => {
+        expect(ls.beimEinschaltenStarten(lage())).to.be.true;
+    });
+
+    it('startet nicht, wenn die Automatik aus ist', () => {
+        expect(ls.beimEinschaltenStarten(lage({ an: false }))).to.be.false;
+    });
+
+    it('startet nicht beim Ausschalten', () => {
+        expect(ls.beimEinschaltenStarten(lage({ vorher: 7, nachher: 1 }))).to.be.false;
+    });
+
+    it('startet nicht, wenn das Geraet schon an war', () => {
+        // Ein Statuswechsel mitten im Betrieb ist kein Einschalten.
+        expect(ls.beimEinschaltenStarten(lage({ vorher: 5, nachher: 7 }))).to.be.false;
+    });
+
+    it('startet auch ohne bekannten Vorzustand', () => {
+        // Nach einem Adapterstart steht dort nichts - das darf nicht blockieren.
+        expect(ls.beimEinschaltenStarten(lage({ vorher: null }))).to.be.true;
+    });
+
+    it('startet nicht, wenn die Suche schon laeuft', () => {
+        expect(ls.beimEinschaltenStarten(lage({ schalter: true }))).to.be.false;
+    });
+
+    it('ueberstimmt keine Entscheidung des Nutzers', () => {
+        // Wer abgeschaltet hat, hat schon Adressen im Ergebnis - dann bleibt es aus.
+        expect(ls.beimEinschaltenStarten(lage({ geprueft: true }))).to.be.false;
+    });
+});
+
+describe('Leaf-Scan: Kontrollfrage, die nie antwortet', () => {
+    /*
+     * Kennt ein Geraet den Adressbereich der Kontrolladresse nicht, antwortet es mit 500 - von
+     * "beschaeftigt" nicht zu unterscheiden. Ohne Rueckfall wuerde es nie gescannt.
+     */
+    it('wartet, solange die Grenze nicht erreicht ist', () => {
+        expect(ls.trotzdemVersuchen({ kennt: false, taub: 3, grenze: 10 })).to.be.false;
+    });
+
+    it('wagt es nach der Grenze', () => {
+        expect(ls.trotzdemVersuchen({ kennt: false, taub: 10, grenze: 10 })).to.be.true;
+    });
+
+    it('wagt nichts bei einem Geraet, das die Adresse kennt', () => {
+        // Dort heisst ein 500 wirklich "gerade nicht" - das ist zu respektieren.
+        expect(ls.trotzdemVersuchen({ kennt: true, taub: 99, grenze: 10 })).to.be.false;
+    });
+});

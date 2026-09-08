@@ -511,6 +511,18 @@
             "en": "Collect datasets"
           }
         },
+        "leafScanAuto": {
+          "type": "checkbox",
+          "newLine": true,
+          "label": {
+            "de": "Leaf-Suche selbst starten, wenn ein Gerät eingeschaltet wird",
+            "en": "Start the leaf search when a device is switched on"
+          },
+          "help": {
+            "de": "Nur bei Geräten, deren Suche noch nie gelaufen ist. Ein Gerät, das meistens aus ist, wird sonst nie durchsucht. Die Suche liest ausschließlich und hält an, sobald das Gerät wieder aus ist.",
+            "en": "Only for devices whose search has never run. A device that is off most of the time would otherwise never be searched. The search only reads, and stops as soon as the device is off again."
+          }
+        },
         "sammlerCloud": {
           "type": "checkbox",
           "newLine": true,
@@ -542,6 +554,40 @@
             "de": "Ohne Cloud: Nach jedem Programm Energie und Wasser aus der Miele-App in die Punkte \"sammlung.eingabeEnergie\" und \"sammlung.eingabeWasser\" eintragen - sie gehören dann zum zuletzt gesammelten Datensatz. Wie viele noch fehlen, steht in \"sammlung.fortschritt\".",
             "en": "Without cloud: after each programme, enter energy and water from the Miele app into \"sammlung.eingabeEnergie\" and \"sammlung.eingabeWasser\" - they are attached to the most recent dataset. \"sammlung.fortschritt\" shows what is still missing."
           }
+        },
+        "zaehlerHinweis": {
+          "type": "staticText",
+          "text": "Energiezähler: Der Verbrauch eines Programms lässt sich am Gerät nicht ablesen — der Wert, den Miele meldet, ist eine Erwartung und keine Messung. Wer eine Messsteckdose davor hat, trägt deren Zähler-Datenpunkt hier ein; der Adapter merkt sich dann bei jedem Programm, was wirklich verbraucht wurde.",
+          "newLine": true,
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
+        },
+        "zaehler": {
+          "type": "table",
+          "label": "Energiezähler je Gerät (optional)",
+          "newLine": true,
+          "items": [
+            {
+              "type": "text",
+              "attr": "serial",
+              "title": "Seriennummer des Geräts",
+              "width": "40%"
+            },
+            {
+              "type": "objectId",
+              "attr": "datenpunkt",
+              "title": "Zähler-Datenpunkt (Wh, laufend steigend)",
+              "width": "60%"
+            }
+          ],
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
         }
       }
     },

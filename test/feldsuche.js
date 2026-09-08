@@ -135,14 +135,39 @@ describe('Feldsuche: Robustheit', () => {
     });
 
     it('haelt ein konstantes Feld nicht fuer falsch, wenn auch der Sollwert konstant ist', () => {
-        // Liefen dreimal dieselben Programme, ist ein gleichbleibendes Feld kein Widerspruch.
+        /*
+         * Liefen dreimal dieselben Programme, ist ein gleichbleibendes Feld kein Widerspruch -
+         * aber auch kein Beleg. Es ist unentschieden, und genau das soll dastehen: kein
+         * "passt", kein "passt nicht". Sonst entsteht der Treffer, der Feld 60 der WCR860 mit
+         * drei gleichen Zyklen zum Energiezaehler erklaerte.
+         */
         const gleich = [
             zyklus({ 26: 500 }, { waterL: 50 }),
             zyklus({ 26: 500 }, { waterL: 50 }),
             zyklus({ 26: 500 }, { waterL: 50 }),
         ];
         const b = fs.felderBewerten(gleich, 'waterL')[0];
-        expect(b.taugt).to.be.true;
+        expect(b.taugt).to.be.false;
+        expect(b.unentschieden).to.be.true;
+        expect(b.grund).to.not.match(/schwankt/);
+    });
+
+    it('erklaert ein Feld nicht zum Treffer, wenn nur gleiche Vergleichswerte vorliegen', () => {
+        /*
+         * Der Fall der WCR860 in Reinform: Feld 60 steht in fast allen Zyklen auf 0 und in
+         * dreien auf 1 - und das sind genau die drei mit 0,1 kWh. Rechnerisch null Prozent
+         * Abweichung, inhaltlich nichts.
+         */
+        const wieFeld60 = [
+            zyklus({ 60: 0 }, { energyKwh: 1.4 }),
+            zyklus({ 60: 0 }, { energyKwh: 2.0 }),
+            zyklus({ 60: 0 }, { energyKwh: 0.8 }),
+            zyklus({ 60: 1 }, { energyKwh: 0.1 }),
+            zyklus({ 60: 1 }, { energyKwh: 0.1 }),
+            zyklus({ 60: 1 }, { energyKwh: 0.1 }),
+        ];
+        const b = fs.felderBewerten(wieFeld60, 'energyKwh')[0];
+        expect(b.taugt).to.be.false;
     });
 });
 
