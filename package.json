@@ -32,7 +32,7 @@
     "@iobroker/adapter-dev": "^1.5.0",
     "@iobroker/testing": "^6.2.1",
     "@tsconfig/node22": "^22.0.6",
-    "@types/node": "^22",
+    "@types/node": "^26",
     "eslint": "^9.39.0",
     "globals": "^17.12.0"
   },
