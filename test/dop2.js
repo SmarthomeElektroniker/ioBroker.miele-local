@@ -61,6 +61,23 @@ describe('DOP2 EcoFeedback', () => {
         expect(eco.waterL, '953 Zehntelliter = 95,3 l').to.equal(95.3);
     });
 
+    it('nimmt den Teiler des Wasserfelds von aussen', () => {
+        // Die WCR860 zaehlt Wasser in Feld 4 und in ganzen Litern - der Teiler 10 der
+        // urspruenglichen Fassung haette daraus 1,7 l gemacht. Genau dieser Fehler steckte
+        // bis zum 28.08.2026 im Adapter, nur mit einem anderen Feld.
+        const { fields } = dop2.parseLeaf(leafBauen({ 25: 894, 4: 17 }));
+        expect(dop2.ecoValues(fields, 25, 4, 1).waterL, 'ganze Liter').to.equal(17);
+        expect(dop2.ecoValues(fields, 25, 4, 10).waterL, 'Zehntel').to.equal(1.7);
+        expect(dop2.ecoValues(fields, 25, 4, 100).waterL, 'Hundertstel').to.equal(0.17);
+    });
+
+    it('faellt auf Zehntelliter zurueck, wenn kein Teiler angegeben ist', () => {
+        const { fields } = dop2.parseLeaf(leafBauen({ 25: 894, 40: 953 }));
+        expect(dop2.ecoValues(fields, 25, 40).waterL).to.equal(95.3);
+        // Auch ein unsinniger Teiler darf nicht durch null teilen.
+        expect(dop2.ecoValues(fields, 25, 40, 0).waterL).to.equal(95.3);
+    });
+
     it('liefert null statt 0, wenn ein Feld fehlt', () => {
         const { fields } = dop2.parseLeaf(leafBauen({ 25: 613 }));
         const eco = dop2.ecoValues(fields, 25, 40);

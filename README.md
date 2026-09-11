@@ -115,6 +115,18 @@ Per device under `<serial>.info` (static/connectivity), `<serial>.state` (live) 
 With control enabled, additionally `<serial>.control.*` (start, stop, pause, powerOn,
 powerOff, lightOn, lightOff).
 
+## Exploring an unknown device
+
+DOP2 addresses data as `unit/attribute`, and only a handful of those addresses are documented
+anywhere. The adapter carries the tools to find the rest: a leaf scanner that works through the
+address space without overwhelming the module, and a value recorder that shows which fields
+actually move while the appliance runs.
+
+**[docs/geraet-erkunden.md](docs/geraet-erkunden.md)** (German) describes the procedure in
+order — when to scan, how to tell a refusal from a busy signal, how to read a series of numbers
+once you have one, and what a newly understood field needs before it becomes a state. It also
+records what did *not* work, so nobody repeats it.
+
 ## Compatibility / limits
 
 - Tested against a washing machine (WCR860/EK037), dishwasher (G5840/EK037) and oven
@@ -127,10 +139,12 @@ powerOff, lightOn, lightOff).
 
 ## Legal / disclaimer
 
-This is an **unofficial, privately developed** project and is **not affiliated with Miele
-& Cie. KG**, nor endorsed or reviewed by them. "Miele", "Miele@home" and related names are
-trademarks of Miele & Cie. KG and are used here only descriptively to indicate
-compatibility.
+This is an **unofficial, privately developed** project and is **not affiliated with
+[Miele & Cie. KG](https://www.miele.com/)**, nor endorsed or reviewed by them. "Miele",
+"Miele@home" and related names are trademarks of
+[Miele & Cie. KG](https://www.miele.com/) and are used here only descriptively to indicate
+compatibility. Information about the appliances themselves is available from the
+manufacturer at <https://www.miele.com/>.
 
 The adapter uses a local protocol that has been publicly documented through **reverse
 engineering**. Use is **at your own risk**; depending on device/firmware it may affect
@@ -151,6 +165,73 @@ engineering work of the projects `MieleRESTServer` (akappner),
 `home-assistant-miele-mobile` and `ha-miele-at-lan`.
 
 ## Changelog
+
+### 0.3.36
+- **Fix: the final water reading of short programs is no longer missed.** With the regular ten-minute interval the last reading of a 35-minute
+  program fell up to nine minutes before the end, and the appliance resets its counters
+  immediately afterwards - the intermediate value was then stored as the final one. Eco
+  readings now switch to a one-minute interval for the last ten minutes of a program.
+- A reading that still did not catch the end is **kept but marked**: it counts as a gap
+  rather than as a deviation, so a correct field assignment no longer looks faulty.
+- **Admin translations completed.** Twelve texts of the settings page had no translation
+  entry and showed German to every other language; six stale keys were removed and the
+  language files moved to the short format (`admin/i18n/<lang>.json`). A test now keeps
+  the translations and `jsonConfig.json` in step.
+- Configurable intervals are capped at runtime - Node fires a timer above 2^31-1 ms
+  immediately instead of late.
+- `npm run test:unit` now picks up every test file; three of them had never run.
+- Leaf scan: a pass aborted because the appliance is busy is now logged as info instead of a
+  warning - it is expected during programmes and resumes automatically from the saved progress.
+- **Object structure check:** the data points added since 0.3.5 (data collection, metering
+  socket, operating hours) now carry names in all eleven languages, and the two input fields
+  for values from the Miele app use the writable role `level` instead of read-only `value.*`
+  roles. Existing objects are updated on start; a new test fails whenever a data point name
+  lacks one of the eleven languages.
+- Repository checker: `common.news` limited to published versions and translated into all eleven
+  languages, size attributes for the new settings, `node:http` instead of `http`, contact e-mail
+  address in `package.json`, `io-package.json` and README.
+- **Fix: the measured energy of the metering socket was dropped** before it reached the
+  field check - every collected cycle lacked it. The field check now compares energy
+  fields against the measurement instead of the cloud value rounded to 0.1 kWh.
+
+### 0.3.18
+- Leaf scan now separates a genuine refusal from a fault - a 503 or dropped socket no longer marks an address as checked that was never really asked.
+
+### 0.3.17
+- Leaf scan with short timeout and incremental saving - a full pass takes minutes instead of hours.
+
+### 0.3.16
+- Leaf scan: systematically probes the appliance for DOP2 leaves and records their fields - two passes (idle and running) reveal which fields move with the programme.
+
+### 0.3.15
+- Ongoing check: compares delivered values against cloud or app readings after each cycle and reports when the field mapping drifts.
+
+### 0.3.14
+- Water consumption verified: field 21 at 5 ml per count matches within 0.5% (8 cycles against the cloud) - field 26 was configured before and carries no measurement at all.
+
+### 0.3.13
+- Field analysis detects empty fields and rigidly coupled values - a field that is a fixed multiple of another carries no measurement of its own.
+
+### 0.3.12
+- Field analysis: evaluates collected cycles and reports which field carries energy and water - a field that stays constant is rejected.
+
+### 0.3.11
+- Renaming of the energy fields now actually takes effect - it was reset by object creation as soon as a programme was running.
+
+### 0.3.10
+- Total operating hours from DOP2 leaf 2/119.
+
+### 0.3.9
+- Water field corrected (#26); hold rule no longer keeps stale values during a run.
+
+### 0.3.8
+- Water value of a finished programme is kept instead of falling back to zero.
+
+### 0.3.7
+- Water consumption read from the correct field; eco field indices are now configurable.
+
+### 0.3.6
+- Optional raw eco field recording for diagnosing model-specific field indices.
 
 ### 0.3.5
 - **Fix: appliance status no longer flips to "off" during a running program.** A failed status
@@ -240,7 +321,7 @@ Most of the above was contributed by [meistermopper](https://github.com/meisterm
 
 MIT License
 
-Copyright (c) 2026 Immanuel
+Copyright (c) 2026 Immanuel <github@freitag.online>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software

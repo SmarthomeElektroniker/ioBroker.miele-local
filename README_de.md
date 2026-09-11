@@ -126,8 +126,10 @@ powerOff, lightOn, lightOff).
 ## Rechtliche Hinweise / Haftungsausschluss
 
 Dies ist ein **inoffizielles, privat entwickeltes** Projekt und steht in **keiner Verbindung zu
-Miele & Cie. KG**. „Miele", „Miele@home" und zugehörige Bezeichnungen sind eingetragene
-Marken der Miele & Cie. KG und werden hier nur beschreibend zur Kompatibilitätsangabe verwendet.
+[Miele & Cie. KG](https://www.miele.de/)**. „Miele", „Miele@home" und zugehörige Bezeichnungen
+sind eingetragene Marken der [Miele & Cie. KG](https://www.miele.de/) und werden hier nur
+beschreibend zur Kompatibilitätsangabe verwendet. Auskunft über die Geräte selbst gibt der
+Hersteller unter <https://www.miele.de/>.
 
 Der Adapter nutzt ein lokales Protokoll, das durch **Reverse Engineering** dokumentiert wurde.
 Die Nutzung erfolgt **auf eigene Verantwortung**. Die Software wird unter MIT-Lizenz
@@ -176,4 +178,4 @@ Open-Source-Projekte `MieleRESTServer` (akappner), `home-assistant-miele-mobile`
 
 ## Lizenz
 
-MIT License - Copyright (c) 2026 Immanuel
+MIT License - Copyright (c) 2026 Immanuel <github@freitag.online>
