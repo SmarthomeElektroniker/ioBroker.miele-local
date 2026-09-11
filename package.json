@@ -1,6 +1,6 @@
 {
   "name": "iobroker.miele-local",
-  "version": "0.3.35",
+  "version": "0.3.36",
   "description": "Connect modern Miele@Home appliances locally without the internet (MieleH256/DOP2).",
   "author": "Immanuel",
   "license": "MIT",
@@ -24,16 +24,17 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^3.4.1",
+    "@iobroker/adapter-core": "^3.4.3",
     "multicast-dns": "^7.2.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@iobroker/adapter-dev": "^1.5.0",
-    "@iobroker/testing": "^5.2.2",
+    "@iobroker/testing": "^6.2.1",
+    "@tsconfig/node22": "^22.0.6",
     "@types/node": "^22",
     "eslint": "^9.39.0",
-    "globals": "^15.15.0"
+    "globals": "^17.12.0"
   },
   "scripts": {
     "test:crypto": "node test/test-crypto.js",
@@ -42,7 +43,7 @@
     "lint": "eslint .",
     "test:integration": "mocha test/integration --exit",
     "test:local": "npm run lint && npm test",
-    "test:unit": "mocha test/dop2 test/stats test/api test/eco test/feldsuche test/kontrolle test/leafscan --exit"
+    "test:unit": "mocha \"test/!(integration|package|test-crypto).js\" --exit"
   },
   "files": [
     "admin/",

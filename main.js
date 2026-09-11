@@ -131,6 +131,12 @@ const HOURS_LEAF = { unit: 2, attr: 119 };
 const HOURS_IDX = 1;
 /** Wartezeit, bevor ein Programm als beendet gilt - gegen kurzzeitige Statusaussetzer. */
 const CYCLE_END_GRACE_MS = 3 * 60000;
+/**
+ * Die groesste Verzoegerung, die setTimeout/setInterval verkraften (2^31-1 ms).
+ *
+ * Darueber feuert der Timer nicht spaeter, sondern SOFORT - siehe intervallMs.
+ */
+const TIMER_MAX_MS = 2147483647;
 /** So viele Fehlschlaege in Folge drosseln die Feinaufzeichnung - siehe feinFehlschlag. */
 const FEIN_FEHLSCHLAEGE_MAX = 5;
 /** Der Anfangstakt der Feinaufzeichnung; bei Fehlschlaegen wird verdoppelt. */
@@ -281,7 +287,7 @@ class MieleLocal extends utils.Adapter {
 
         // Periodisches Re-Discovery im Hintergrund (z. B. für Geräte, die aus dem Standby aufwachen)
         if (this.config.autoDiscover !== false) {
-            const discInterval = Math.max(1, this.config.autoDiscoverInterval || 10) * 60 * 1000;
+            const discInterval = MieleLocal.intervallMs(this.config.autoDiscoverInterval, 10, 1, 60000);
             this.discoveryTimer = this.setInterval(() => this.discoverDevices(), discInterval);
         }
 
@@ -303,7 +309,8 @@ class MieleLocal extends utils.Adapter {
         // EcoFeedback (Energie/Wasser) per DOP2 – langsameres, separates Intervall
         if (this.config.ecoFeedback !== false) {
             this.pollEco();
-            this.ecoTimer = this.setInterval(() => this.pollEco(), (this.config.ecoInterval || 60) * 1000);
+            this.ecoTimer = this.setInterval(() => this.pollEco(),
+                MieleLocal.intervallMs(this.config.ecoInterval, 60, 10));
         }
 
         // Betriebsstunden: einmal beim Start, danach stuendlich - siehe pollHours().
@@ -350,7 +357,8 @@ class MieleLocal extends utils.Adapter {
         // Sekundengenaue Rest-/Laufzeit per DOP2 2/256 – schneller 10s-Poll
         if (this.config.secondsTime !== false) {
             this.pollSeconds();
-            this.secTimer = this.setInterval(() => this.pollSeconds(), (this.config.secondsInterval || 30) * 1000);
+            this.secTimer = this.setInterval(() => this.pollSeconds(),
+                MieleLocal.intervallMs(this.config.secondsInterval, 30, 5));
         }
     }
 
@@ -762,6 +770,10 @@ class MieleLocal extends utils.Adapter {
             // Endet ein Programm, laeuft die Eco-Abfrage noch eine Weile nach - der
             // Schlussstand steht oft erst nach dem Statuswechsel fest.
             const laeuftJetzt = statusVal === 5 || statusVal === 6;
+            // Naehert sich das Programm dem Ende, wird engmaschiger abgelesen - siehe
+            // ecoEndspurtPruefen. Das ist die einzige Stelle, an der der Schlussstand
+            // ueberhaupt noch zu holen ist.
+            if (this.config.ecoFeedback) await this.ecoEndspurtPruefen(deviceId, statusVal);
             if (dev.ecoLaeuft && !laeuftJetzt) {
                 dev.ecoNachlaufBis = Date.now() + ecoRegel.NACHLAUF_MS;
                 dev.ecoStabil = 0;
@@ -949,6 +961,37 @@ class MieleLocal extends utils.Adapter {
             waterL: await frisch(`${deviceId}.eco.water`, offen.ecoWasserStart),
             gemessenWh: gemessen,
         };
+
+        /*
+         * War die letzte Ablesung der Endstand - oder ein Zwischenstand?
+         *
+         * Der Zyklus wird dadurch NICHT verworfen. Er wandert nur mit einem Vermerk weiter:
+         * Die Feldsuche laesst diese Groesse aus, die Kontrolle bucht sie als Luecke statt
+         * als Abweichung. Alles andere am Zyklus - Programm, Dauer, Rohfelder, gemessene
+         * Energie - bleibt unveraendert erhalten und zaehlt normal.
+         *
+         * Ein Zwischenstand ist kein Messfehler: Der Zaehler stand wirklich dort. Falsch
+         * waere allein, ihn gegen einen Endwert zu rechnen. Siehe lib/eco.js.
+         */
+        const dev = this.devices && this.devices[deviceId];
+        const bewertung = ecoRegel.ablesungBewerten({
+            letzteAblesungMs: dev && dev.ecoWasserZuletztMs,
+            endeMs: ende,
+            wert: eintrag.waterL,
+            vorletzterWert: dev ? dev.ecoWasserVorletzter : null,
+        });
+        if (!bewertung.vollstaendig) {
+            eintrag.unvollstaendig = { waterL: bewertung.grund };
+            this.log.info(`${deviceId}: Wasserwert ${eintrag.waterL} l wird nicht als Endwert `
+                + `gewertet - ${bewertung.grund}`);
+        }
+        // Fuer den naechsten Lauf zuruecksetzen, sonst erbt er die Ablesung dieses Programms.
+        if (dev) {
+            dev.ecoWasserZuletztMs = null;
+            dev.ecoWasserLetzter = null;
+            dev.ecoWasserVorletzter = null;
+        }
+
         await this.appendCycle(deviceId, eintrag);
         await this.sammlungAufnehmen(deviceId, eintrag);
 
@@ -1050,6 +1093,7 @@ class MieleLocal extends utils.Adapter {
                 cloud,
                 // Der gemessene Verbrauch - die einzige belastbare Energiezahl, die es gibt.
                 gemessenWh: eintrag.gemessenWh ?? null,
+                unvollstaendig: eintrag.unvollstaendig || null,
             });
 
             let bisher = [];
@@ -1097,6 +1141,7 @@ class MieleLocal extends utils.Adapter {
                 lokal: { waterL: eintrag.waterL, energyKwh: eintrag.energyKwh },
                 cloud,
                 manuell: satz.manuell,
+                unvollstaendig: eintrag.unvollstaendig || null,
             });
             if (vergleich) {
                 let bisherK = [];
@@ -1471,7 +1516,9 @@ class MieleLocal extends utils.Adapter {
     schedulePoll(immediate = false) {
         if (this.pollTimer) this.clearTimeout(this.pollTimer);
         const anyActive = Object.values(this.devices).some(d => d.active);
-        const interval = (anyActive ? this.config.activePollInterval || 5 : this.config.pollInterval || 15) * 1000;
+        const interval = anyActive
+            ? MieleLocal.intervallMs(this.config.activePollInterval, 5, 1)
+            : MieleLocal.intervallMs(this.config.pollInterval, 15, 1);
         const run = async () => {
             if (this.stopping) return;
             await this.pollAll();
@@ -1529,6 +1576,69 @@ class MieleLocal extends utils.Adapter {
      * Versuche in den ersten zwei Minuten, solange das Geraet sicher noch wach ist. Das sind
      * drei zusaetzliche Anfragen je Waschgang - die Stelle, an der sie den Unterschied machen.
      */
+    /**
+     * Engmaschig ablesen, solange die Restzeit zur Neige geht.
+     *
+     * WARUM DER REGULAERE TAKT NICHT REICHT. Er steht auf zehn Minuten. Bei einem langen
+     * Programm faellt das nicht auf; bei einem kurzen entscheidet es ueber den Endwert. Am
+     * 10.09.2026 an der WCR860 belegt: "Seide" lief von 17:10 bis 17:45, abgelesen wurde um
+     * 17:16, 17:26 und 17:36. Die letzte Ablesung lag neun Minuten vor Schluss und stand bei
+     * 20,77 l - gebraucht hatte das Programm 31 l. Um 17:46 war der Zaehler schon zurueck
+     * auf 0.
+     *
+     * WARUM NICHT ecoSchlussstandHolen. Der greift erst nach dem Statuswechsel und ist damit
+     * immer zu spaet: Zu diesem Zeitpunkt steht im Leaf die Null. Er bleibt als zweites Netz
+     * fuer Geraete, die ihre Zaehler laenger halten - den Endwert holt aber nur dieser Takt.
+     *
+     * Er endet von selbst, sobald das Programm nicht mehr laeuft.
+     */
+    /**
+     * Ein eingestelltes Intervall in Millisekunden - und niemals ausserhalb dessen, was
+     * setTimeout/setInterval verkraften.
+     *
+     * WARUM DAS NOETIG IST. Node behandelt Verzoegerungen ueber 2.147.483.647 ms (rund 24,8
+     * Tage) nicht etwa als "sehr lang", sondern laesst den Timer SOFORT feuern - aus einer
+     * Einstellung, die "selten" heissen sollte, wird eine Dauerschleife. Die Eingabefelder im
+     * Admin begrenzen die Werte zwar, aber diese Grenze ist nur die Oberflaeche: Wer die
+     * Instanzeinstellungen ueber die Objektverwaltung oder die API schreibt, geht daran vorbei.
+     * Eine Grenze, die nur in der Maske steht, ist keine.
+     *
+     * Nach unten gilt dasselbe in klein: Eine 0 aus einer halb ausgefuellten Konfiguration
+     * wuerde den Adapter das Geraet in Endlosschleife fragen lassen.
+     *
+     * @param {number}  wert      Wert aus der Konfiguration, in Sekunden (oder [einheitMs])
+     * @param {number}  vorgabe   Ersatz, wenn nichts Brauchbares eingestellt ist
+     * @param {number}  minSek    Untergrenze in Sekunden
+     * @param {number}  [einheitMs=1000]  Umrechnung der Einheit, z. B. 60000 fuer Minuten
+     */
+    static intervallMs(wert, vorgabe, minSek, einheitMs = 1000) {
+        const zahl = Number(wert);
+        const sek = Number.isFinite(zahl) && zahl > 0 ? zahl : vorgabe;
+        const begrenzt = Math.max(minSek, sek);
+        return Math.min(begrenzt * einheitMs, TIMER_MAX_MS);
+    }
+
+    async ecoEndspurtPruefen(deviceId, statusVal) {
+        const dev = this.devices && this.devices[deviceId];
+        if (!dev) return;
+        const rest = await this.getStateAsync(`${deviceId}.state.remainingMinutes`);
+        const restMin = rest && typeof rest.val === 'number' ? rest.val : null;
+        const soll = ecoRegel.imEndspurt(statusVal, restMin);
+
+        if (soll && !dev.ecoEndspurtTimer) {
+            this.log.debug(`Eco ${deviceId}: Endspurt - noch ${restMin} min, `
+                + `Ablesung jetzt alle ${ecoRegel.ENDSPURT_TAKT_MS / 1000} s`);
+            dev.ecoEndspurtTimer = this.setInterval(() => {
+                this.pollEco().catch(e =>
+                    this.log.debug(`Eco ${deviceId}: Endspurt-Ablesung fehlgeschlagen - ${e.message}`));
+            }, ecoRegel.ENDSPURT_TAKT_MS);
+        } else if (!soll && dev.ecoEndspurtTimer) {
+            this.clearInterval(dev.ecoEndspurtTimer);
+            dev.ecoEndspurtTimer = null;
+            this.log.debug(`Eco ${deviceId}: Endspurt beendet`);
+        }
+    }
+
     ecoSchlussstandHolen(deviceId) {
         const dev = this.devices && this.devices[deviceId];
         if (!dev || dev.ecoSchlussLaeuft) return;
@@ -1703,6 +1813,21 @@ class MieleLocal extends utils.Adapter {
                 const alterWert = bisher && typeof bisher.val === 'number' ? bisher.val : 0;
                 const behalten = zurueckgesetzt && alterWert > 0;
                 if (!behalten) {
+                    /*
+                     * Mitschreiben, WANN zuletzt ein echter Wert kam und was davor stand.
+                     *
+                     * Beides braucht der Zyklusabschluss, um zu erkennen, ob die letzte
+                     * Ablesung der Endstand war oder ein Zwischenstand - siehe
+                     * ecoRegel.ablesungBewerten. Nur hier, im Zweig ohne Halteregel: Ein
+                     * gehaltener Wert ist keine neue Ablesung, und ihn mitzuzaehlen wuerde
+                     * genau das verschleiern, worum es geht.
+                     */
+                    if (eco.waterL > 0) {
+                        dev.ecoWasserVorletzter = typeof dev.ecoWasserLetzter === 'number'
+                            ? dev.ecoWasserLetzter : null;
+                        dev.ecoWasserLetzter = eco.waterL;
+                        dev.ecoWasserZuletztMs = Date.now();
+                    }
                     await this.setStateAsync(`${deviceId}.eco.water`,
                         { val: eco.waterL, ack: true });
                 } else {

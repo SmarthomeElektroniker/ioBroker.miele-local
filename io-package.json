@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.35",
+    "version": "0.3.36",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.36": {
+        "en": "Fix: the final water reading of short programs is no longer missed. With the regular ten-minute interval the last reading of a 35-minute program fell up to nine minutes before the end, and the appliance resets its counters immediately afterwards - the intermediate value was then stored as the final one. Eco readings now switch to a one-minute interval for the last ten minutes of a program. A reading that still did not catch the end is kept but marked: it counts as a gap rather than as a deviation, so it no longer distorts the field check. Admin translations completed: twelve texts of the settings page had no entry and showed German to every other language; six stale keys removed; language files moved to the short format. Configurable intervals are now capped at runtime.",
+        "de": "Fix: Der Schlussstand des Wasserzaehlers kurzer Programme geht nicht mehr verloren. Im regulaeren Zehn-Minuten-Takt lag die letzte Ablesung eines 35-Minuten-Programms bis zu neun Minuten vor dem Ende, und das Geraet setzt seine Zaehler unmittelbar danach zurueck - der Zwischenstand wurde dann als Endwert gespeichert. In den letzten zehn Minuten eines Programms wird jetzt im Minutentakt abgelesen. Eine Ablesung, die den Schluss dennoch verpasst hat, bleibt erhalten, wird aber vermerkt: Sie zaehlt als Luecke statt als Abweichung und verfaelscht damit die Feldkontrolle nicht mehr. Admin-Uebersetzungen vervollstaendigt: zwoelf Texte der Einstellungsseite hatten keinen Eintrag und erschienen in allen anderen Sprachen auf Deutsch; sechs verwaiste Schluessel entfernt; Sprachdateien im Kurzformat. Einstellbare Intervalle werden zur Laufzeit begrenzt."
+      },
       "0.3.18": {
         "de": "Leaf-Scan unterscheidet jetzt eine echte Absage des Geraets von einer Stoerung - ein 503 oder abgebrochener Socket hakt keine Adresse mehr ab, die nie gefragt wurde",
         "en": "Leaf scan now separates a genuine refusal from a fault - a 503 or dropped socket no longer marks an address as checked that was never really asked"
@@ -149,18 +153,9 @@
         "uk": "Додатковий запис необроблених полів eco для визначення індексів залежно від моделі",
         "zh-cn": "可选记录 eco 原始字段，用于确定各型号的字段索引"
       },
-      "0.3.4": {
-        "en": "Login instructions translated into all supported languages",
-        "de": "Login-Anleitung in alle unterstuetzten Sprachen uebersetzt",
-        "ru": "Инструкция по входу переведена на все поддерживаемые языки",
-        "pt": "Instruções de início de sessão traduzidas para todos os idiomas suportados",
-        "nl": "Inloginstructies vertaald naar alle ondersteunde talen",
-        "fr": "Instructions de connexion traduites dans toutes les langues prises en charge",
-        "it": "Istruzioni di accesso tradotte in tutte le lingue supportate",
-        "es": "Instrucciones de inicio de sesión traducidas a todos los idiomas admitidos",
-        "pl": "Instrukcja logowania przetłumaczona na wszystkie obsługiwane języki",
-        "uk": "Інструкцію входу перекладено всіма підтримуваними мовами",
-        "zh-cn": "登录说明已翻译为所有支持的语言"
+      "0.3.5": {
+        "en": "Fix: appliance status no longer flips to \"off\" during a running program, and the remaining time is read from the correct field. Frozen EcoFeedback values are no longer booked as consumption, requests are serialised per appliance, and a cycle survives an adapter restart. EcoFeedback is only requested while an appliance is actually running. Login instructions and datapoint names translated into all supported languages.",
+        "de": "Fix: Der Geraetestatus springt waehrend eines laufenden Programms nicht mehr auf \"Aus\", und die Restzeit wird aus dem richtigen Feld gelesen. Eingefrorene EcoFeedback-Werte werden nicht mehr als Verbrauch gebucht, Anfragen laufen je Geraet nacheinander, und ein Zyklus ueberlebt einen Adapter-Neustart. EcoFeedback wird nur noch abgefragt, solange ein Geraet laeuft. Login-Anleitung und Datenpunktnamen in alle unterstuetzten Sprachen uebersetzt."
       },
       "0.3.3": {
         "en": "Fix object structure errors reported by the repository checker",

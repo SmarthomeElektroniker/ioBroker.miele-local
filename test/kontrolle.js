@@ -165,3 +165,48 @@ describe('Kontrolle: Robustheit', () => {
         expect(e.werte.waterL.fehlt).to.be.true;
     });
 });
+
+describe('Kontrolle: Zwischenstand zaehlt als Luecke, nicht als Abweichung', () => {
+    /*
+     * Der Fall vom 10.09.2026 an der WCR860, mit den echten Zahlen. Ohne den Vermerk ergaebe
+     * er 33 Prozent Abweichung und liesse das seit zwoelf Zyklen richtige Feld 21 fehlerhaft
+     * aussehen. Siehe lib/eco.js, ablesungBewerten.
+     */
+    const zwischenstand = {
+        zeit: 1788504000000,
+        programm: 'Seide',
+        lokal: { waterL: 20.77, energyKwh: null },
+        cloud: { waterL: 31, energyKwh: 0.1 },
+        unvollstaendig: { waterL: 'letzte Ablesung 9 min vor Programmende' },
+    };
+
+    it('bucht ihn als Luecke und nennt den Grund', () => {
+        const v = k.vergleichen(zwischenstand);
+        expect(v.werte.waterL.fehlt).to.equal(true);
+        expect(v.werte.waterL.abweichung).to.equal(undefined);
+        // Der Wert bleibt sichtbar - verschwiegen wird nichts.
+        expect(v.werte.waterL.lokal).to.equal(20.77);
+        expect(v.werte.waterL.soll).to.equal(31);
+        expect(v.werte.waterL.grund).to.contain('9 min');
+    });
+
+    it('laesst die Genauigkeit der uebrigen Zyklen unberuehrt', () => {
+        const gut = [
+            { zeit: 1, programm: 'Baumwolle', lokal: { waterL: 57.11 }, cloud: { waterL: 57 } },
+            { zeit: 2, programm: 'Feinwaesche', lokal: { waterL: 73.09 }, cloud: { waterL: 73 } },
+            { zeit: 3, programm: 'Seide', lokal: { waterL: 30.94 }, cloud: { waterL: 31 } },
+        ].map(k.vergleichen);
+        const verlauf = gut.concat([k.vergleichen(zwischenstand)]);
+        const s = k.stand(verlauf, 'waterL');
+        expect(s.zyklen).to.equal(3);
+        expect(s.luecken).to.equal(1);
+        expect(s.mittel).to.be.below(0.01);
+        expect(s.warnt).to.equal(false);
+    });
+
+    it('ohne den Vermerk waere derselbe Zyklus ein Ausreisser', () => {
+        const ohne = Object.assign({}, zwischenstand, { unvollstaendig: null });
+        const v = k.vergleichen(ohne);
+        expect(v.werte.waterL.abweichung).to.be.above(0.3);
+    });
+});

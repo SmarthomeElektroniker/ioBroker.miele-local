@@ -332,3 +332,31 @@ describe('Feldsuche: krumme Teiler', () => {
         expect(fs.felderBewerten(zehntel, 'waterL')[0].teiler).to.equal(10);
     });
 });
+
+describe('Feldsuche: gemessener Verbrauch', () => {
+    const sammlerModul = require('../lib/sammler');
+    const suche = require('../lib/feldsuche');
+
+    it('behaelt den Messwert der Steckdose im Datensatz', () => {
+        // Der Fehler vom 11.09.2026: gemessenWh kam herein und fehlte im Satz.
+        const satz = sammlerModul.datensatzBauen({ felder: { 25: 768 }, gemessenWh: 1325.1 });
+        expect(satz.gemessenWh).to.equal(1325.1);
+    });
+
+    it('laesst leere oder unsinnige Messwerte weg', () => {
+        expect(sammlerModul.datensatzBauen({ felder: {}, gemessenWh: 0 })).to.not.have.property('gemessenWh');
+        expect(sammlerModul.datensatzBauen({ felder: {}, gemessenWh: null })).to.not.have.property('gemessenWh');
+    });
+
+    it('zieht fuer die Energie die Messung der gerundeten Cloud vor', () => {
+        const v = suche.vergleichswert({ gemessenWh: 144.7, cloud: { energyKwh: 0.1 } }, 'energyKwh');
+        expect(v.quelle).to.equal('gemessen');
+        expect(v.wert).to.be.closeTo(0.1447, 1e-9);
+    });
+
+    it('nimmt fuer das Wasser weiterhin die Cloud - die Steckdose misst keine Liter', () => {
+        const v = suche.vergleichswert({ gemessenWh: 144.7, cloud: { waterL: 31 } }, 'waterL');
+        expect(v.quelle).to.equal('cloud');
+    });
+});
+

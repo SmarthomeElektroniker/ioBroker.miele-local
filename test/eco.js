@@ -150,3 +150,85 @@ describe('EcoFeedback-Objekte', () => {
             .to.be.a('string').and.match(/estimate/);
     });
 });
+
+const MIN = 60000;
+
+describe('Eco: war die letzte Ablesung der Endstand?', () => {
+    /*
+     * Die beiden Faelle stammen aus der Waschmaschine WCR860 und sind der Grund, warum es
+     * ZWEI Bedingungen braucht. Beide Male "Seide", beide Male 31 l laut Miele-App - der eine
+     * Zyklus ist brauchbar, der andere nicht.
+     */
+    it('nimmt den Lauf vom 06.09.2026 an: Ablesung kurz vor Schluss', () => {
+        const r = eco.ablesungBewerten({
+            letzteAblesungMs: 1000 * 60 * 100,
+            endeMs: 1000 * 60 * 100 + 2 * MIN,
+            wert: 30.94, vorletzterWert: 10.10,
+        });
+        expect(r.vollstaendig).to.equal(true);
+        expect(r.grund).to.equal(null);
+    });
+
+    it('weist den Lauf vom 10.09.2026 zurueck: 9 min alt und noch deutlich steigend', () => {
+        const r = eco.ablesungBewerten({
+            letzteAblesungMs: 1000 * 60 * 100,
+            endeMs: 1000 * 60 * 100 + 9 * MIN,
+            wert: 20.77, vorletzterWert: 10.11,
+        });
+        expect(r.vollstaendig).to.equal(false);
+        expect(r.grund).to.contain('Zwischenstand');
+    });
+
+    it('nimmt eine alte Ablesung an, wenn der Zaehler laengst steht', () => {
+        // Derselbe Abstand wie oben, aber der Wert hat sich nicht mehr bewegt: Das Programm
+        // war fertig, es kam nur nichts mehr dazu. Ein solcher Zyklus ist vollstaendig.
+        const r = eco.ablesungBewerten({
+            letzteAblesungMs: 1000 * 60 * 100,
+            endeMs: 1000 * 60 * 100 + 9 * MIN,
+            wert: 31.0, vorletzterWert: 30.9,
+        });
+        expect(r.vollstaendig).to.equal(true);
+    });
+
+    it('weist den Lauf vom 09.09.2026 zurueck: Zaehler stand still, aber 21 min vor Schluss', () => {
+        // Einweichphase: 10,10 -> 10,10 l. Kein Anstieg - trotzdem kein Endwert, das
+        // Programm brauchte 31 l.
+        const r = eco.ablesungBewerten({
+            letzteAblesungMs: 1000 * 60 * 100,
+            endeMs: 1000 * 60 * 100 + 21 * MIN,
+            wert: 10.10, vorletzterWert: 10.10,
+        });
+        expect(r.vollstaendig).to.equal(false);
+        expect(r.grund).to.contain('21 min');
+    });
+
+    it('wertet nicht, wo nichts zu werten ist', () => {
+        expect(eco.ablesungBewerten({}).vollstaendig).to.equal(true);
+        expect(eco.ablesungBewerten({ letzteAblesungMs: 1, endeMs: 2, wert: 0 }).vollstaendig)
+            .to.equal(true);
+        // Ohne Vorgaenger laesst sich kein Anstieg bilden - dann gilt die Ablesung.
+        expect(eco.ablesungBewerten({
+            letzteAblesungMs: 1000, endeMs: 1000 + 9 * MIN, wert: 20, vorletzterWert: null,
+        }).vollstaendig).to.equal(true);
+    });
+
+    it('haelt eine Ablesung nach dem Programmende nie fuer zu alt', () => {
+        const r = eco.ablesungBewerten({
+            letzteAblesungMs: 1000 * 60 * 100 + 5 * MIN,
+            endeMs: 1000 * 60 * 100,
+            wert: 31, vorletzterWert: 10,
+        });
+        expect(r.alterMs).to.equal(0);
+        expect(r.vollstaendig).to.equal(true);
+    });
+});
+
+describe('Eco: Endspurt', () => {
+    it('greift nur im Betrieb und nur nahe am Ende', () => {
+        expect(eco.imEndspurt(5, 8)).to.equal(true);
+        expect(eco.imEndspurt(6, 0)).to.equal(true);
+        expect(eco.imEndspurt(5, 35)).to.equal(false);   // Programmbeginn
+        expect(eco.imEndspurt(1, 3)).to.equal(false);    // Geraet aus
+        expect(eco.imEndspurt(5, null)).to.equal(false); // keine Restzeit bekannt
+    });
+});

@@ -4,7 +4,10 @@ node_modules/
 .DS_Store
 tmp/
 coverage/
-.vscode/
+.vscode/*
+# Die Schema-Zuordnungen gehoeren ins Repo: Sie geben Admin-UI und io-package.json im
+# Editor eine Pruefung, und der Repo-Checker verlangt sie (S4036).
+!.vscode/settings.json
 *.tgz
 
 .commitinfo
