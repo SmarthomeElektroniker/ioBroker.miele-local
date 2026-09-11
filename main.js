@@ -3031,7 +3031,7 @@ class MieleLocal extends utils.Adapter {
             if (this.secTimer) this.clearInterval(this.secTimer);
             if (this.push) await this.push.stop();
             await this.setStateAsync('info.connection', { val: false, ack: true });
-            for (const deviceId of Object.keys(this.devices)) {
+            for (const deviceId of Object.keys(this.devices || {})) {
                 await this.setStateAsync(`${deviceId}.info.connected`, { val: false, ack: true });
             }
         } catch {
