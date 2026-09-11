@@ -2332,7 +2332,14 @@ class MieleLocal extends utils.Adapter {
 
             if (leafscan.ueberlastet(ergebnis)) {
                 if (++stoerungen >= leafscan.ABBRUCH_FEHLER) {
-                    this.log.warn(`${deviceId}: Leaf-Scan abgebrochen - ${stoerungen} `
+                    /*
+                     * INFO, NICHT WARN. Ein ueberlastetes Modul ist hier der Normalfall, kein
+                     * Fehler: Waehrend eines Programms kommt es mit den vielen Leaf-Anfragen nicht
+                     * mit, und der Scan setzt spaeter ab dem gesicherten Fortschritt fort. Als
+                     * Warnung stand diese Zeile vom 05. bis 11.09.2026 271-mal im Log, ohne dass
+                     * je etwas zu tun gewesen waere - und verdeckte damit echte Warnungen.
+                     */
+                    this.log.info(`${deviceId}: Leaf-Scan abgebrochen - ${stoerungen} `
                         + 'Verbindungsstoerungen in Folge. Das Geraet kommt nicht mit; '
                         + 'spaeter weitermachen, der Fortschritt ist gesichert.');
                     ueberlastet = true;

@@ -180,6 +180,8 @@ engineering work of the projects `MieleRESTServer` (akappner),
 - Configurable intervals are capped at runtime - Node fires a timer above 2^31-1 ms
   immediately instead of late.
 - `npm run test:unit` now picks up every test file; three of them had never run.
+- Leaf scan: a pass aborted because the appliance is busy is now logged as info instead of a
+  warning - it is expected during programmes and resumes automatically from the saved progress.
 - **Fix: the measured energy of the metering socket was dropped** before it reached the
   field check - every collected cycle lacked it. The field check now compares energy
   fields against the measurement instead of the cloud value rounded to 0.1 kWh.
