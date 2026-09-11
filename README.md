@@ -182,6 +182,14 @@ engineering work of the projects `MieleRESTServer` (akappner),
 - `npm run test:unit` now picks up every test file; three of them had never run.
 - Leaf scan: a pass aborted because the appliance is busy is now logged as info instead of a
   warning - it is expected during programmes and resumes automatically from the saved progress.
+- **Object structure check:** the data points added since 0.3.5 (data collection, metering
+  socket, operating hours) now carry names in all eleven languages, and the two input fields
+  for values from the Miele app use the writable role `level` instead of read-only `value.*`
+  roles. Existing objects are updated on start; a new test fails whenever a data point name
+  lacks one of the eleven languages.
+- Repository checker: `common.news` limited to published versions and translated into all eleven
+  languages, size attributes for the new settings, `node:http` instead of `http`, contact e-mail
+  address in `package.json`, `io-package.json` and README.
 - **Fix: the measured energy of the metering socket was dropped** before it reached the
   field check - every collected cycle lacked it. The field check now compares energy
   fields against the measurement instead of the cloud value rounded to 0.1 kWh.
@@ -313,7 +321,7 @@ Most of the above was contributed by [meistermopper](https://github.com/meisterm
 
 MIT License
 
-Copyright (c) 2026 Immanuel
+Copyright (c) 2026 Immanuel <github@freitag.online>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software

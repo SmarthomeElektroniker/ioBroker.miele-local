@@ -178,4 +178,4 @@ Open-Source-Projekte `MieleRESTServer` (akappner), `home-assistant-miele-mobile`
 
 ## Lizenz
 
-MIT License - Copyright (c) 2026 Immanuel
+MIT License - Copyright (c) 2026 Immanuel <github@freitag.online>

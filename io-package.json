@@ -29,7 +29,7 @@
       "zh-cn": "无需互联网即可在本地连接现代 Miele@Home 家电。"
     },
     "authors": [
-      "Immanuel"
+      "Immanuel <github@freitag.online>"
     ],
     "keywords": [
       "miele",
@@ -53,121 +53,42 @@
     "loglevel": "info",
     "news": {
       "0.3.36": {
-        "en": "Fix: the final water reading of short programs is no longer missed. With the regular ten-minute interval the last reading of a 35-minute program fell up to nine minutes before the end, and the appliance resets its counters immediately afterwards - the intermediate value was then stored as the final one. Eco readings now switch to a one-minute interval for the last ten minutes of a program. A reading that still did not catch the end is kept but marked: it counts as a gap rather than as a deviation, so it no longer distorts the field check. Admin translations completed: twelve texts of the settings page had no entry and showed German to every other language; six stale keys removed; language files moved to the short format. Configurable intervals are now capped at runtime.",
-        "de": "Fix: Der Schlussstand des Wasserzaehlers kurzer Programme geht nicht mehr verloren. Im regulaeren Zehn-Minuten-Takt lag die letzte Ablesung eines 35-Minuten-Programms bis zu neun Minuten vor dem Ende, und das Geraet setzt seine Zaehler unmittelbar danach zurueck - der Zwischenstand wurde dann als Endwert gespeichert. In den letzten zehn Minuten eines Programms wird jetzt im Minutentakt abgelesen. Eine Ablesung, die den Schluss dennoch verpasst hat, bleibt erhalten, wird aber vermerkt: Sie zaehlt als Luecke statt als Abweichung und verfaelscht damit die Feldkontrolle nicht mehr. Admin-Uebersetzungen vervollstaendigt: zwoelf Texte der Einstellungsseite hatten keinen Eintrag und erschienen in allen anderen Sprachen auf Deutsch; sechs verwaiste Schluessel entfernt; Sprachdateien im Kurzformat. Einstellbare Intervalle werden zur Laufzeit begrenzt."
-      },
-      "0.3.18": {
-        "de": "Leaf-Scan unterscheidet jetzt eine echte Absage des Geraets von einer Stoerung - ein 503 oder abgebrochener Socket hakt keine Adresse mehr ab, die nie gefragt wurde",
-        "en": "Leaf scan now separates a genuine refusal from a fault - a 503 or dropped socket no longer marks an address as checked that was never really asked"
-      },
-      "0.3.17": {
-        "de": "Leaf-Scan mit kurzem Zeitlimit und Zwischenspeicherung - ein Durchlauf dauert Minuten statt Stunden",
-        "en": "Leaf scan with short timeout and incremental saving - a full pass takes minutes instead of hours"
-      },
-      "0.3.16": {
-        "de": "Leaf-Scan: durchsucht das Geraet systematisch nach DOP2-Leafs und haelt deren Felder fest - zwei Durchgaenge (Leerlauf und Betrieb) zeigen, welche Felder sich mit dem Programm bewegen",
-        "en": "Leaf scan: systematically probes the appliance for DOP2 leaves and records their fields - two passes (idle and running) reveal which fields move with the programme"
-      },
-      "0.3.15": {
-        "de": "Laufende Kontrolle: vergleicht nach jedem Zyklus die gelieferten Werte mit Cloud oder App-Ablesung und meldet, wenn die Feldzuordnung wegläuft",
-        "en": "Ongoing check: compares delivered values against cloud or app readings after each cycle and reports when the field mapping drifts"
-      },
-      "0.3.14": {
-        "de": "Wasserverbrauch belegt: Feld 21 mit 5 ml je Zaehlschritt trifft auf 0,5 % genau (8 Zyklen gegen die Cloud) - bisher stand Feld 26 dort, das gar keine Messung traegt",
-        "en": "Water consumption verified: field 21 at 5 ml per count matches within 0.5% (8 cycles against the cloud) - field 26 was configured before and carries no measurement at all"
-      },
-      "0.3.13": {
-        "de": "Feldsuche erkennt leere Felder und starr gekoppelte Werte - ein Feld, das ein festes Vielfaches eines anderen ist, traegt keine eigene Messung",
-        "en": "Field analysis detects empty fields and rigidly coupled values - a field that is a fixed multiple of another carries no measurement of its own"
-      },
-      "0.3.12": {
-        "de": "Feldsuche: wertet die gesammelten Zyklen aus und sagt, welches Feld Energie und Wasser traegt - ein Feld, das konstant bleibt, wird verworfen",
-        "en": "Field analysis: evaluates collected cycles and reports which field carries energy and water - a field that stays constant is rejected"
-      },
-      "0.3.11": {
-        "de": "Umbenennung der Energiefelder wirkt jetzt wirklich - sie wurde von der Objektanlage zurueckgesetzt, sobald ein Programm lief",
-        "en": "Renaming of the energy fields now actually takes effect - it was reset by object creation as soon as a programme was running"
-      },
-      "0.3.10": {
-        "en": "Total operating hours from DOP2 leaf 2/119",
-        "de": "Betriebsstunden gesamt aus DOP2-Leaf 2/119",
-        "ru": "Общее время работы из DOP2-листа 2/119",
-        "pt": "Horas de funcionamento totais do leaf DOP2 2/119",
-        "nl": "Totale bedrijfsuren uit DOP2-leaf 2/119",
-        "fr": "Heures de fonctionnement totales depuis le leaf DOP2 2/119",
-        "it": "Ore di funzionamento totali dal leaf DOP2 2/119",
-        "es": "Horas de funcionamiento totales del leaf DOP2 2/119",
-        "pl": "Łączne godziny pracy z liścia DOP2 2/119",
-        "uk": "Загальний час роботи з листа DOP2 2/119",
-        "zh-cn": "来自 DOP2 叶节点 2/119 的总运行小时数"
-      },
-      "0.3.9": {
-        "en": "Water field corrected (#26); hold rule no longer keeps stale values during a run",
-        "de": "Wasserfeld berichtigt (#26); Haltelogik behaelt keine veralteten Werte mehr im Betrieb",
-        "ru": "Исправлено поле воды (#26); удержание больше не сохраняет устаревшие значения",
-        "pt": "Campo de água corrigido (#26); a retenção já não mantém valores desatualizados",
-        "nl": "Waterveld gecorrigeerd (#26); vasthouden bewaart geen verouderde waarden meer",
-        "fr": "Champ eau corrigé (#26) ; la rétention ne conserve plus de valeurs périmées",
-        "it": "Campo acqua corretto (#26); la ritenzione non conserva più valori obsoleti",
-        "es": "Campo de agua corregido (#26); la retención ya no conserva valores obsoletos",
-        "pl": "Poprawione pole wody (#26); przytrzymanie nie zachowuje już nieaktualnych wartości",
-        "uk": "Виправлено поле води (#26); утримання більше не зберігає застарілі значення",
-        "zh-cn": "修正用水字段（#26）；保持逻辑不再保留过时数值"
-      },
-      "0.3.8": {
-        "en": "Water value of a finished programme is kept instead of falling back to zero",
-        "de": "Wasserwert eines beendeten Programms bleibt stehen statt auf null zurueckzufallen",
-        "ru": "Значение воды завершённой программы сохраняется, а не сбрасывается в ноль",
-        "pt": "O valor de água de um programa terminado mantém-se em vez de voltar a zero",
-        "nl": "Waterwaarde van een beeindigd programma blijft staan in plaats van naar nul te vallen",
-        "fr": "La valeur d'eau d'un programme terminé est conservée au lieu de retomber à zéro",
-        "it": "Il valore dell'acqua di un programma terminato resta invece di tornare a zero",
-        "es": "El valor de agua de un programa terminado se mantiene en lugar de volver a cero",
-        "pl": "Wartość wody zakończonego programu pozostaje zamiast wracać do zera",
-        "uk": "Значення води завершеної програми зберігається, а не скидається до нуля",
-        "zh-cn": "已完成程序的用水量保持显示，而不是归零"
-      },
-      "0.3.7": {
-        "en": "Water consumption read from the correct field; eco field indices are now configurable",
-        "de": "Wasserverbrauch aus dem richtigen Feld gelesen; Eco-Feldindizes jetzt einstellbar",
-        "ru": "Расход воды считывается из правильного поля; индексы полей eco теперь настраиваются",
-        "pt": "Consumo de água lido do campo correto; índices dos campos eco agora configuráveis",
-        "nl": "Waterverbruik uit het juiste veld gelezen; eco-veldindices nu instelbaar",
-        "fr": "Consommation d'eau lue depuis le bon champ ; index des champs eco configurables",
-        "it": "Consumo d'acqua letto dal campo corretto; indici dei campi eco ora configurabili",
-        "es": "Consumo de agua leído del campo correcto; índices de campos eco ahora configurables",
-        "pl": "Zużycie wody odczytywane z właściwego pola; indeksy pól eco teraz konfigurowalne",
-        "uk": "Витрата води зчитується з правильного поля; індекси полів eco тепер налаштовуються",
-        "zh-cn": "从正确的字段读取用水量；eco 字段索引现在可配置"
-      },
-      "0.3.6": {
-        "en": "Optional raw eco field recording for diagnosing model-specific field indices",
-        "de": "Optionales Mitschreiben der Eco-Rohfelder zur Klaerung modellabhaengiger Feldindizes",
-        "ru": "Дополнительная запись необработанных полей eco для выяснения индексов полей модели",
-        "pt": "Registo opcional de campos eco brutos para esclarecer índices específicos do modelo",
-        "nl": "Optioneel vastleggen van ruwe eco-velden om modelafhankelijke veldindices te bepalen",
-        "fr": "Enregistrement optionnel des champs eco bruts pour déterminer les indices par modèle",
-        "it": "Registrazione opzionale dei campi eco grezzi per chiarire gli indici specifici del modello",
-        "es": "Registro opcional de campos eco sin procesar para aclarar índices propios de cada modelo",
-        "pl": "Opcjonalne zapisywanie surowych pól eco w celu ustalenia indeksów zależnych od modelu",
-        "uk": "Додатковий запис необроблених полів eco для визначення індексів залежно від моделі",
-        "zh-cn": "可选记录 eco 原始字段，用于确定各型号的字段索引"
+        "en": "Energy and water: water consumption is read from the correct DOP2 field (field 21, confirmed within 0.5% against the cloud); final readings of short programs are no longer lost; total operating hours added. New data collection with field analysis, an ongoing check of the field mapping and a leaf scan for model-specific fields. Admin translations completed, configurable intervals capped at runtime, all data point names translated into eleven languages.",
+        "de": "Energie und Wasser: Der Wasserverbrauch wird aus dem richtigen DOP2-Feld gelesen (Feld 21, gegen die Cloud auf 0,5 % bestätigt); die letzten Werte kurzer Programme gehen nicht mehr verloren; Betriebsstunden gesamt ergänzt. Neue Datensammlung mit Feldanalyse, laufender Kontrolle der Feldzuordnung und einem Leaf-Scan für modellspezifische Felder. Admin-Übersetzungen vervollständigt, einstellbare Intervalle zur Laufzeit begrenzt, alle Datenpunktnamen in elf Sprachen übersetzt.",
+        "ru": "Энергия и вода: расход воды считывается из правильного поля DOP2 (поле 21, подтверждено с точностью 0,5 % по данным облака); последние показания коротких программ больше не теряются; добавлено общее время работы. Новый сбор данных с анализом полей, постоянной проверкой сопоставления полей и сканированием leaf для полей конкретных моделей. Переводы интерфейса администратора дополнены, настраиваемые интервалы ограничены во время работы, все названия точек данных переведены на одиннадцать языков.",
+        "pt": "Energia e água: o consumo de água é lido do campo DOP2 correto (campo 21, confirmado com 0,5 % de precisão face à cloud); as últimas leituras de programas curtos já não se perdem; adicionadas as horas totais de funcionamento. Nova recolha de dados com análise de campos, verificação contínua do mapeamento de campos e uma análise de leafs para campos específicos do modelo. Traduções do admin concluídas, intervalos configuráveis limitados em tempo de execução, todos os nomes de pontos de dados traduzidos para onze idiomas.",
+        "nl": "Energie en water: het waterverbruik wordt uit het juiste DOP2-veld gelezen (veld 21, tot op 0,5 % bevestigd tegen de cloud); de laatste waarden van korte programma's gaan niet meer verloren; totaal aantal bedrijfsuren toegevoegd. Nieuwe gegevensverzameling met veldanalyse, doorlopende controle van de veldtoewijzing en een leaf-scan voor modelspecifieke velden. Admin-vertalingen voltooid, instelbare intervallen tijdens runtime begrensd, alle datapuntnamen in elf talen vertaald.",
+        "fr": "Énergie et eau : la consommation d'eau est lue dans le bon champ DOP2 (champ 21, confirmé à 0,5 % près par rapport au cloud) ; les dernières valeurs des programmes courts ne sont plus perdues ; ajout des heures de fonctionnement totales. Nouvelle collecte de données avec analyse des champs, contrôle continu du mappage des champs et un scan des leafs pour les champs propres au modèle. Traductions de l'admin complétées, intervalles configurables limités à l'exécution, tous les noms de points de données traduits en onze langues.",
+        "it": "Energia e acqua: il consumo d'acqua viene letto dal campo DOP2 corretto (campo 21, confermato entro lo 0,5 % rispetto al cloud); gli ultimi valori dei programmi brevi non vanno più persi; aggiunte le ore di funzionamento totali. Nuova raccolta dati con analisi dei campi, controllo continuo della mappatura dei campi e una scansione dei leaf per i campi specifici del modello. Traduzioni dell'admin completate, intervalli configurabili limitati in fase di esecuzione, tutti i nomi dei punti dati tradotti in undici lingue.",
+        "es": "Energía y agua: el consumo de agua se lee del campo DOP2 correcto (campo 21, confirmado con un 0,5 % de precisión frente a la nube); los últimos valores de los programas cortos ya no se pierden; se añaden las horas de funcionamiento totales. Nueva recopilación de datos con análisis de campos, control continuo de la asignación de campos y un escaneo de leafs para campos específicos del modelo. Traducciones del admin completadas, intervalos configurables limitados en tiempo de ejecución, todos los nombres de puntos de datos traducidos a once idiomas.",
+        "pl": "Energia i woda: zużycie wody jest odczytywane z właściwego pola DOP2 (pole 21, potwierdzone z dokładnością 0,5 % względem chmury); ostatnie odczyty krótkich programów nie są już tracone; dodano łączną liczbę godzin pracy. Nowe zbieranie danych z analizą pól, bieżącą kontrolą przypisania pól i skanowaniem leafów dla pól specyficznych dla modelu. Uzupełniono tłumaczenia panelu admin, konfigurowalne interwały są ograniczane w czasie działania, wszystkie nazwy punktów danych przetłumaczono na jedenaście języków.",
+        "uk": "Енергія та вода: витрата води зчитується з правильного поля DOP2 (поле 21, підтверджено з точністю 0,5 % щодо хмари); останні показники коротких програм більше не втрачаються; додано загальну кількість мотогодин. Новий збір даних з аналізом полів, постійною перевіркою зіставлення полів та скануванням leaf для полів конкретних моделей. Переклади адмін-панелі доповнено, налаштовувані інтервали обмежуються під час роботи, усі назви точок даних перекладено одинадцятьма мовами.",
+        "zh-cn": "能耗与用水：用水量从正确的 DOP2 字段读取（字段 21，与云端对比误差在 0.5% 以内）；短程序的最终读数不再丢失；新增总运行小时数。新的数据收集功能，包含字段分析、字段映射的持续校验，以及针对特定型号字段的 Leaf 扫描。完善管理界面翻译，可配置的间隔在运行时受到限制，所有数据点名称均已翻译为十一种语言。"
       },
       "0.3.5": {
         "en": "Fix: appliance status no longer flips to \"off\" during a running program, and the remaining time is read from the correct field. Frozen EcoFeedback values are no longer booked as consumption, requests are serialised per appliance, and a cycle survives an adapter restart. EcoFeedback is only requested while an appliance is actually running. Login instructions and datapoint names translated into all supported languages.",
-        "de": "Fix: Der Geraetestatus springt waehrend eines laufenden Programms nicht mehr auf \"Aus\", und die Restzeit wird aus dem richtigen Feld gelesen. Eingefrorene EcoFeedback-Werte werden nicht mehr als Verbrauch gebucht, Anfragen laufen je Geraet nacheinander, und ein Zyklus ueberlebt einen Adapter-Neustart. EcoFeedback wird nur noch abgefragt, solange ein Geraet laeuft. Login-Anleitung und Datenpunktnamen in alle unterstuetzten Sprachen uebersetzt."
+        "de": "Fix: Der Geraetestatus springt waehrend eines laufenden Programms nicht mehr auf \"Aus\", und die Restzeit wird aus dem richtigen Feld gelesen. Eingefrorene EcoFeedback-Werte werden nicht mehr als Verbrauch gebucht, Anfragen laufen je Geraet nacheinander, und ein Zyklus ueberlebt einen Adapter-Neustart. EcoFeedback wird nur noch abgefragt, solange ein Geraet laeuft. Login-Anleitung und Datenpunktnamen in alle unterstuetzten Sprachen uebersetzt.",
+        "ru": "Исправлено: во время работы программы статус прибора больше не переключается на «выкл.», а оставшееся время считывается из правильного поля. Застывшие значения EcoFeedback больше не учитываются как потребление, запросы к каждому прибору выполняются последовательно, а цикл сохраняется после перезапуска адаптера. EcoFeedback запрашивается только тогда, когда прибор действительно работает. Инструкции по входу и названия точек данных переведены на все поддерживаемые языки.",
+        "pt": "Correção: o estado do aparelho já não muda para \"desligado\" durante um programa em curso, e o tempo restante é lido do campo correto. Valores EcoFeedback congelados já não são contabilizados como consumo, os pedidos são serializados por aparelho e um ciclo sobrevive a um reinício do adaptador. O EcoFeedback só é pedido enquanto o aparelho está realmente a funcionar. Instruções de início de sessão e nomes dos pontos de dados traduzidos para todos os idiomas suportados.",
+        "nl": "Opgelost: de apparaatstatus springt tijdens een lopend programma niet meer naar \"uit\", en de resterende tijd wordt uit het juiste veld gelezen. Bevroren EcoFeedback-waarden worden niet meer als verbruik geboekt, verzoeken worden per apparaat na elkaar afgehandeld en een cyclus overleeft een herstart van de adapter. EcoFeedback wordt alleen opgevraagd terwijl een apparaat echt draait. Inloginstructies en datapuntnamen vertaald in alle ondersteunde talen.",
+        "fr": "Correction : l'état de l'appareil ne passe plus à « arrêt » pendant un programme en cours, et le temps restant est lu dans le bon champ. Les valeurs EcoFeedback figées ne sont plus comptabilisées comme consommation, les requêtes sont sérialisées par appareil et un cycle survit à un redémarrage de l'adaptateur. EcoFeedback n'est interrogé que lorsqu'un appareil fonctionne réellement. Instructions de connexion et noms des points de données traduits dans toutes les langues prises en charge.",
+        "it": "Correzione: lo stato dell'apparecchio non passa più a \"spento\" durante un programma in corso e il tempo rimanente viene letto dal campo corretto. I valori EcoFeedback bloccati non vengono più contabilizzati come consumo, le richieste vengono serializzate per apparecchio e un ciclo sopravvive a un riavvio dell'adattatore. EcoFeedback viene richiesto solo mentre un apparecchio è effettivamente in funzione. Istruzioni di accesso e nomi dei punti dati tradotti in tutte le lingue supportate.",
+        "es": "Corrección: el estado del aparato ya no cambia a \"apagado\" durante un programa en curso, y el tiempo restante se lee del campo correcto. Los valores EcoFeedback congelados ya no se contabilizan como consumo, las solicitudes se serializan por aparato y un ciclo sobrevive a un reinicio del adaptador. EcoFeedback solo se solicita mientras un aparato está realmente en funcionamiento. Instrucciones de inicio de sesión y nombres de puntos de datos traducidos a todos los idiomas compatibles.",
+        "pl": "Poprawka: stan urządzenia nie przełącza się już na „wyłączone” w trakcie trwającego programu, a pozostały czas jest odczytywany z właściwego pola. Zamrożone wartości EcoFeedback nie są już księgowane jako zużycie, zapytania są szeregowane dla każdego urządzenia, a cykl przetrwa ponowne uruchomienie adaptera. EcoFeedback jest odpytywany tylko wtedy, gdy urządzenie faktycznie pracuje. Instrukcje logowania i nazwy punktów danych przetłumaczono na wszystkie obsługiwane języki.",
+        "uk": "Виправлено: під час роботи програми статус приладу більше не перемикається на «вимк.», а час, що залишився, зчитується з правильного поля. Застиглі значення EcoFeedback більше не враховуються як споживання, запити до кожного приладу виконуються послідовно, а цикл зберігається після перезапуску адаптера. EcoFeedback запитується лише тоді, коли прилад справді працює. Інструкції з входу та назви точок даних перекладено всіма підтримуваними мовами.",
+        "zh-cn": "修复：程序运行期间设备状态不再跳变为“关闭”，剩余时间从正确的字段读取。冻结的 EcoFeedback 数值不再计为能耗，每台设备的请求按顺序处理，程序周期可在适配器重启后保留。仅在设备实际运行时才请求 EcoFeedback。登录说明和数据点名称已翻译为所有支持的语言。"
       },
       "0.3.3": {
         "en": "Fix object structure errors reported by the repository checker",
         "de": "Beanstandungen des Objektstruktur-Pruefers behoben",
         "ru": "Исправлены замечания проверки структуры объектов",
         "pt": "Corrigidos erros de estrutura de objetos",
-        "nl": "Objectstructuurfouten verholpen",
+        "nl": "Door de repository-checker gemelde fouten in de objectstructuur verholpen",
         "fr": "Corrections des erreurs de structure d objets",
         "it": "Corretti errori di struttura degli oggetti",
         "es": "Corregidos errores de estructura de objetos",
-        "pl": "Naprawiono błędy struktury obiektów",
-        "uk": "Виправлено помилки структури обʼєктів",
+        "pl": "Naprawiono błędy struktury obiektów zgłoszone przez narzędzie sprawdzające repozytorium",
+        "uk": "Виправлено помилки структури об'єктів, про які повідомив перевіряльник репозиторію",
         "zh-cn": "修复对象结构检查报告的错误"
       },
       "0.2.1": {

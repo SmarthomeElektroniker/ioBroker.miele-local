@@ -487,6 +487,11 @@
           "xl": 12
         },
         "_sammlerKopf": {
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
           "type": "header",
           "size": 4,
           "newLine": true,
@@ -496,6 +501,11 @@
           }
         },
         "_sammlerText": {
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
           "type": "staticText",
           "newLine": true,
           "text": {
@@ -504,6 +514,11 @@
           }
         },
         "sammlerAktiv": {
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4,
           "type": "checkbox",
           "newLine": true,
           "label": {
@@ -512,6 +527,11 @@
           }
         },
         "leafScanAuto": {
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4,
           "type": "checkbox",
           "newLine": true,
           "label": {
@@ -524,6 +544,11 @@
           }
         },
         "sammlerCloud": {
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4,
           "type": "checkbox",
           "newLine": true,
           "hidden": "!data.sammlerAktiv",
@@ -537,6 +562,11 @@
           }
         },
         "sammlerCloudInstanz": {
+          "xs": 12,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "xl": 6,
           "type": "text",
           "newLine": true,
           "hidden": "!data.sammlerCloud",
@@ -547,6 +577,11 @@
           "default": "mielecloudservice.0"
         },
         "_sammlerHand": {
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
           "type": "staticText",
           "newLine": true,
           "hidden": "!data.sammlerAktiv",

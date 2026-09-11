@@ -1510,6 +1510,18 @@ class MieleLocal extends utils.Adapter {
                 native: {},
             });
         }
+        /*
+         * Den Namen der Betriebsstunden auch dann nachziehen, wenn das Geraet gerade keine meldet.
+         *
+         * Der Datenpunkt wird sonst nur beim Lesen der Stunden erweitert. Ein vorhandener behielt
+         * so seinen alten, nur zweisprachigen Namen, bis das Geraet wieder lief - die Objektpruefung
+         * des PR #6471 fand das am 11.09.2026 an der ausgeschalteten Spuelmaschine.
+         */
+        if (await this.getObjectAsync(`${deviceId}.info.operatingHours`)) {
+            await this.extendObjectAsync(`${deviceId}.info.operatingHours`, {
+                common: { name: namen.text('Betriebsstunden gesamt', 'Total operating hours', de) },
+            });
+        }
         this._histCreated[deviceId] = true;
     }
 
@@ -1931,13 +1943,21 @@ class MieleLocal extends utils.Adapter {
              'Record one leaf closely (e.g. 2/6192)', 'string', 'text', '', true],
             ['leafScanJson', 'Gefundene Leafs mit Feldern (JSON)', 'Found leaves with fields (JSON)',
              'string', 'json', '', false],
+            /*
+             * Rolle "level", nicht value.*: Beide Felder sind EINGABEN des Nutzers und damit
+             * beschreibbar. value.* verlangt write = false - die Objektpruefung des PR #6471
+             * meldete das am 11.09.2026 als E1011, und "value.volume" gibt es im Rollenkatalog
+             * gar nicht (E1008, am 24.08.2026 schon einmal an anderer Stelle entfernt).
+             */
             ['eingabeEnergie', 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
-             'number', 'value.power.consumption', 'kWh', true],
+             'number', 'level', 'kWh', true],
             ['eingabeWasser', 'Wasser aus der Miele-App (l)', 'Water from the Miele app (l)',
-             'number', 'value.volume', 'l', true],
+             'number', 'level', 'l', true],
         ];
         for (const [k, nameDe, nameEn, typ, rolle, einheit, schreibbar] of felder) {
-            await this.setObjectNotExistsAsync(`${deviceId}.sammlung.${k}`, {
+            // extendObject, nicht setObjectNotExists: Sonst erreicht eine korrigierte Rolle oder ein
+            // uebersetzter Name nie eine Installation, auf der der Datenpunkt schon existiert.
+            await this.extendObjectAsync(`${deviceId}.sammlung.${k}`, {
                 type: 'state',
                 common: {
                     name: namen.text(nameDe, nameEn, de), type: typ, role: rolle,
