@@ -15,127 +15,183 @@ account during operation, no detour through the Miele 3rd-party API.
 > local key (GroupID/GroupKey). After that the adapter runs offline, and the Miele app
 > keeps working unchanged.
 
-## Features
+**What it does:** reads the live state of every appliance in plain text, records each completed
+programme with its consumption, and — if you allow it — starts, stops and pauses them.
+**What it needs:** one login, and either mDNS on your network or the appliance IP addresses.
 
-- **Automatic credential retrieval** via a guided login (cloud OAuth), without
-  re-provisioning the appliances.
-- **Automatic device discovery** via mDNS (`_mieleathome._tcp`).
-- **Live states** of all supported appliance classes (washing machine, dryer,
-  dishwasher, oven, steam oven, hob, coffee machine and more) with plain-text decoding of
-  status, program and phase.
-- **Real-time updates** via the SuperVision push channel (optional), with polling as a
-  reliable fallback.
-- **Control** (optional): start/stop/pause, light, on/off through writable states — as
-  long as "MobileStart/remote control" is enabled on the appliance.
-
-## Installation
+## Quick start
 
 1. Install the adapter and create an instance.
-2. On the **Login** tab, choose your country and follow the 3-step login guide below.
-3. Paste the captured `miele://…` redirect address and click **Fetch GroupKey**. GroupID and
-   GroupKey are stored securely (GroupKey encrypted).
-4. Save. The adapter discovers your devices and creates the states.
+2. On the **Login** tab pick your country and follow the three steps below.
+3. Paste the captured `miele://…` address and click **Fetch GroupKey**.
+4. Save. The adapter finds your appliances and creates their states.
 
-### Step-by-step: Capturing the redirect URL
+If the adapter runs in a Docker container with bridge networking, discovery will find nothing —
+enter the IP addresses by hand on the **Appliances** tab. See [Network](#network-ports-docker-push).
 
-Because the final `miele://` address is a custom mobile-app scheme, desktop browsers cannot open
-it automatically and will hang on a spinning wheel. Capture the URL using browser DevTools:
+### The login, step by step
 
-1. **Prepare DevTools:** Click **Open login page** to open the Miele login in a new tab. In that
-   new tab, press **F12** to open Developer Tools and switch to the **Network** tab. Enable
-   persistent logging:
-   - **Chrome / Edge / Brave:** Check **Preserve log**.
-   - **Firefox:** Click the gear icon ⚙️ and check **Persist Logs**.
-2. **Sign In:** Enter the email and password of your Miele app account and submit the login.
-   *Note:* The page will remain on a spinning wheel (or report a failed load) — this is completely
-   expected and indicates success.
-3. **Copy & Submit:** In the Network tab (F12), scroll to the very last (usually red) request. It
-   starts with `redirect?redirect_uri=miele...` or `miele://oauth2-code/...`. Right-click this
-   entry → **Copy URL** (or **Copy link address**). Paste it into the **miele:// redirect URL**
-   field in ioBroker and click **Fetch GroupKey**.
+The final address uses the `miele://` scheme of the mobile app. Desktop browsers cannot open it,
+so the page stops at a spinning wheel and you read the address out of the browser yourself.
 
-## Required ports / firewall
+1. **Prepare DevTools.** Click **Open login page** — a new tab opens. Press **F12** there, switch
+   to the **Network** tab and keep the log:
+   - **Chrome / Edge / Brave:** tick **Preserve log**.
+   - **Firefox:** gear icon ⚙️ → **Persist Logs**.
+2. **Sign in.** Enter the email and password of your Miele app account. The page will then hang on
+   a spinning wheel or report a failed load — that is what success looks like here.
+3. **Copy the address.** In the Network tab scroll to the last (usually red) entry, starting with
+   `redirect?redirect_uri=miele…` or `miele://oauth2-code/…`. Right-click → **Copy URL**, paste it
+   into the **miele:// redirect URL** field and click **Fetch GroupKey**.
+
+GroupID and GroupKey are then stored in the instance configuration, the key encrypted. You never
+need this procedure again.
+
+## What you get
+
+Every appliance becomes one device with its serial number as the ID. Below it:
+
+### `state` — what the appliance is doing right now
+
+| State | Meaning |
+|---|---|
+| `status` | operating state. The number carries the plain text as a value list, so the object browser and VIS show "In use" instead of `5`. |
+| `statusText` | the same as text. Kept for setups that already read it. |
+| `programId` / `programText` | running programme |
+| `programPhase` / `programPhaseText` | phase within the programme |
+| `remainingMinutes`, `elapsedMinutes`, `startInMinutes` | times in minutes |
+| `remainingSeconds`, `elapsedSeconds` | to the second, if enabled |
+| `estimatedEndTime` / `estimatedEndTimeText` | projected finish (timestamp in ms / `HH:MM`) |
+| `temperature`, `targetTemperature` (plus zones 2 and 3) | temperatures |
+| `signalDoor`, `signalInfo`, `signalFailure` | door and signal flags |
+| `mobileStart` | whether the appliance currently accepts remote control |
+| `light`, `spinningSpeed`, `dryingStepText` | appliance-specific |
+
+The raw numbers and their `…Text` counterparts exist side by side on purpose: the raw value is
+what you compare and chart, the text is what you display. Since 0.3.37 the raw value itself
+carries the plain-text list, so in most places the text state is no longer needed.
+
+### `info` — what the appliance is
+
+`connected`, `techType`, `fabNumber`, `matNumber`, `deviceType`, `xkmType`, `xkmVersion`,
+`protocolVersion`, `operatingHours`, and the poll counters `pollTotal`, `pollErrors`,
+`pollRetries`, `pollErrorRate`. `lastError` holds the reason the last request failed.
+
+### `eco` — energy and water
+
+`eco.energy` (kWh), `eco.energyWh` (Wh), `eco.water` (l) where the appliance provides them, plus
+`eco.quelle` naming which source a value came from. Read over DOP2; so far washing machines
+deliver it. **The value the appliance reports is its own expectation, not a measurement.** For a
+real figure, enter a metering plug's counter state on the **Polling & values** tab — the adapter
+then records what each programme actually drew.
+
+### `history` and `stats` — what has run
+
+Every completed programme is recorded with duration, programme, energy and water. The appliances
+themselves keep nothing, so the history starts when you switch the feature on and cannot be
+filled retroactively. `history.cyclesJson` holds the last programmes, `stats.week`, `stats.month`,
+`stats.year` and `stats.total` the sums beside it.
+
+### `control` — only if you allow it
+
+`start`, `stop`, `pause`, `powerOn`, `powerOff`, `lightOn`, `lightOff`. Writing `true` triggers
+the command; the state resets itself. Commands only work while **MobileStart / remote control**
+is enabled on the appliance, and some firmwares reject DOP2 writes outright.
+
+## Settings
+
+| Tab | What it holds |
+|---|---|
+| **Login** | country, the guided login, the captured address |
+| **Appliances** | mDNS discovery, the fallback IP scan, manual IP addresses |
+| **Polling & values** | poll intervals, German state names, second-precise times, EcoFeedback, energy meter, device internals |
+| **Push & ports** | the optional real-time channel and its inbound port |
+| **Control** | the switch that creates the writable states |
+| **History** | recording of completed programmes, ring buffer, retention, History adapter |
+| **Diagnostics** | everything for fault finding and field mapping — off by default |
+| **Advanced** | GroupID and GroupKey by hand |
+
+Every field carries its explanation underneath it in the admin; this page does not repeat them.
+
+## Network: ports, Docker, push
 
 | Direction | Port | Purpose | Required |
 |---|---|---|---|
-| inbound | TCP *push port* (default 18082) | Devices send real-time updates to ioBroker (callback target) | only when push is enabled |
-| in/out | UDP 5353 (mDNS) | device discovery and push registration | yes |
-| outbound | TCP 80 → devices | read states / send control commands | yes |
-| outbound | TCP 443 → miele-iot.com | only during login (fetch GroupKey) | login only |
+| inbound | TCP *push port* (default 18082) | appliances send updates to ioBroker | only with push |
+| in/out | UDP 5353 (mDNS) | discovery and push registration | for discovery |
+| outbound | TCP 80 → appliances | read states, send commands | yes |
+| outbound | TCP 443 → miele-iot.com | fetch the GroupKey | login only |
 
-Without push, **no inbound port** is required. ioBroker and the devices must be in the same
-broadcast segment (no VLAN/Docker-bridge separation) for mDNS to work.
+Without push **no inbound port** is needed. For mDNS, ioBroker and the appliances must sit in the
+same broadcast segment.
 
-### Running in Docker (important)
+**Docker.** In a container with bridge networking multicast is not forwarded, so discovery finds
+nothing — enter the IP addresses by hand, polling then works normally. Push does not work there at
+all, because the appliances cannot reach the container: the callback address sits behind NAT.
+Reliable push needs `network_mode: host`.
 
-If ioBroker runs in a **Docker container with bridge networking** (the default, e.g. the
-buanet image), the automatic **mDNS discovery cannot reach the devices** — multicast is not
-bridged. Direct communication (TCP 80) does work, because it is routed. In that case:
-
-- **Enter the device IPs manually on the "Devices & polling" tab.** Polling then works
-  normally.
-- **Push** does not work in a bridge network (the devices cannot reach the container). For
-  push, run the container in **host networking** (`network_mode: host`) — the push port is
-  then automatically open. In a bridge network you additionally have to map `-p
-  18082:18082`, but the callback return address sits behind NAT, so push stays unreliable.
-
-### How push works (technical)
-
-When push is enabled, the adapter performs an **enrollment** per device: `PUT
-/Devices/<series>/SuperVision/<own-fab>` (registers the adapter as a peer) and several
-`POST /Subscriptions` with a **callback URL** `http://<ioBroker-LAN-IP>:<push-port>/…`. The
-device then sends state changes to that URL unsolicited (sub-second). Subscriptions are
-renewed periodically. If the device cannot reach the callback URL (bridge NAT), no pushes
-arrive — the adapter then falls back to polling.
+**How push works.** The adapter registers itself per appliance as a household peer
+(`PUT /Devices/<series>/SuperVision/<own-fab>`) and subscribes with a callback URL. The appliance
+then sends changes unsolicited, within a second. Not every module can do this: the older XKM
+EK037 and EK057 accept the subscription and send nothing. Polling remains the reliable path.
 
 ## Privacy
 
-**No personal data** is stored by the adapter. GroupID, GroupKey and refresh token live
-only in the (encrypted) instance configuration or in ioBroker objects. No data is
-transmitted to third parties; in normal operation there is no cloud connection.
+The adapter stores **no personal data**. GroupID, GroupKey and refresh token live only in the
+encrypted instance configuration or in ioBroker objects. Nothing is transmitted to third parties;
+in normal operation there is no cloud connection at all.
 
-## States (excerpt)
+One exception worth knowing: the diagnostic data collection records the **start and end time of
+every programme**. That stays in your instance — but if you pass the collection or its CSV export
+on to someone, you pass those times along with it.
 
-Per device under `<serial>.info` (static/connectivity), `<serial>.state` (live) and `<serial>.eco`:
+## Compatibility and limits
 
-- `info.connected` — connectivity status (true when appliance responds)
-- `state.statusText` / `state.status` — operating state (plain text + raw value)
-- `state.programText` / `state.programId` — running program
-- `state.programPhaseText` / `state.programPhase` — program phase
-- `state.remainingMinutes`, `state.elapsedMinutes`, `state.startInMinutes`
-- `state.remainingSeconds`, `state.elapsedSeconds` (optional second-precise DOP2 values)
-- `state.estimatedEndTime` / `state.estimatedEndTimeText` — projected finish time
-- `state.temperature[Zone2/3]`, `state.targetTemperature[Zone2/3]`
-- `state.signalDoor`, `state.signalInfo`, `state.signalFailure`
-- `state.mobileStart` — whether remote control is enabled on the device
-- `state.light`, `state.spinningSpeed` (washing machine), `state.dryingStepText` (dryer)
-- `eco.energy` (kWh), `eco.energyWh` (Wh), `eco.water` (l) (where supported)
-- `info.techType`, `info.fabNumber`, `info.xkmType`, `info.xkmVersion`, `info.deviceType`
-
-With control enabled, additionally `<serial>.control.*` (start, stop, pause, powerOn,
-powerOff, lightOn, lightOff).
-
-## Exploring an unknown device
-
-DOP2 addresses data as `unit/attribute`, and only a handful of those addresses are documented
-anywhere. The adapter carries the tools to find the rest: a leaf scanner that works through the
-address space without overwhelming the module, and a value recorder that shows which fields
-actually move while the appliance runs.
-
-**[docs/geraet-erkunden.md](docs/geraet-erkunden.md)** (German) describes the procedure in
-order — when to scan, how to tell a refusal from a busy signal, how to read a series of numbers
-once you have one, and what a newly understood field needs before it becomes a state. It also
-records what did *not* work, so nobody repeats it.
-
-## Compatibility / limits
-
-- Tested against a washing machine (WCR860/EK037), dishwasher (G5840/EK037) and oven
+- Tested against a washing machine (WCR860/EK037), a dishwasher (G5840/EK037) and an oven
   (H2469BP/EK057).
-- Refrigeration/freezer appliances are usually **read-only** locally (firmware rejects
-  write commands).
-- Control commands require "MobileStart/remote control" on the device; some firmwares
-  answer DOP2 writes with HTTP 404/500.
-- The SuperVision push is a best-effort addition; polling is the reliable default path.
+- Refrigeration appliances are usually read-only locally; the firmware rejects writes.
+- Control needs MobileStart on the appliance; some firmwares answer DOP2 writes with 404 or 500.
+- EcoFeedback is not available everywhere. The dishwasher tested here provides no energy or water
+  counter over any readable leaf — for that appliance the values have to come from the cloud.
+- Push is a best-effort addition, polling the default.
+
+## Diagnostics
+
+Everything in this section is **off by default** and is not needed for day-to-day operation. It
+exists for one question: which raw field of *your* appliance holds energy and water. The field
+numbers differ per series, and the defaults in the adapter come from a WCR860.
+
+**Raw fields.** Writes all fields of the eco leaf to `eco.felderJson` instead of only the two
+evaluated ones.
+
+**Data collection.** Records one dataset per completed programme — model, programme, all raw
+fields, and at the end the final state of every answering leaf. To turn that into a mapping the
+adapter needs a reference value: either from a cloud adapter, or entered by hand into
+`sammlung.eingabeEnergie` and `sammlung.eingabeWasser` after a programme. `sammlung.fortschritt`
+says what is still missing, `sammlung.befund` holds the result: which field fits, with which
+divisor, and how closely.
+
+**Leaf scan.** DOP2 addresses data as `unit/attribute`, and only a handful of those addresses are
+documented anywhere. The scan works through the address space gently enough not to overwhelm the
+module; `sammlung.leafScanJson` collects what answered. `sammlung.leafVerlaufFein` records a
+single leaf closely while a programme runs — the field whose value grows with consumption is the
+one you are looking for.
+
+**CSV export.** The button on the Diagnostics tab writes two tables into the instance's file area
+and opens the first:
+
+- `sammlung-<date>.csv` — one row per programme: times, programme, the reference values, every raw
+  field in its own column, and for each leaf field the reading at start, at end and the difference
+  between them. For lifetime counters only that difference means anything.
+- `befund-<date>.csv` — one row per field: how well it matches the reference, the best divisor,
+  the average and the largest deviation. This is the answer the collection exists for.
+
+Semicolon separated, decimal comma, BOM — a double click opens them in a spreadsheet.
+
+**Exploring an unknown appliance.** [docs/geraet-erkunden.md](docs/geraet-erkunden.md) (German)
+describes the whole procedure in order: when to scan, how to tell a refusal from a busy signal,
+how to read a series of numbers once you have one, and what a newly understood field needs before
+it becomes a state. It also records what did *not* work, so nobody repeats it.
 
 ## Legal / disclaimer
 
@@ -167,6 +223,39 @@ engineering work of the projects `MieleRESTServer` (akappner),
 ## Changelog
 
 ### 0.3.37
+- **Plain text on the raw values.** `status`, `programType`, `programPhase` and `programId` now
+  carry their value list in `common.states`, built from the same tables the `…Text` states come
+  from, so the two cannot drift apart. The object browser and VIS show the text, the value stays a
+  number. The `…Text` states remain unchanged. Programme lists above 64 entries are left out - an
+  oven has 168 of them, and they do not belong inside every object.
+- **Descriptions where they were missing.** Not one of the 446 objects carried a `common.desc`.
+  Everything writable now does, plus the whole diagnostic branch, the three timestamps in
+  milliseconds, and the five raw values whose meaning is documented nowhere. At
+  `sammlung.leafVerlaufFein` the format and an example are part of the description - without them
+  nobody could guess what to type in.
+- **Admin rearranged.** "Appliances & polling" carried 25 fields from six unrelated topics and is
+  now split into **Appliances** and **Polling & values**; the three eco field indices moved to
+  Diagnostics, next to the collection that determines them. 18 blocks of running text disappeared:
+  their content now sits as one or two sentences under the field it belongs to, where the admin
+  shows it. Seven of 69 fields had a help text before, 28 have one now.
+- **The diagnostic branch is only created when it is used.** Its fourteen states per appliance
+  used to appear for everyone. They now require data collection or the leaf scan to be switched
+  on; the scan and the close recording bring the channel with them so they cannot fail silently.
+- **CSV: start, end and difference per leaf field.** Until now a record only held the final state
+  of the other leaves. For a lifetime counter like `hoursOfOperation` that says nothing about a
+  single programme - only the difference does, and those leaves are the only route for appliances
+  that do not answer 2/6195 at all. The adapter now reads the state at the start of a programme as
+  well. The export also gained the serial number as its own column, the adapter version, the
+  divisor and unit in the field headings, a unit on the temperature, and a note on records that
+  predate timestamps instead of silently empty cells.
+- **Second file with the analysis.** `befund-<date>.csv` holds one row per field: match against the
+  reference, best divisor, average and largest deviation. That is the question the collection
+  exists for, and it no longer has to be rebuilt by hand in a spreadsheet.
+- **Fix: role `value.volume` had returned.** A newly added table reintroduced a role the ioBroker
+  catalogue does not know; the repository check reports it as E1008. It is `value` again.
+- **Object IDs of the diagnostic branch in one table.** They are not renamed yet, but they now live
+  in `lib/ids.js` instead of scattered through 180 kB of source, so a later rename is an edit to a
+  table rather than a search.
 - **Device internals as datapoints.** The adapter now carries the field tables of every DOP2 leaf
   documented by the public reverse-engineering projects `MieleRESTServer` (akappner) and
   `ha-miele-at-lan` (tiehfood) - 52 structures, including those for ovens, coffee machines,

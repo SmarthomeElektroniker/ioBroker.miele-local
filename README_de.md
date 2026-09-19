@@ -15,142 +15,258 @@ Cloud-Konto im laufenden Betrieb, kein Umweg über die Miele 3rd-Party-Cloud-API
 > lokalen Schlüssel (GroupID/GroupKey) abzurufen. Danach läuft der Adapter komplett
 > offline, und die Miele-App funktioniert unverändert weiter.
 
-## Funktionen
+**Was er tut:** Er liest den Zustand jedes Geräts im Klartext, schreibt jedes abgeschlossene
+Programm mitsamt Verbrauch mit und startet, stoppt und pausiert die Geräte, wenn man es erlaubt.
+**Was er braucht:** eine einmalige Anmeldung und entweder mDNS im Netz oder die IP-Adressen.
 
-- **Automatischer Abruf der Zugangsdaten** über einen geführten Login (Cloud-OAuth), ohne
-  die Geräte neu anlernen zu müssen.
-- **Automatische Geräteerkennung** über mDNS (`_mieleathome._tcp`).
-- **Live-Zustände** aller unterstützten Geräteklassen (Waschmaschine, Trockner,
-  Spülmaschine, Backofen, Dampfgarer, Kochfeld, Kaffeevollautomat u. v. m.) mit Klartext-Dekodierung
-  von Status, Programm und Phase.
-- **Echtzeit-Aktualisierungen** über den SuperVision-Push-Kanal (optional), mit Polling als
-  zuverlässigem Fallback.
-- **Steuerung** (optional): Start/Stop/Pause, Licht, Ein/Aus über beschreibbare Datenpunkte –
-  sofern „MobileStart / Fernsteuerung" am Gerät aktiviert ist.
+## Schnellstart
 
-## Installation
+1. Adapter installieren und eine Instanz anlegen.
+2. Im Reiter **Anmeldung** das Land wählen und den drei Schritten unten folgen.
+3. Die abgefangene `miele://…`-Adresse einfügen und auf **GroupKey ermitteln** klicken.
+4. Speichern. Der Adapter findet die Geräte und legt ihre Datenpunkte an.
 
-1. Adapter installieren und Instanz anlegen.
-2. Im Tab **Login** das Land wählen und der folgenden 3-Schritte-Anleitung folgen.
-3. Die abgefangene `miele://…`-Weiterleitungsadresse einfügen und auf **GroupKey abrufen** klicken.
-   GroupID und GroupKey werden sicher gespeichert (GroupKey verschlüsselt).
-4. Speichern. Der Adapter findet die Geräte per mDNS und legt die Datenpunkte an.
+Läuft ioBroker in einem Docker-Container mit Bridge-Netz, findet die Suche nichts – dann die
+IP-Adressen im Reiter **Geräte** von Hand eintragen. Siehe [Netz](#netz-ports-docker-push).
 
-### Schritt-für-Schritt: Weiterleitungs-URL abfangen
+### Die Anmeldung, Schritt für Schritt
 
-Da die finale `miele://`-Adresse ein mobiles App-Protokoll ist, können Desktop-Browser sie nicht
-automatisch öffnen und bleiben bei einem sich drehenden Laderad stehen. Fange die URL mit den
-Entwicklertools (DevTools) deines Browsers ab:
+Die letzte Adresse benutzt das `miele://`-Schema der Handy-App. Browser am Rechner können sie
+nicht öffnen, deshalb bleibt die Seite bei einem drehenden Rad stehen und man liest die Adresse
+selbst aus dem Browser heraus.
 
-1. **Entwicklertools vorbereiten:** Klicke auf **Login-Seite öffnen**, um den Login in einem neuen Tab
-   zu öffnen. Drücke in dem neuen Tab **F12** (Entwicklertools) und wechsle auf den Reiter **Netzwerk**
-   (Network). Aktiviere die dauerhafte Protokollierung:
-   - **Chrome / Edge / Brave:** Haken bei **Log beibehalten** (*Preserve log*) setzen.
-   - **Firefox:** Auf das Zahnrad-Symbol ⚙️ klicken und **Protokolle dauerhaft anzeigen** (*Persist Logs*) aktivieren.
-2. **Anmelden:** E-Mail und Passwort deines Miele-App-Kontos eingeben und die Anmeldung abschicken.
-   *Hinweis:* Die Seite bleibt bei einem Laderad stehen (oder meldet einen Ladefehler) – das ist völlig
-   normal und signalisiert Erfolg.
-3. **Kopieren & Einbinden:** Im Netzwerk-Tab (F12) ganz nach unten zur letzten (meist rot markierten)
-   Zeile scrollen. Sie beginnt mit `redirect?redirect_uri=miele...` oder `miele://oauth2-code/...`.
-   Mache einen Rechtsklick auf diese Zeile → **URL kopieren** (bzw. **Link-Adresse kopieren**). Füge sie
-   in das Feld **miele://-Redirect-URL** im ioBroker ein und klicke auf **GroupKey abrufen**.
+1. **Entwicklertools vorbereiten.** Auf **Login-Seite öffnen** klicken – ein neuer Reiter geht auf.
+   Dort **F12** drücken, auf **Netzwerk** wechseln und das Protokoll behalten:
+   - **Chrome / Edge / Brave:** Haken bei **Log beibehalten** (Preserve log).
+   - **Firefox:** Zahnrad ⚙️ → **Protokolle dauerhaft anzeigen** (Persist Logs).
+2. **Anmelden.** E-Mail und Passwort des Miele-App-Kontos eingeben. Danach bleibt die Seite bei
+   einem drehenden Rad stehen oder meldet einen Ladefehler – genau so sieht hier Erfolg aus.
+3. **Adresse kopieren.** Im Netzwerk-Reiter ganz nach unten zur letzten (meist rot markierten)
+   Zeile scrollen; sie beginnt mit `redirect?redirect_uri=miele…` oder `miele://oauth2-code/…`.
+   Rechtsklick → **URL kopieren**, unten in das Feld **miele://-Redirect-URL** einfügen und auf
+   **GroupKey ermitteln** klicken.
 
-## Benötigte Ports / Firewall
+GroupID und GroupKey stehen danach in der Instanzkonfiguration, der Schlüssel verschlüsselt.
+Diese Prozedur braucht man nie wieder.
 
-| Richtung | Port | Zweck | Erforderlich |
+## Was dabei herauskommt
+
+Jedes Gerät wird ein Objekt mit seiner Seriennummer als Kennung. Darunter:
+
+### `state` – was das Gerät gerade tut
+
+| Datenpunkt | Bedeutung |
+|---|---|
+| `status` | Betriebszustand. Die Zahl trägt den Klartext als Werteliste, der Objektbrowser und VIS zeigen deshalb „In Betrieb“ statt `5`. |
+| `statusText` | dasselbe als Text. Bleibt für Aufbauten, die ihn bereits lesen. |
+| `programId` / `programText` | laufendes Programm |
+| `programPhase` / `programPhaseText` | Phase innerhalb des Programms |
+| `remainingMinutes`, `elapsedMinutes`, `startInMinutes` | Zeiten in Minuten |
+| `remainingSeconds`, `elapsedSeconds` | sekundengenau, wenn eingeschaltet |
+| `estimatedEndTime` / `estimatedEndTimeText` | voraussichtliches Ende (Zeitstempel in ms / `HH:MM`) |
+| `temperature`, `targetTemperature` (dazu Zone 2 und 3) | Temperaturen |
+| `signalDoor`, `signalInfo`, `signalFailure` | Tür- und Signalmerker |
+| `mobileStart` | ob das Gerät gerade Fernsteuerung annimmt |
+| `light`, `spinningSpeed`, `dryingStepText` | gerätespezifisch |
+
+Rohwert und `…Text` stehen mit Absicht nebeneinander: Mit der Zahl rechnet und zeichnet man, den
+Text zeigt man an. Seit 0.3.37 trägt der Rohwert die Klartextliste selbst, der Textdatenpunkt
+wird damit an den meisten Stellen entbehrlich.
+
+### `info` – was das Gerät ist
+
+`connected`, `techType`, `fabNumber`, `matNumber`, `deviceType`, `xkmType`, `xkmVersion`,
+`protocolVersion`, `operatingHours`, dazu die Abfragezähler `pollTotal`, `pollErrors`,
+`pollRetries`, `pollErrorRate`. In `lastError` steht, woran die letzte Anfrage scheiterte.
+
+### `eco` – Energie und Wasser
+
+`eco.energy` (kWh), `eco.energyWh` (Wh), `eco.water` (l), soweit das Gerät sie liefert, dazu
+`eco.quelle` mit der Herkunft des Werts. Gelesen wird über DOP2; bislang liefern das
+Waschmaschinen. **Der vom Gerät gemeldete Wert ist seine eigene Erwartung, keine Messung.** Wer
+eine echte Zahl will, trägt im Reiter **Abfrage & Werte** den Zähler-Datenpunkt einer
+Messsteckdose ein – dann schreibt der Adapter mit, was ein Programm wirklich gezogen hat.
+
+### `history` und `stats` – was gelaufen ist
+
+Jedes abgeschlossene Programm wird mit Dauer, Programm, Energie und Wasser festgehalten. Die
+Geräte selbst heben nichts auf, der Verlauf beginnt also mit dem Einschalten dieser Funktion und
+lässt sich nicht rückwirkend füllen. In `history.cyclesJson` stehen die letzten Programme, in
+`stats.week`, `stats.month`, `stats.year` und `stats.total` die Summen daneben.
+
+### `control` – nur, wenn man es erlaubt
+
+`start`, `stop`, `pause`, `powerOn`, `powerOff`, `lightOn`, `lightOff`. Ein `true` löst aus, der
+Datenpunkt setzt sich selbst zurück. Befehle wirken nur, solange am Gerät **MobileStart /
+Fernsteuerung** freigegeben ist; manche Firmwares lehnen DOP2-Schreibbefehle grundsätzlich ab.
+
+## Einstellungen
+
+| Reiter | Was darin steht |
+|---|---|
+| **Anmeldung** | Land, der geführte Login, die abgefangene Adresse |
+| **Geräte** | mDNS-Suche, Ausfall-Suche im Subnetz, manuelle IP-Adressen |
+| **Abfrage & Werte** | Abfrageintervalle, deutsche Namen, Sekundenzeit, EcoFeedback, Energiezähler, geräteinterne Werte |
+| **Push & Ports** | der optionale Echtzeitkanal und sein eingehender Port |
+| **Steuerung** | der Schalter, der die beschreibbaren Datenpunkte anlegt |
+| **Verlauf** | Mitschrift abgeschlossener Programme, Ringpuffer, Aufbewahrung, History-Adapter |
+| **Diagnose** | alles zur Fehlersuche und Feldzuordnung – ab Werk aus |
+| **Erweitert** | GroupID und GroupKey von Hand |
+
+Jedes Feld trägt seine Erklärung im Admin direkt unter sich; diese Seite wiederholt sie nicht.
+
+## Netz: Ports, Docker, Push
+
+| Richtung | Port | Wozu | Nötig |
 |---|---|---|---|
-| Eingehend | TCP *Push-Port* (Standard 18082) | Geräte senden Echtzeit-Updates an ioBroker | nur bei aktivem Push |
-| Ein/Aus | UDP 5353 (mDNS) | Geräteerkennung und Push-Registrierung | ja |
-| Ausgehend | TCP 80 → Geräte | Zustände lesen / Steuerbefehle senden | ja |
-| Ausgehend | TCP 443 → miele-iot.com | nur beim Login (GroupKey abrufen) | nur beim Login |
+| eingehend | TCP *Push-Port* (Vorgabe 18082) | Geräte melden Änderungen an ioBroker | nur mit Push |
+| ein/aus | UDP 5353 (mDNS) | Gerätesuche und Push-Anmeldung | für die Suche |
+| ausgehend | TCP 80 → Geräte | Zustände lesen, Befehle senden | ja |
+| ausgehend | TCP 443 → miele-iot.com | GroupKey abrufen | nur bei der Anmeldung |
 
-Ohne Push ist **kein eingehender Port** erforderlich. ioBroker und die Geräte müssen sich im
-selben Broadcast-Segment befinden (keine VLAN-/Docker-Bridge-Trennung), damit mDNS funktioniert.
+Ohne Push ist **kein eingehender Port** nötig. Für mDNS müssen ioBroker und die Geräte im selben
+Broadcast-Segment liegen.
 
-### Betrieb in Docker (wichtig)
+**Docker.** In einem Container mit Bridge-Netz wird Multicast nicht weitergereicht, die Suche
+findet also nichts – die IP-Adressen von Hand eintragen, das Abfragen läuft dann normal. Push
+funktioniert dort gar nicht, weil die Geräte den Container nicht erreichen: Die Rückadresse liegt
+hinter NAT. Zuverlässiger Push braucht `network_mode: host`.
 
-Wenn ioBroker in einem **Docker-Container mit Bridge-Netzwerk** läuft (Standard, z. B. buanet-Image),
-kann die automatische **mDNS-Erkennung die Geräte nicht erreichen** – Multicast wird nicht
-gebrückt. Die direkte Kommunikation (TCP 80) funktioniert, da sie geroutet wird. In diesem Fall:
-
-- **Geräte-IPs manuell im Tab „Geräte & Polling" eintragen.** Das Polling funktioniert dann normal.
-- **Push** funktioniert im Bridge-Netzwerk nicht (die Geräte können den Container nicht erreichen). Für
-  Push den Container im **Host-Netzwerk** betreiben (`network_mode: host`) – der Push-Port ist
-  dann automatisch erreichbar.
-
-### Wie Push technisch funktioniert
-
-Bei aktiviertem Push führt der Adapter ein **Enrollment** je Gerät durch: `PUT
-/Devices/<series>/SuperVision/<own-fab>` (registriert den Adapter als Haushalts-Peer) sowie mehrere
-`POST /Subscriptions` mit einer **Callback-URL** `http://<ioBroker-LAN-IP>:<push-port>/…`. Das
-Gerät sendet Zustandsänderungen dann unaufgefordert (sub-sekündlich) an diese URL. Die Subscriptions
-werden periodisch erneuert. Erreicht das Gerät die Callback-URL nicht, greift der Adapter automatisch
-auf Polling zurück.
+**Wie Push arbeitet.** Der Adapter meldet sich je Gerät als Haushalts-Peer an
+(`PUT /Devices/<Serie>/SuperVision/<eigene-Fab>`) und abonniert mit einer Rückrufadresse. Das
+Gerät schickt Änderungen dann von sich aus, im Sekundenbereich. Nicht jedes Modul kann das: Die
+älteren XKM EK037 und EK057 nehmen das Abonnement an und senden nichts. Das Abfragen bleibt der
+verlässliche Weg.
 
 ## Datenschutz
 
-Es werden **keine personenbezogenen Daten** im Adapter gespeichert. GroupID, GroupKey und
-Refresh-Token verbleiben ausschließlich in der (verschlüsselten) Instanzkonfiguration bzw. in
-ioBroker-Objekten. Es erfolgt keine Datenübertragung an Dritte; im laufenden Betrieb besteht
-keine Cloud-Verbindung.
+Der Adapter speichert **keine personenbezogenen Daten**. GroupID, GroupKey und Refresh-Token
+liegen nur in der verschlüsselten Instanzkonfiguration oder in ioBroker-Objekten. Es wird nichts
+an Dritte übertragen; im Normalbetrieb besteht überhaupt keine Cloud-Verbindung.
 
-## Datenpunkte (Auszug)
+Eine Ausnahme, die man kennen sollte: Die Datensammlung der Diagnose hält **Beginn und Ende jedes
+Programms** fest. Das bleibt in der eigenen Instanz – wer die Sammlung oder ihren CSV-Ausdruck
+weitergibt, gibt diese Zeitpunkte aber mit.
 
-Je Gerät unter `<serial>.info` (statisch/Verbindung), `<serial>.state` (live) und `<serial>.eco`:
+## Kompatibilität und Grenzen
 
-- `info.connected` – Erreichbarkeitsstatus (true, wenn Gerät antwortet)
-- `state.statusText` / `state.status` – Betriebszustand (Klartext + Rohwert)
-- `state.programText` / `state.programId` – Laufendes Programm
-- `state.programPhaseText` / `state.programPhase` – Programmphase
-- `state.remainingMinutes`, `state.elapsedMinutes`, `state.startInMinutes`
-- `state.remainingSeconds`, `state.elapsedSeconds` (sekundengenau via DOP2)
-- `state.estimatedEndTime` / `state.estimatedEndTimeText` – Voraussichtliches Programmende
-- `state.temperature[Zone2/3]`, `state.targetTemperature[Zone2/3]`
-- `state.signalDoor`, `state.signalInfo`, `state.signalFailure`
-- `state.mobileStart` – Gibt an, ob MobileStart/Fernsteuerung am Gerät aktiv ist
-- `state.light`, `state.spinningSpeed` (Waschmaschine), `state.dryingStepText` (Trockner)
-- `eco.energy` (kWh), `eco.energyWh` (Wh), `eco.water` (l) (wo unterstützt)
-- `info.techType`, `info.fabNumber`, `info.xkmType`, `info.xkmVersion`, `info.deviceType`
+- Geprüft gegen eine Waschmaschine (WCR860/EK037), eine Spülmaschine (G5840/EK037) und einen
+  Backofen (H2469BP/EK057).
+- Kühl- und Gefriergeräte sind lokal meist nur lesbar; die Firmware lehnt Schreibbefehle ab.
+- Steuern setzt MobileStart am Gerät voraus; manche Firmwares antworten auf DOP2-Schreibbefehle
+  mit 404 oder 500.
+- EcoFeedback gibt es nicht überall. Die hier geprüfte Spülmaschine führt über kein lesbares Leaf
+  einen Energie- oder Wasserzähler – dort müssen die Werte aus der Cloud kommen.
+- Push ist eine Zugabe nach bestem Bemühen, das Abfragen der Normalfall.
 
-Bei aktivierter Steuerung zusätzlich `<serial>.control.*` (start, stop, pause, powerOn,
-powerOff, lightOn, lightOff).
+## Diagnose
 
-## Kompatibilität / Grenzen
+Alles in diesem Abschnitt ist **ab Werk aus** und wird im täglichen Betrieb nicht gebraucht. Es
+dient einer einzigen Frage: Welches Rohfeld *dieses* Geräts trägt Energie und Wasser? Die
+Feldnummern sind je Baureihe verschieden, und die Vorgaben im Adapter stammen von einer WCR860.
 
-- Getestet an Waschmaschine (WCR860/EK037), Spülmaschine (G5840/EK037) und Backofen (H2469BP/EK057).
-- Kühl- und Gefriergeräte sind lokal meist **nur lesbar** (die Firmware lehnt Schreibbefehle ab).
-- Steuerbefehle setzen „MobileStart / Fernsteuerung" am Gerät voraus; manche Firmware-Versionen
-  beantworten DOP2-Schreibbefehle mit HTTP 404/500.
-- Der SuperVision-Push ist eine Best-Effort-Ergänzung; Polling ist der zuverlässige Standardpfad.
+**Rohfelder.** Schreibt alle Felder des Eco-Leaf nach `eco.felderJson` statt nur der zwei
+ausgewerteten.
+
+**Datensammlung.** Legt je abgeschlossenem Programm einen Datensatz an – Modell, Programm, alle
+Rohfelder und am Ende den Schlussstand jedes antwortenden Leafs. Damit daraus eine Zuordnung
+wird, braucht der Adapter einen Vergleichswert: entweder aus einem Cloud-Adapter oder nach jedem
+Programm von Hand in `sammlung.eingabeEnergie` und `sammlung.eingabeWasser` eingetragen. In
+`sammlung.fortschritt` steht, was noch fehlt; in `sammlung.befund` das Ergebnis: welches Feld
+passt, mit welchem Teiler und wie genau.
+
+**Leaf-Suche.** DOP2 adressiert Daten als `Unit/Attribut`, und nur eine Handvoll dieser Adressen
+ist überhaupt irgendwo dokumentiert. Die Suche arbeitet den Adressraum schonend genug ab, um das
+Modul nicht zu überlasten; in `sammlung.leafScanJson` sammelt sich, was geantwortet hat. Mit
+`sammlung.leafVerlaufFein` lässt sich ein einzelnes Leaf während eines laufenden Programms
+engmaschig mitschreiben – das Feld, dessen Wert mit dem Verbrauch mitwächst, ist das gesuchte.
+
+**CSV-Ausdruck.** Der Knopf im Diagnose-Reiter legt zwei Tabellen im Dateibereich der Instanz ab
+und öffnet die erste:
+
+- `sammlung-<Datum>.csv` – eine Zeile je Programm: Zeiten, Programm, die Vergleichswerte, jedes
+  Rohfeld in einer eigenen Spalte, und je Leaf-Feld der Stand bei Beginn, bei Ende und die
+  Differenz dazwischen. Bei Lebenszählern sagt allein die Differenz etwas aus.
+- `befund-<Datum>.csv` – eine Zeile je Feld: Übereinstimmung mit dem Vergleichswert, bester
+  Teiler, mittlere und größte Abweichung. Das ist die Antwort, wegen der die Sammlung läuft.
+
+Semikolon als Trennzeichen, Komma als Dezimalzeichen, BOM – ein Doppelklick öffnet sie in der
+Tabellenkalkulation.
+
+**Ein unbekanntes Gerät erkunden.** [docs/geraet-erkunden.md](docs/geraet-erkunden.md) beschreibt
+das ganze Verfahren der Reihe nach: wann man scannt, woran man eine Abweisung von einem
+Überlastsignal unterscheidet, wie man eine Zahlenreihe liest, wenn man eine hat, und was ein neu
+verstandenes Feld braucht, bevor daraus ein Datenpunkt wird. Es hält auch fest, was *nicht*
+funktioniert hat, damit es niemand wiederholt.
 
 ## Rechtliche Hinweise / Haftungsausschluss
 
-Dies ist ein **inoffizielles, privat entwickeltes** Projekt und steht in **keiner Verbindung zu
-[Miele & Cie. KG](https://www.miele.de/)**. „Miele", „Miele@home" und zugehörige Bezeichnungen
-sind eingetragene Marken der [Miele & Cie. KG](https://www.miele.de/) und werden hier nur
-beschreibend zur Kompatibilitätsangabe verwendet. Auskunft über die Geräte selbst gibt der
-Hersteller unter <https://www.miele.de/>.
+Dies ist ein **inoffizielles, privat entwickeltes** Projekt und steht **in keiner Verbindung zur
+[Miele & Cie. KG](https://www.miele.com/)**, wird von dieser weder unterstützt noch geprüft.
+„Miele“, „Miele@home“ und zugehörige Namen sind Marken der
+[Miele & Cie. KG](https://www.miele.com/) und werden hier nur beschreibend verwendet, um die
+Kompatibilität anzugeben. Informationen zu den Geräten selbst gibt es beim Hersteller unter
+<https://www.miele.com/>.
 
-Der Adapter nutzt ein lokales Protokoll, das durch **Reverse Engineering** dokumentiert wurde.
-Die Nutzung erfolgt **auf eigene Verantwortung**. Die Software wird unter MIT-Lizenz
-**ohne Mängelgewähr** bereitgestellt (siehe LICENSE).
+Der Adapter nutzt ein lokales Protokoll, das durch **Reverse Engineering** öffentlich
+dokumentiert wurde. Die Nutzung erfolgt **auf eigene Gefahr**; je nach Gerät und Firmware kann
+sie Gewährleistungsansprüche berühren. Die Software steht unter der MIT-Lizenz **ohne jede
+Gewährleistung** (siehe LICENSE). Der Autor haftet nicht für Schäden an Geräten, Daten oder
+sonstige Folgen der Nutzung.
 
 ## Danksagung
 
 Besonderer Dank gilt **[meistermopper](https://github.com/meistermopper)**, einem erfahrenen
-Entwickler von ioBroker-Adaptern, der diesen Adapter unaufgefordert durchgesehen und
-erhebliche Verbesserungen beigesteuert hat: die periodische Gerätesuche im Hintergrund für
-Geräte, die aus dem Standby aufwachen, einen Erreichbarkeits-Datenpunkt je Gerät, korrigierte
-Rollen und Einheiten, explizite Vorgabewerte für alle Datenpunkte sowie die deutsche
-Dokumentation. Seine Arbeit ist in Version 0.3.0 eingeflossen.
+ioBroker-Adapterentwickler, der diesen Adapter unaufgefordert durchgesehen und wesentliche
+Verbesserungen beigesteuert hat: die periodische Hintergrundsuche für Geräte, die aus der
+Bereitschaft aufwachen, einen Verbindungszustand je Gerät, korrigierte Rollen und Einheiten,
+ausdrückliche Vorgabewerte für alle Datenpunkte und die deutsche Dokumentation. Seine Arbeit ist
+in Version 0.3.0 eingeflossen.
 
-Das lokale Protokoll (`MieleH256`, DOP2, Provisioning) basiert auf der Vorarbeit der
-Open-Source-Projekte `MieleRESTServer` (akappner), `home-assistant-miele-mobile` und
-`ha-miele-at-lan`.
+Das lokale Protokoll (`MieleH256`, DOP2, Provisionierung) beruht auf der öffentlichen
+Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
+`home-assistant-miele-mobile` und `ha-miele-at-lan`.
 
 ## Changelog
 
 ### 0.3.37
+- **Klartext am Rohwert.** `status`, `programType`, `programPhase` und `programId` tragen ihre
+  Werteliste jetzt in `common.states`, gebaut aus denselben Tabellen, aus denen auch die
+  `…Text`-Datenpunkte kommen – damit können beide nicht auseinanderlaufen. Objektbrowser und VIS
+  zeigen den Text, der Wert bleibt eine Zahl. Die `…Text`-Datenpunkte bleiben unverändert.
+  Programmtabellen über 64 Einträgen bleiben außen vor; ein Backofen hat 168 davon, und die
+  gehören nicht in jedes Objekt.
+- **Beschreibungen, wo sie fehlten.** Kein einziges der 446 Objekte trug eine `common.desc`. Alles
+  Beschreibbare hat jetzt eine, dazu der ganze Diagnosezweig, die drei Zeitstempel in
+  Millisekunden und die fünf Rohwerte, deren Bedeutung nirgends dokumentiert ist. Bei
+  `sammlung.leafVerlaufFein` stehen Format und ein Beispiel darin – ohne sie konnte niemand
+  erraten, was einzutragen ist.
+- **Admin neu geordnet.** „Geräte & Abfrage“ trug 25 Felder aus sechs unabhängigen Themen und ist
+  nun in **Geräte** und **Abfrage & Werte** geteilt; die drei Eco-Feldindizes stehen bei der
+  Diagnose, neben der Sammlung, die sie ermittelt. 18 Fließtextblöcke sind verschwunden: Ihr
+  Inhalt steht als ein bis zwei Sätze unter dem Feld, zu dem er gehört, wo der Admin ihn zeigt.
+  Sieben von 69 Feldern hatten vorher eine Hilfe, jetzt sind es 28.
+- **Der Diagnosezweig entsteht nur, wenn er benutzt wird.** Seine vierzehn Datenpunkte je Gerät
+  standen bisher bei jedem im Baum. Sie setzen jetzt eingeschaltete Datensammlung oder Leaf-Suche
+  voraus; Suche und Feinaufzeichnung bringen den Kanal selbst mit, damit sie nicht still
+  ausfallen.
+- **CSV: Start, Ende und Differenz je Leaf-Feld.** Bisher trug ein Datensatz nur den Schlussstand
+  der übrigen Leafs. Bei einem Lebenszähler wie `hoursOfOperation` sagt der über ein einzelnes
+  Programm nichts – erst die Differenz tut das, und genau diese Leafs sind der einzige Weg bei
+  Geräten, die 2/6195 gar nicht beantworten. Der Adapter liest den Stand jetzt auch bei
+  Programmbeginn. Dazu im Ausdruck: die Seriennummer als eigene Spalte, die Adapterversion,
+  Teiler und Einheit in den Überschriften, eine Einheit an der Temperatur und ein Vermerk an
+  Datensätzen aus der Zeit vor den Zeitstempeln statt stillschweigend leerer Zellen.
+- **Zweite Datei mit der Auswertung.** `befund-<Datum>.csv` führt eine Zeile je Feld:
+  Übereinstimmung mit dem Vergleichswert, bester Teiler, mittlere und größte Abweichung. Das ist
+  die Frage, wegen der die Sammlung läuft, und sie muss nicht mehr von Hand in der
+  Tabellenkalkulation nachgebaut werden.
+- **Behoben: Die Rolle `value.volume` war zurückgekehrt.** Eine neu hinzugekommene Tabelle führte
+  eine Rolle wieder ein, die der ioBroker-Katalog nicht kennt; die Repository-Prüfung meldet sie
+  als E1008. Es ist wieder `value`.
+- **Objekt-IDs des Diagnosezweigs in einer Tabelle.** Umbenannt ist noch nichts, aber sie stehen
+  jetzt in `lib/ids.js` statt verstreut über 180 kB Quelltext – eine spätere Umbenennung ist damit
+  eine Änderung an einer Tabelle statt einer Suchaktion.
 - **Geräteinterne Messwerte als Datenpunkte.** Der Adapter führt jetzt die Feldtabellen aller
   DOP2-Leafs, die die öffentlichen Reverse-Engineering-Projekte `MieleRESTServer` (akappner) und
   `ha-miele-at-lan` (tiehfood) dokumentieren - 52 Strukturen, darunter die für Backofen,
