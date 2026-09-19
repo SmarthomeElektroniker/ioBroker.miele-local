@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.",
     "EcoFeedback-Intervall in Sekunden": "EcoFeedback-Intervall in Sekunden",
     "Eingehender Push-Port (TCP)": "Eingehender Push-Port (TCP)",
-    "Einheit Wasserfeld": "Einheit Wasserfeld",
     "Einträge im Ringpuffer": "Einträge im Ringpuffer",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.",
     "Energiezähler je Gerät (optional)": "Energiezähler je Gerät (optional)",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).",
     "History-Instanz": "History-Instanz",
-    "Hundertstelliter": "Hundertstelliter",
     "IP-Adresse": "IP-Adresse",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.",
     "Italien": "Italien",
@@ -78,11 +76,12 @@
     "USA": "USA",
     "Verlauf": "Verlauf",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.",
-    "Zehntelliter": "Zehntelliter",
     "Zusätzlich in den History-Adapter schreiben": "Zusätzlich in den History-Adapter schreiben",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "Zähler-Datenpunkt (Wh, laufend steigend)",
-    "ganze Liter": "ganze Liter",
     "miele://-Redirect-URL": "miele://-Redirect-URL",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.",
-    "Österreich": "Österreich"
+    "Österreich": "Österreich",
+    "Teilungsfaktor Wasserfeld": "Teilungsfaktor Wasserfeld",
+    "Rohwert ÷ Teilungsfaktor = Liter": "Rohwert ÷ Teilungsfaktor = Liter",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund."
 }

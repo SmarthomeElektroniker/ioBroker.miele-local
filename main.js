@@ -6,6 +6,9 @@
  */
 
 const utils = require('@iobroker/adapter-core');
+// Nur fuer die Herkunftsspalte der CSV-Ausdrucke. package.json liegt in jedem npm-Paket bei,
+// auch wenn files[] sie nicht auffuehrt.
+const paket = require('./package.json');
 const { MieleCrypto } = require('./lib/crypto');
 const { MieleDeviceApi } = require('./lib/api');
 const { discover, scanSubnet, istMiele } = require('./lib/discovery');
@@ -18,6 +21,9 @@ const feldsuche = require('./lib/feldsuche');
 const kontrolle = require('./lib/kontrolle');
 const leafscan = require('./lib/leafscan');
 const leafverlauf = require('./lib/leafverlauf');
+const felder = require('./lib/felder');
+const csvBauer = require('./lib/csv');
+const datenpunkte = require('./lib/datenpunkte');
 
 /**
  * Verschnaufpause zwischen zwei Scan-Durchgaengen.
@@ -108,7 +114,29 @@ const stats = require('./lib/stats');
 const ECO_LEAF = { unit: 2, attr: 6195 };
 const ECO_ENERGY_IDX = 25;   // Wh
 const ECO_WATER_IDX = 26;    // Hundertstelliter
-const ECO_WATER_DIV = 100;   // Teiler: 1 = ganze Liter, 10 = Zehntel, 100 = Hundertstel
+const ECO_WATER_DIV = 200;   // Teilungsfaktor Wasserfeld: Rohwert / Faktor = Liter (WCR860, Feld 21: 5 ml je Schritt)
+
+/*
+ * Das EcoFeedback, das MIELE SELBST fuehrt - DOP2-Leaf 2/1585, Feld 6.
+ *
+ * Was dort steht: der Energie- und Wasserverbrauch des zuletzt gelaufenen Programms und die
+ * Summenzaehler - also genau die Zahlen, die die Miele-App anzeigt. Die Feldnamen stammen aus
+ * MieleRESTServer (DeviceAttributesDWTDWM), ausgelesen werden sie ueber lib/datenpunkte.js.
+ *
+ * WARUM DER ADAPTER TROTZDEM SELBST ZAEHLT. Keines der drei Geraete dieses Haushalts kennt den
+ * Leaf: XKM EK037 und EK057 antworten auf 2/1585 mit HTTP 404, bei allen dreien, auch mitten im
+ * Programm. Fuer sie bleibt der Durchflusszaehler die einzige Quelle (Feld 21 des Eco-Leaf,
+ * 5 ml je Impuls, gegen den Hauswasserzaehler auf 0,5 Prozent belegt).
+ *
+ * DIE REIHENFOLGE IST DAMIT: erst fragen, was das Geraet selbst sagt - und nur wenn es
+ * schweigt, selbst zaehlen. Nicht umgekehrt: Der eigene Zaehler ist eine Hilfskonstruktion,
+ * der Wert des Geraets ist die Auskunft des Herstellers.
+ */
+const ECO_KONTEXT_LEAF = { unit: 2, attr: 1585 };
+/** Feld 6 von 2/1585 traegt die Geraeteattribute, darin Feld 4 das Wasser des letzten Programms. */
+const ECO_KONTEXT_WASSER = '6.4';
+/** ... und Feld 3 die Energie des letzten Programms. */
+const ECO_KONTEXT_ENERGIE = '6.3';
 
 // Sekundengenaue Zeiten aus DOP2-Leaf 2/256 (verifiziert: #7 Restzeit s, #8 Laufzeit s).
 const SEC_LEAF = { unit: 2, attr: 256 };
@@ -576,18 +604,30 @@ class MieleLocal extends utils.Adapter {
         for (const key of Object.keys(objdef.STATE_FIELDS)) {
             if (!objdef.fieldAllowed(key, deviceType)) continue;
             for (const s of objdef.STATE_FIELDS[key].states) {
+                const common = {
+                    name: objdef.nameFor('state', s.sub, s.name, german),
+                    role: s.role,
+                    type: s.type,
+                    unit: s.unit,
+                    read: true,
+                    write: false,
+                    def: s.def !== undefined ? s.def : (s.type === 'number' ? 0 : s.type === 'boolean' ? false : ''),
+                };
+                // Klartext direkt am Rohwert: Der Objektbrowser und VIS zeigen dann "In Betrieb"
+                // statt 5, ohne dass man den *Text-Datenpunkt danebenlegen muss. Die gibt es
+                // weiterhin - bestehende Aufbauten haengen daran.
+                const liste = objdef.zustandsTexte(s.sub, deviceType, german);
+                if (liste) common.states = liste;
+                const eigene = namen.beschreibung(`state.${s.sub}`, german);
+                if (eigene) common.desc = eigene;
+                // Der zugehoerige *Text-Datenpunkt ist damit entbehrlich geworden; das gehoert
+                // an ihn geschrieben, sonst raetselt man ueber den doppelten Eintrag.
+                if (s.sub.endsWith('Text')
+                    && objdef.zustandsTexte(s.sub.slice(0, -4), deviceType, german)) {
+                    common.desc = namen.altlast(s.sub.slice(0, -4), german);
+                }
                 await this.extendObjectAsync(`${deviceId}.state.${s.sub}`, {
-                    type: 'state',
-                    common: {
-                        name: objdef.nameFor('state', s.sub, s.name, german),
-                        role: s.role,
-                        type: s.type,
-                        unit: s.unit,
-                        read: true,
-                        write: false,
-                        def: s.def !== undefined ? s.def : (s.type === 'number' ? 0 : s.type === 'boolean' ? false : ''),
-                    },
-                    native: {},
+                    type: 'state', common, native: {},
                 });
             }
         }
@@ -599,17 +639,20 @@ class MieleLocal extends utils.Adapter {
                 native: {},
             });
             for (const c of objdef.CONTROL_STATES) {
+                const common = {
+                    name: objdef.nameFor('control', c.sub, c.name, german),
+                    role: c.role,
+                    type: 'boolean',
+                    read: false,
+                    write: true,
+                    def: c.def !== undefined ? c.def : false,
+                };
+                // Was der Knopf tut und woran er scheitern kann - im Objektbrowser steht
+                // sonst nur "Start program".
+                const desc = namen.beschreibung(`control.${c.sub}`, german);
+                if (desc) common.desc = desc;
                 await this.extendObjectAsync(`${deviceId}.control.${c.sub}`, {
-                    type: 'state',
-                    common: {
-                        name: objdef.nameFor('control', c.sub, c.name, german),
-                        role: c.role,
-                        type: 'boolean',
-                        read: false,
-                        write: true,
-                        def: c.def !== undefined ? c.def : false,
-                    },
-                    native: { opcode: c.opcode },
+                    type: 'state', common, native: { opcode: c.opcode },
                 });
             }
         }
@@ -863,6 +906,26 @@ class MieleLocal extends utils.Adapter {
                     // Der Stand der Messsteckdose beim Start - siehe gemessenerVerbrauch.
                     zaehlerStart: await this.zaehlerStand(deviceId),
                 };
+                /*
+                 * Den Stand aller Leafs beim Start holen - nebenher.
+                 *
+                 * Das Auslesen dauert je nach Geraet eine Minute (Pause zwischen den Adressen,
+                 * siehe leafStaendeLesen). Es darf die Abfrage nicht aufhalten, deshalb laeuft
+                 * es nebenher und traegt sich nach, wenn es fertig ist. Der Vergleich auf start
+                 * verhindert, dass ein spaet eintreffendes Ergebnis in einen inzwischen
+                 * begonnenen zweiten Zyklus faellt.
+                 *
+                 * Absichtlich NICHT in einem Datenpunkt gesichert: Ein Neustart mitten im
+                 * Programm kostet dann die Differenz dieses einen Laufs, was der Datensatz als
+                 * unvollstaendig vermerkt - das ist mir lieber als ein weiteres Objekt im Baum.
+                 */
+                if (this.config.sammlerAktiv) {
+                    const meinStart = this._cycles[deviceId].start;
+                    this.leafStaendeLesen(deviceId).then((l) => {
+                        const z = this._cycles[deviceId];
+                        if (z && z.start === meinStart && Object.keys(l).length) z.leafsStart = l;
+                    }).catch(() => { /* ohne Startstand bleibt es bei den Endwerten */ });
+                }
                 await this.ensureHistoryObjects(deviceId);
                 await this.setStateAsync(`${deviceId}.history.laufendSeit`,
                     { val: this._cycles[deviceId].start, ack: true });
@@ -1074,6 +1137,10 @@ class MieleLocal extends utils.Adapter {
             if (this.config.sammlerCloud) cloud = await this.cloudWerteLesen(deviceId);
 
             const satz = sammler.datensatzBauen({
+                // Start und Ende des Programms - ohne sie liess sich ein Datensatz spaeter keinem
+                // Waschgang zuordnen (15.09.2026).
+                start: eintrag.start,
+                ende: eintrag.ende,
                 modell: {
                     techType: await lies('info.techType'),
                     matNumber: await lies('info.matNumber'),
@@ -1090,6 +1157,8 @@ class MieleLocal extends utils.Adapter {
                     temperatur: await lies('state.targetTemperature'),
                 },
                 felder,
+                // Der Leaf-Stand vom Programmstart, falls er rechtzeitig kam.
+                leafsStart: eintrag.leafsStart,
                 cloud,
                 // Der gemessene Verbrauch - die einzige belastbare Energiezahl, die es gibt.
                 gemessenWh: eintrag.gemessenWh ?? null,
@@ -1104,6 +1173,17 @@ class MieleLocal extends utils.Adapter {
             await this.setStateAsync(`${deviceId}.sammlung.zyklen`, { val: neu.length, ack: true });
             await this.setStateAsync(`${deviceId}.sammlung.fortschritt`,
                 { val: sammler.fortschritt(neu), ack: true });
+
+            /*
+             * Die Schlussstaende aller Leafs nachtragen - im Hintergrund.
+             *
+             * Nicht abgewartet: Der Durchgang dauert je nach Geraet eine knappe Minute (fuenf
+             * Sekunden Pause je Adresse, damit das Modul nebenher noch arbeiten kann). Der
+             * Zyklusabschluss wuerde sonst genau so lange stehen, und daran haengen Statistik,
+             * Verlauf und Push-Meldung.
+             */
+            this.leafsAbschlussNachtragen(deviceId)
+                .catch(e => this.log.debug(`${deviceId}: Leaf-Schlussstand - ${e.message}`));
 
             /*
              * Sammeln allein beantwortet nichts - deshalb gleich die Auswertung.
@@ -1184,6 +1264,85 @@ class MieleLocal extends utils.Adapter {
      * Der Wert wird waehrend des Programms mitgefuehrt und beim Ende zurueckgesetzt - deshalb
      * der Hoechstwert der letzten Stunde und nicht der Augenblickswert.
      */
+    /**
+     * Nach einem Programm einmal ueber ALLE antwortenden Leafs gehen - schonend.
+     *
+     * DIE REIHENFOLGE IST ABSICHT: erst den Datensatz sichern, dann die Leafs lesen. Bricht
+     * der Durchgang ab, weil das Geraet abgeschaltet wurde, fehlen ein paar Leafs - der
+     * Datensatz selbst steht aber bereits vollstaendig da.
+     *
+     * SCHONEND HEISST: fuenf Sekunden zwischen zwei Anfragen, wie im Leaf-Scan. Am 04.09.2026
+     * hatte ein Durchgang mit 400 ms das WLAN-Modul der Waschmaschine dazu gebracht, beide
+     * Verbindungen abzuwerfen - die lokale und die zur Cloud. Lieber eine Minute laenger.
+     *
+     * Was dabei herauskommt, ist derselbe Satz Istwerte, den auch die Datenpunkte bekommen -
+     * gedeutet, nicht roh. Der Rohverlauf steht daneben in sammlung.leafVerlaufJson.
+     */
+    /**
+     * Den Stand aller antwortenden Leafs einmal auslesen.
+     *
+     * WOZU GETRENNT. Bis 0.3.37 geschah das nur am Programmende. Fuer das Eco-Leaf 2/6195
+     * reicht das, weil dessen Felder je Programm zurueckgesetzt werden. Alle anderen Adressen
+     * fuehren Lebenszaehler - eine Betriebsstundenzahl von 4711 sagt ueber einen einzelnen
+     * Waschgang nichts. Verbrauch steht dort erst in der DIFFERENZ zwischen Anfang und Ende,
+     * und genau diese Adressen sind der einzige Weg bei Geraeten, die 2/6195 nicht beantworten
+     * (die Spuelmaschine dieses Haushalts etwa). Deshalb wird jetzt beides gelesen.
+     *
+     * @param {string} deviceId
+     * @returns {Promise<object>} {"2/119": {"1": 4711, ...}, ...} - leer, wenn nichts zu holen war
+     */
+    async leafStaendeLesen(deviceId) {
+        const dev = this.devices && this.devices[deviceId];
+        if (!dev) return {};
+
+        const stand = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+        let gefunden = {};
+        try { gefunden = JSON.parse((stand && stand.val) || '{}') || {}; } catch (e) { return {}; }
+        const liste = Object.entries(gefunden).filter(([, v]) => v && v.antwortet).map(([k]) => k);
+        if (!liste.length) return {};
+
+        const leafs = {};
+        for (const schluessel of liste) {
+            const [unit, attr] = schluessel.split('/').map(Number);
+            if (!unit || !attr) continue;
+            try {
+                const res = await dev.api.readDop2(dev.route, unit, attr, 0, 0,
+                    leafscan.SCAN_TIMEOUT_MS);
+                if (res.status === 200 && res.headers['x-signature']) {
+                    const { fields } = this.leafLesen(res);
+                    const werte = {};
+                    for (const w of datenpunkte.istwerte(schluessel, fields)) werte[w.pfad] = w.wert;
+                    /*
+                     * Leafs ohne Namenstabelle bleiben nicht aussen vor.
+                     *
+                     * istwerte() kennt nur benannte Strukturen. Gerade die unbenannten sind aber
+                     * die interessanten - bei der Spuelmaschine antworten elf Adressen, die kein
+                     * oeffentliches Projekt kennt. Fuer sie wird der flache Rohwert genommen.
+                     */
+                    if (!Object.keys(werte).length) Object.assign(werte, this.leafLesen(res).werte);
+                    if (Object.keys(werte).length) leafs[schluessel] = werte;
+                }
+            } catch (e) { /* ein Fehlschlag beendet den Durchgang nicht */ }
+            await new Promise(r => this.setTimeout(r, leafscan.PAUSE_MS));
+        }
+        return leafs;
+    }
+
+    /** Den Schlussstand der Leafs an den zuletzt gesammelten Datensatz haengen. */
+    async leafsAbschlussNachtragen(deviceId) {
+        if (!this.config.sammlerAktiv) return;
+        const leafs = await this.leafStaendeLesen(deviceId);
+        if (!Object.keys(leafs).length) return;
+
+        const alt = await this.getStateAsync(`${deviceId}.sammlung.datenJson`);
+        let bisher = [];
+        try { bisher = JSON.parse((alt && alt.val) || '[]') || []; } catch (e) { return; }
+        const neu = sammler.leafsNachtragen(bisher, leafs);
+        await this.setStateAsync(`${deviceId}.sammlung.datenJson`,
+            { val: JSON.stringify(neu), ack: true });
+        this.log.debug(`${deviceId}: Schlussstand von ${Object.keys(leafs).length} Leafs nachgetragen.`);
+    }
+
     async cloudWerteLesen(deviceId) {
         const instanz = this.config.sammlerCloudInstanz || 'mielecloudservice.0';
         const holen = async (feld) => {
@@ -1497,16 +1656,20 @@ class MieleLocal extends utils.Adapter {
             ['durationMin', namen.text('Dauer je Programm', 'Duration per cycle', de), 'number', 'value.interval', 'min', 0],
             // Startzeitpunkt des laufenden Programms - er ueberlebt einen Neustart des Adapters,
             // damit die Zyklusdauer danach nicht von vorn zaehlt (siehe trackCycle).
-            ['laufendSeit', namen.text('Laufendes Programm seit', 'Current cycle started', de), 'number', 'date', '', 0],
+            ['laufendSeit', namen.text('Laufendes Programm seit', 'Current cycle started', de), 'number', 'date', '', 0],  // Beschreibung siehe BESCHREIBUNGEN
             // Der Zaehlerstand der Messsteckdose beim Programmstart - aus demselben Grund
             // dauerhaft: Ohne ihn kann am Programmende kein Verbrauch gebildet werden.
             ['zaehlerStart', namen.text('Zaehlerstand bei Programmstart', 'Meter reading at cycle start', de),
              'number', 'value.power.consumption', 'Wh', 0],
         ];
         for (const [sub, name, typ, rolle, einheit, def] of defs) {
+            const hDesc = namen.beschreibung(`history.${sub}`, de);
             await this.extendObjectAsync(`${deviceId}.history.${sub}`, {
                 type: 'state',
-                common: { name, type: typ, role: rolle, unit: einheit || undefined, def, read: true, write: false },
+                common: Object.assign(
+                    { name, type: typ, role: rolle, unit: einheit || undefined, def,
+                      read: true, write: false },
+                    hDesc ? { desc: hDesc } : {}),
                 native: {},
             });
         }
@@ -1667,6 +1830,60 @@ class MieleLocal extends utils.Adapter {
         });
     }
 
+    /**
+     * Das EcoFeedback des Geraets holen - falls es eines fuehrt.
+     *
+     * DREI ABSAGEN, DANN RUHE. Dieselbe Regel wie beim Eco-Leaf: Ein 404 heisst "dieses Modell
+     * kennt den Leaf nicht", und das aendert sich nicht mehr. Der Zaehler lebt nur im
+     * Arbeitsspeicher - nach einem Neustart wird erneut geprueft, falls inzwischen eine neue
+     * Firmware auf dem Modul liegt.
+     *
+     * Die Felder selbst landen als Datenpunkte unter "detail.ecoFeedback" - dafuer ist hier
+     * nichts zu tun, das erledigt geraeteWerteSchreiben aus demselben Abruf.
+     *
+     * @returns {{energieWh: number|null, wasserL: number|null}|null} null = kein EcoFeedback
+     */
+    async ecoKontextLesen(deviceId, dev) {
+        if (!this._kontextAbsagen) this._kontextAbsagen = {};
+        if ((this._kontextAbsagen[deviceId] || 0) >= MieleLocal.ECO_ABSAGEN_MAX) return null;
+        let fields;
+        try {
+            const res = await dev.api.readDop2(dev.route, ECO_KONTEXT_LEAF.unit, ECO_KONTEXT_LEAF.attr);
+            if (res.status !== 200 || !res.headers['x-signature']) {
+                if (MieleLocal.kenntLeafNicht(res.status)) {
+                    this._kontextAbsagen[deviceId] = (this._kontextAbsagen[deviceId] || 0) + 1;
+                    if (this._kontextAbsagen[deviceId] >= MieleLocal.ECO_ABSAGEN_MAX) {
+                        this.log.debug(`Eco ${deviceId}: Dieses Modell fuehrt kein eigenes `
+                            + 'EcoFeedback (2/1585), der Durchflusszaehler bleibt die Quelle.');
+                    }
+                }
+                return null;
+            }
+            ({ fields } = dop2.parseLeaf(this.mc.decryptResponse(res.headers['x-signature'], res.body)));
+        } catch (e) {
+            this.log.debug(`Eco ${deviceId}: 2/1585 - ${e.message}`);
+            return null;
+        }
+        this._kontextAbsagen[deviceId] = 0;
+        const leaf = `${ECO_KONTEXT_LEAF.unit}/${ECO_KONTEXT_LEAF.attr}`;
+        await this.geraeteWerteSchreiben(deviceId, leaf, fields);
+
+        let werte;
+        try {
+            werte = datenpunkte.istwerte(leaf, fields);
+        } catch (e) {
+            return null;
+        }
+        const hole = pfad => {
+            const w = werte.find(x => x.pfad === pfad);
+            return w && typeof w.wert === 'number' ? w.wert : null;
+        };
+        const energieWh = hole(ECO_KONTEXT_ENERGIE);
+        const wasserL = hole(ECO_KONTEXT_WASSER);
+        if (energieWh == null && wasserL == null) return null;
+        return { energieWh, wasserL };
+    }
+
     async pollEco() {
         if (!this._ecoAbsagen) this._ecoAbsagen = {};
         for (const [deviceId, dev] of Object.entries(this.devices)) {
@@ -1715,6 +1932,9 @@ class MieleLocal extends utils.Adapter {
                 this.log.debug(`Eco ${deviceId}: parse error ${e.message}`);
                 continue;
             }
+            // Auch die uebrigen Felder dieses Leaf sind Messwerte - sie kosten keinen weiteren
+            // Abruf, weil der Leaf ohnehin gerade gelesen wurde.
+            await this.geraeteWerteSchreiben(deviceId, `${ECO_LEAF.unit}/${ECO_LEAF.attr}`, fields);
             // Antwortet das Gerät wieder, zählt die Absagenreihe von vorn.
             this._ecoAbsagen[deviceId] = 0;
             if (this._ecoSelten) delete this._ecoSelten[deviceId];
@@ -1724,11 +1944,49 @@ class MieleLocal extends utils.Adapter {
             const eco = dop2.ecoValues(fields,
                 this.config.ecoEnergyIdx || ECO_ENERGY_IDX,
                 this.config.ecoWaterIdx || ECO_WATER_IDX,
-                this.config.ecoWaterDiv || ECO_WATER_DIV);
+                Number(this.config.ecoWaterDiv) > 0 ? Number(this.config.ecoWaterDiv) : ECO_WATER_DIV);
+            /*
+             * Was das Geraet selbst als EcoFeedback fuehrt, hat Vorrang.
+             *
+             * DER FALLBACK IST DER DURCHFLUSSZAEHLER, nicht umgekehrt. Sagt das Geraet, wie viel
+             * Wasser das letzte Programm gebraucht hat, gilt seine Zahl; schweigt es, bleibt es
+             * bei Feld 21 des Eco-Leaf geteilt durch 200 - der Impulszaehlung, die an 24 Laeufen
+             * gegen den Hauswasserzaehler steht (Median 200,10 Impulse je Liter, Streuung 1,4 %).
+             *
+             * HOECHSTENS EINMAL JE MINUTE. Das Modul bedient nur eine Verbindung; wer den
+             * Eco-Takt auf zehn Sekunden stellt, soll damit nicht auch diesen Abruf versechsfachen.
+             */
+            if (!this._kontextZuletzt) this._kontextZuletzt = {};
+            if (Date.now() - (this._kontextZuletzt[deviceId] || 0) >= 60000) {
+                this._kontextZuletzt[deviceId] = Date.now();
+                const amtlich = await this.ecoKontextLesen(deviceId, dev);
+                if (amtlich) {
+                    if (amtlich.wasserL != null) { eco.waterL = amtlich.wasserL; dev.ecoAmtlich = true; }
+                    if (amtlich.energieWh != null) {
+                        eco.energyWh = amtlich.energieWh;
+                        eco.energyKwh = Math.round(amtlich.energieWh) / 1000;
+                        dev.ecoAmtlich = true;
+                    }
+                }
+            }
             if (eco.energyWh == null && eco.waterL == null) continue;
 
             await this.ensureEcoObjects(deviceId);
             await this.ensureSammlungObjects(deviceId);
+            /*
+             * Der Inhalt eines Datenpunkts ist ein Text, kein Sprachobjekt.
+             *
+             * namen.text() liefert bei deutscher Einstellung ein i18n-Objekt - richtig fuer
+             * common.name, falsch fuer einen Wert: Im Datenpunkt staende dann "[object Object]".
+             * Deshalb hier eine schlichte Fallunterscheidung.
+             */
+            const deutsch = this.config.germanNames !== false;
+            await this.setStateChangedAsync(`${deviceId}.eco.quelle`, {
+                val: dev.ecoAmtlich
+                    ? (deutsch ? 'Gerät (EcoFeedback)' : 'Appliance (EcoFeedback)')
+                    : (deutsch ? 'Adapter (Durchflusszähler)' : 'Adapter (flow meter)'),
+                ack: true,
+            });
 
             /*
              * Hat das Geraet seine Zaehler schon zurueckgesetzt?
@@ -1902,16 +2160,37 @@ class MieleLocal extends utils.Adapter {
      * nach jedem Programm von Hand aus der Miele-App ein. Der Adapter uebernimmt sie in den
      * zuletzt aufgenommenen Datensatz, sobald sie gesetzt werden.
      */
-    async ensureSammlungObjects(deviceId) {
-        if (!this.config.sammlerAktiv) return;
+    /**
+     * Die Datenpunkte der Datensammlung anlegen.
+     *
+     * WARUM BEDINGT. Der Kanal bringt vierzehn Datenpunkte je Geraet mit, die ausschliesslich
+     * der Feldsuche dienen. Wer den Adapter nur benutzt, um seine Waschmaschine zu sehen, hatte
+     * sie bisher trotzdem im Objektbaum stehen - bei drei Geraeten 42 Objekte, die nichts
+     * erklaeren. Seit 0.3.37 entstehen sie nur noch, wenn sie jemand braucht.
+     *
+     * WARUM ZWEI SCHALTER. Die Leaf-Suche haengt an `leafScanAuto` und laesst sich unabhaengig
+     * von der Datensammlung einschalten. Stuende hier nur `sammlerAktiv`, liefe sie ins Leere:
+     * Sie schreibt nach `sammlung.leafScan*`, und ein setState auf ein nicht vorhandenes Objekt
+     * verpufft mit einer Warnung im Protokoll, die niemand liest.
+     *
+     * @param {string} deviceId
+     * @param {boolean} [erzwingen] Von den Diagnosefunktionen selbst gesetzt: Sie schreiben in
+     *   den Kanal und muessen ihn deshalb mitbringen duerfen, auch wenn beide Schalter aus sind
+     *   (etwa beim von Hand gedrueckten Scan).
+     */
+    async ensureSammlungObjects(deviceId, erzwingen) {
+        if (!erzwingen && !this.config.sammlerAktiv && !this.config.leafScanAuto) return;
         if (!this._sammlungCreated) this._sammlungCreated = {};
         if (this._sammlungCreated[deviceId]) return;
         const de = this.config.germanNames !== false;
 
+        const kanalDesc = namen.beschreibung('sammlung', de);
         await this.extendObjectAsync(`${deviceId}.sammlung`, {
             type: 'channel',
-            common: { name: namen.text('Datensammlung (Feldzuordnung)',
-                                       'Data collection (field mapping)', de) },
+            common: Object.assign({
+                name: namen.text('Datensammlung (Feldzuordnung)',
+                                 'Data collection (field mapping)', de),
+            }, kanalDesc ? { desc: kanalDesc } : {}),
             native: {},
         });
         const felder = [
@@ -1957,13 +2236,16 @@ class MieleLocal extends utils.Adapter {
         for (const [k, nameDe, nameEn, typ, rolle, einheit, schreibbar] of felder) {
             // extendObject, nicht setObjectNotExists: Sonst erreicht eine korrigierte Rolle oder ein
             // uebersetzter Name nie eine Installation, auf der der Datenpunkt schon existiert.
+            const common = {
+                name: namen.text(nameDe, nameEn, de), type: typ, role: rolle,
+                unit: einheit || undefined, read: true, write: schreibbar,
+            };
+            // Erklaerung im Objektbrowser. Ohne sie ist "Was noch fehlt" nicht zu deuten,
+            // und bei leafVerlaufFein weiss niemand, was er eintragen soll.
+            const desc = namen.beschreibung(`sammlung.${k}`, de);
+            if (desc) common.desc = desc;
             await this.extendObjectAsync(`${deviceId}.sammlung.${k}`, {
-                type: 'state',
-                common: {
-                    name: namen.text(nameDe, nameEn, de), type: typ, role: rolle,
-                    unit: einheit || undefined, read: true, write: schreibbar,
-                },
-                native: {},
+                type: 'state', common, native: {},
             });
         }
         // Die beiden Eingabefelder beobachten - sie sind der einzige Weg fuer alle, die keine
@@ -2057,8 +2339,18 @@ class MieleLocal extends utils.Adapter {
                 this.log.debug(`Betriebsstunden ${deviceId}: ${e.message}`);
                 continue;
             }
+            await this.geraeteWerteSchreiben(deviceId, `${HOURS_LEAF.unit}/${HOURS_LEAF.attr}`, fields);
             const f = fields[HOURS_IDX];
-            const stunden = f && typeof f.value === 'number' ? f.value : null;
+            /*
+             * DER ROHWERT STEHT IN MINUTEN, nicht in Stunden.
+             *
+             * Bis zum 11.09.2026 wurde er unveraendert als Stunden gespeichert. Die Spuelmaschine
+             * meldete damit 439713 "Betriebsstunden" - 50 Jahre Dauerbetrieb. In Minuten sind es
+             * 7329 Stunden, und das passt zu einem Geraet, das taeglich laeuft. ha-miele-at-lan
+             * kommt unabhaengig zum selben Schluss (Leaf 2/119, alle fuenf Werte in Minuten).
+             */
+            const roh = f && typeof f.value === 'number' ? f.value : null;
+            const stunden = felder.stundenAusLeaf(roh);
             // Null nicht uebernehmen: Ein Zaehler, der bei 0 steht, ist bei einem Geraet in
             // Betrieb kein Messwert, sondern ein Zeichen, dass dieses Modell ihn nicht fuehrt.
             if (stunden === null || stunden <= 0) continue;
@@ -2074,6 +2366,7 @@ class MieleLocal extends utils.Adapter {
             });
             await this.setStateAsync(`${deviceId}.info.operatingHours`,
                 { val: stunden, ack: true });
+            this.log.debug(`Betriebsstunden ${deviceId}: ${roh} min = ${stunden} h`);
         }
     }
 
@@ -2098,6 +2391,7 @@ class MieleLocal extends utils.Adapter {
             } catch (e) {
                 continue; // Gerät ohne 2/256 oder gerade beschäftigt
             }
+            await this.geraeteWerteSchreiben(deviceId, `${SEC_LEAF.unit}/${SEC_LEAF.attr}`, fields);
             const rem = fields[SEC_REMAINING_IDX] && typeof fields[SEC_REMAINING_IDX].value === 'number' ? fields[SEC_REMAINING_IDX].value : null;
             const ela = fields[SEC_ELAPSED_IDX] && typeof fields[SEC_ELAPSED_IDX].value === 'number' ? fields[SEC_ELAPSED_IDX].value : null;
             if (rem == null && ela == null) continue;
@@ -2267,7 +2561,8 @@ class MieleLocal extends utils.Adapter {
     async leafScanDurchgang(deviceId) {
         const dev = this.devices && this.devices[deviceId];
         if (!dev) { this.log.warn(`Leaf-Scan: ${deviceId} ist nicht verbunden`); return; }
-        await this.ensureSammlungObjects(deviceId);
+        // erzwingen: Der Scan ist selbst eine Diagnosefunktion und braucht den Kanal.
+        await this.ensureSammlungObjects(deviceId, true);
 
         let bisher = {};
         try {
@@ -2438,13 +2733,90 @@ class MieleLocal extends utils.Adapter {
      * beide Ablagen bei der naechsten Aenderung auseinanderlaufen.
      */
     leafFelder(res) {
+        return this.leafLesen(res).werte;
+    }
+
+    /**
+     * Ein gelesenes Leaf einmal auspacken - roh UND gedeutet.
+     *
+     * WARUM BEIDES. Der Verlauf braucht die ROHE Struktur: "[9, 0, 0, 40, 0, 0]" zeigt, dass
+     * dort eine Wertehuelle steckt, und genau daran liess sich am 15.09.2026 nachweisen, dass
+     * der Adapter bis dahin die falsche Stelle las. Die Datenpunkte brauchen den GEDEUTETEN
+     * Wert - 40 Grad, nicht die Huelle.
+     *
+     * Und beides aus EINEM Abruf: Ein Miele-Modul bedient nur eine Verbindung; dasselbe Leaf
+     * zweimal zu lesen, waere die doppelte Last fuer dieselbe Auskunft.
+     *
+     * @returns {{werte: object, fields: object}} werte = flach fuer den Verlauf,
+     *          fields = wie parseLeaf sie liefert, fuer die Datenpunkte
+     */
+    leafLesen(res) {
         const plain = this.mc.decryptResponse(res.headers['x-signature'], res.body);
         const { fields } = dop2.parseLeaf(plain);
         const werte = {};
         for (const [idx, f] of Object.entries(fields || {})) {
             werte[idx] = MieleLocal.reinerWert(f && f.value);
         }
-        return werte;
+        return { werte, fields };
+    }
+
+    /**
+     * Was ein gelesenes Leaf hergibt, als Datenpunkte anlegen und schreiben.
+     *
+     * DIE REGEL: ES GIBT NUR, WAS DAS GERAET LIEFERT.
+     * Die Namenstabelle kennt ueber dreihundert Felder aus fremden Projekten - Waschmaschine,
+     * Backofen, Kaffeemaschine, Kommunikationsmodul. Sie alle anzulegen, hiesse jedem Nutzer
+     * einen Baum voller Nullen hinzustellen, in dem eine echte Null nicht mehr auffaellt.
+     * Deshalb entsteht ein Datenpunkt in dem Augenblick, in dem das Geraet das Feld zum ersten
+     * Mal beantwortet - und sonst nie.
+     *
+     * WAS ES AN ZUSAETZLICHER LAST KOSTET: nichts. Geschrieben wird aus Abrufen, die ohnehin
+     * laufen (Verlauf, Feinaufzeichnung, Eco-Abfrage). Es kommt kein einziger Aufruf hinzu.
+     *
+     * @param {string} deviceId
+     * @param {string} leaf    "2/6195"
+     * @param {object} fields  wie parseLeaf sie liefert
+     * @returns {number} wie viele Werte geschrieben wurden
+     */
+    async geraeteWerteSchreiben(deviceId, leaf, fields) {
+        if (!this.config.leafDatenpunkte) return 0;
+        const deutsch = this.config.germanNames !== false;
+        let defs;
+        try {
+            defs = datenpunkte.fuerLeaf(leaf, fields, deutsch);
+        } catch (e) {
+            this.log.debug(`${deviceId}: ${leaf} nicht deutbar - ${e.message}`);
+            return 0;
+        }
+        if (!defs.length) return 0;
+
+        if (!this._dpAngelegt) this._dpAngelegt = {};
+        const bekannt = this._dpAngelegt[deviceId] || (this._dpAngelegt[deviceId] = {});
+        let geschrieben = 0;
+        for (const d of defs) {
+            const id = `${deviceId}.detail.${d.kanal}.${d.sub}`;
+            if (!bekannt[id]) {
+                // Der Kanal einmal je Geraet - extendObject ist genuegsam, aber nicht umsonst.
+                if (!bekannt[`kanal:${d.kanal}`]) {
+                    await this.extendObjectAsync(`${deviceId}.detail`, {
+                        type: 'channel',
+                        common: { name: namen.text('Geräteinterne Werte', 'Device internals', deutsch) },
+                        native: {},
+                    });
+                    await this.extendObjectAsync(`${deviceId}.detail.${d.kanal}`, {
+                        type: 'channel',
+                        common: { name: datenpunkte.kanalName(d.kanal, deutsch) },
+                        native: {},
+                    });
+                    bekannt[`kanal:${d.kanal}`] = true;
+                }
+                await this.extendObjectAsync(id, { type: 'state', common: d.common, native: { leaf } });
+                bekannt[id] = true;
+            }
+            await this.setStateChangedAsync(id, { val: d.wert, ack: true });
+            geschrieben++;
+        }
+        return geschrieben;
     }
 
     /**
@@ -2463,12 +2835,9 @@ class MieleLocal extends utils.Adapter {
      * ohne die Nullen am Ende.
      */
     static reinerWert(v) {
-        if (typeof v === 'bigint') return Number(v);
-        if (Buffer.isBuffer(v)) return v.toString('latin1').replace(/\0+$/, '');
-        if (Array.isArray(v)) return v.map(x => MieleLocal.reinerWert(x));
-        // Ein Paar aus Typ und Wert - die Schale abstreifen und weitersuchen.
-        if (v && typeof v === 'object' && 'value' in v) return MieleLocal.reinerWert(v.value);
-        return v;
+        // Die Umsetzung steht in lib/dop2.js - lib/datenpunkte.js braucht sie ebenso, und zwei
+        // Kopien waeren beim naechsten Umbau auseinandergelaufen.
+        return dop2.reinerWert(v);
     }
 
     /**
@@ -2537,9 +2906,10 @@ class MieleLocal extends utils.Adapter {
                 await this.feinFehlschlag(deviceId, schluessel, `HTTP ${res.status}`);
             }
             if (res.status === 200 && res.headers['x-signature']) {
-                const felder = this.leafFelder(res);
+                const { werte: felder, fields } = this.leafLesen(res);
                 if (felder && Object.keys(felder).length) {
                     if (this.feinFehler) this.feinFehler[deviceId] = 0;
+                    await this.geraeteWerteSchreiben(deviceId, schluessel, fields);
                     verlauf = leafverlauf.aufnehmen(verlauf, schluessel, felder, jetzt);
                     await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufJson`,
                         { val: JSON.stringify(verlauf), ack: true });
@@ -2670,8 +3040,9 @@ class MieleLocal extends utils.Adapter {
         const dev = this.devices && this.devices[deviceId];
         if (!dev) return;
         // Die Datenpunkte anlegen, falls es sie noch nicht gibt - der Verlauf laeuft auch
-        // ohne vorherigen Scan an, sobald Treffer gespeichert sind.
-        await this.ensureSammlungObjects(deviceId);
+        // ohne vorherigen Scan an, sobald Treffer gespeichert sind. erzwingen, weil die
+        // Feinaufzeichnung sonst still ins Leere schriebe.
+        await this.ensureSammlungObjects(deviceId, true);
 
         const stand = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
         let gefunden = {};
@@ -2710,8 +3081,9 @@ class MieleLocal extends utils.Adapter {
                 const res = await dev.api.readDop2(dev.route, unit, attr, 0, 0,
                     leafscan.SCAN_TIMEOUT_MS);
                 if (res.status !== 200 || !res.headers['x-signature']) continue;
-                const felder = this.leafFelder(res);
+                const { werte: felder, fields } = this.leafLesen(res);
                 if (felder && Object.keys(felder).length) {
+                    await this.geraeteWerteSchreiben(deviceId, schluessel, fields);
                     verlauf = leafverlauf.aufnehmen(verlauf, schluessel, felder, jetzt);
                     gelesen++;
                 }
@@ -2758,7 +3130,7 @@ class MieleLocal extends utils.Adapter {
 
         this.log.info(`${deviceId}: eingeschaltet - die Leaf-Suche wird gestartet `
             + `(${leafscan.adressen().length} Adressen, laeuft ueber viele Durchgaenge).`);
-        await this.ensureSammlungObjects(deviceId);
+        await this.ensureSammlungObjects(deviceId, true);
         await this.setStateAsync(`${deviceId}.sammlung.leafScan`, { val: true, ack: true });
         this.leafScanDauerlauf(deviceId)
             .catch(e => this.log.warn(`${deviceId}: Leaf-Scan fehlgeschlagen - ${e.message}`));
@@ -2985,6 +3357,77 @@ class MieleLocal extends utils.Adapter {
         }
     }
 
+    /**
+     * Die gesammelten Datensaetze aller Geraete als CSV-Datei ablegen.
+     *
+     * WARUM ALS DATEI UND NICHT ALS TEXT. Der Admin kann eine Antwort nur anzeigen, nicht
+     * speichern; eine Sammlung mit sechzig Zyklen und vierzig Rohfeldern will aber niemand aus
+     * einem Meldungsfenster herauskopieren. Abgelegt wird sie deshalb im Dateibereich der
+     * Instanz, und der Admin bekommt nur die Adresse - ein Klick, und die Tabelle liegt im
+     * Download-Ordner.
+     *
+     * Das dafuer noetige meta-Objekt entsteht erst beim ersten Ausdruck. Wer die Diagnose nie
+     * benutzt, bekommt dadurch auch kein zusaetzliches Objekt in seine Instanz.
+     *
+     * @returns {Promise<{url: string, datei: string, zeilen: number}>}
+     */
+    async sammlungAlsCsv() {
+        const geraete = [];
+        let zeilen = 0;
+        for (const deviceId of Object.keys(this.devices || {})) {
+            let saetze = [];
+            try {
+                const s = await this.getStateAsync(`${deviceId}.sammlung.datenJson`);
+                saetze = JSON.parse((s && s.val) || '[]') || [];
+            } catch (e) {
+                this.log.debug(`CSV: ${deviceId} hat keine lesbare Sammlung (${e.message})`);
+            }
+            let name = deviceId;
+            try {
+                const o = await this.getObjectAsync(deviceId);
+                const n = o && o.common && o.common.name;
+                name = (typeof n === 'string' ? n : (n && (n.de || n.en))) || deviceId;
+            } catch (e) {
+                /* der Geraetename ist nur Beiwerk */
+            }
+            zeilen += saetze.length;
+            geraete.push({ id: deviceId, name, saetze });
+        }
+
+        const version = (this.common && this.common.version) || paket.version || undefined;
+        const jetzt = new Date();
+        const text = csvBauer.csvBauen(geraete, version);
+        const datei = csvBauer.dateiname(jetzt);
+        // Der Dateibereich haengt an einem Objekt vom Typ meta - ohne das schlaegt writeFile fehl.
+        await this.setForeignObjectNotExistsAsync(this.namespace, {
+            type: 'meta',
+            common: { name: 'Dateien', type: 'meta.user' },
+            native: {},
+        });
+        await this.writeFileAsync(this.namespace, datei, text);
+
+        /*
+         * Die Auswertung als zweite Datei.
+         *
+         * Sie beantwortet die Frage, wegen der die Sammlung ueberhaupt laeuft - welches Feld
+         * das Wasser ist -, und zwar je Feld eine Zeile statt je Zyklus. Ein Fehlschlag hier
+         * darf den Hauptausdruck nicht mitreissen: Der ist auch allein brauchbar.
+         */
+        let befundDatei = null;
+        try {
+            befundDatei = csvBauer.befundDateiname(jetzt);
+            await this.writeFileAsync(this.namespace, befundDatei,
+                csvBauer.befundCsv(geraete, version));
+        } catch (e) {
+            befundDatei = null;
+            this.log.warn(`CSV: die Auswertung liess sich nicht ablegen (${e.message})`);
+        }
+
+        this.log.info(`Sammlung als CSV abgelegt: ${datei} (${zeilen} Datensätze)`
+            + (befundDatei ? `, Auswertung in ${befundDatei}` : ''));
+        return { url: `/files/${this.namespace}/${datei}`, datei, zeilen, befundDatei };
+    }
+
     // --- Admin-Nachrichten (OAuth-Login) ---
     async onMessage(obj) {
         if (!obj || !obj.command) return;
@@ -3039,6 +3482,19 @@ class MieleLocal extends utils.Adapter {
             if (obj.command === 'discover') {
                 const list = await discover(6000, m => this.log.debug(m), this);
                 this.sendTo(obj.from, obj.command, { devices: list.map(d => ({ ip: d.ip, techType: d.techType, deviceType: Number(d.txt.devicetype), group: d.txt.group })) }, obj.callback);
+                return;
+            }
+            if (obj.command === 'csvExport') {
+                const { url, zeilen, datei, befundDatei } = await this.sammlungAlsCsv();
+                this.sendTo(obj.from, obj.command,
+                    {
+                        openUrl: url,
+                        // Nach dem Öffnen nicht die Konfiguration speichern - es wurde nichts geändert.
+                        saveConfig: false,
+                        result: `${zeilen} Datensätze in ${datei}`
+                            + (befundDatei ? ` · Auswertung: ${befundDatei}` : ''),
+                    },
+                    obj.callback);
                 return;
             }
         } catch (e) {

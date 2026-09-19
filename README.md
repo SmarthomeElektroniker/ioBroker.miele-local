@@ -166,6 +166,34 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.37
+- **Device internals as datapoints.** The adapter now carries the field tables of every DOP2 leaf
+  documented by the public reverse-engineering projects `MieleRESTServer` (akappner) and
+  `ha-miele-at-lan` (tiehfood) - 52 structures, including those for ovens, coffee machines,
+  failures and the communication module, not just washing machines. A datapoint is created only
+  when the appliance actually delivers the field; nothing is created blindly. The values are
+  written from polls that already run, so no additional requests are made. New branch per device:
+  `detail.<channel>.<field>`. Off switch in the Diagnostics tab.
+- **Fix: Generic value wrappers were read at the wrong position.** Miele wraps every measurement
+  in a small structure, and there are two shapes: `[mask, value, interpretation]` and
+  `[mask, min, max, current, step]`. The adapter always read the second entry - correct for the
+  first shape, the *minimum* for the second, which is 0 on every observed field. Seven fields of
+  the eco leaf were affected, among them `heatingTargetTemperature`: during a 40 °C programme the
+  appliance reported `[9, 0, 0, 40, 0, 0]` and the adapter 0. Field numbers inside structures are
+  now preserved and used.
+- **Water: the appliance's own EcoFeedback comes first.** Where DOP2 2/1585 exists, its value for
+  the last programme is used; only where it does not does the adapter fall back to counting flow
+  meter impulses (field 21 / 200, verified against the house water meter over 24 programmes). The
+  new datapoint `eco.quelle` says which of the two a value came from.
+- **The collector records every leaf.** At the end of a programme the adapter reads each answering
+  leaf once, gently (five seconds between requests, in the background), and appends the final state
+  to the record. This is what makes the collection useful for appliances that do not answer 2/6195
+  at all - a dishwasher that stays silent there answers nineteen other addresses. The CSV export
+  lists them as columns named `2/119.1 hoursOfOperation`.
+- **Leaf scan covers unit 14.** An oven that answered all 882 scanned addresses with 404 was being
+  asked in the wrong units: `ha-miele-at-lan` documents the cooking programme lists at 14/1570 and
+  14/1571.
+
 ### 0.3.36
 - **Fix: the final water reading of short programs is no longer missed.** With the regular ten-minute interval the last reading of a 35-minute
   program fell up to nine minutes before the end, and the appliance resets its counters
@@ -190,6 +218,10 @@ engineering work of the projects `MieleRESTServer` (akappner),
 - Repository checker: `common.news` limited to published versions and translated into all eleven
   languages, size attributes for the new settings, `node:http` instead of `http`, contact e-mail
   address in `package.json`, `io-package.json` and README.
+- **Fix: water field divisor.** The setting was a unit select with 1, 10 or 100, while the default
+  for field 21 is 200 (5 ml per step) - the correct value could not be selected, and a missing
+  value fell back to 100 in one place and 10 in another. It is now a free number ("water field
+  divisor", decimals allowed, default 200); invalid values fall back to 200.
 - **Fix: the measured energy of the metering socket was dropped** before it reached the
   field check - every collected cycle lacked it. The field check now compares energy
   fields against the measurement instead of the cloud value rounded to 0.1 kWh.

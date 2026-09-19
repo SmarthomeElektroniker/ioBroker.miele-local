@@ -150,7 +150,34 @@ Open-Source-Projekte `MieleRESTServer` (akappner), `home-assistant-miele-mobile`
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.3.37
+- **Geräteinterne Messwerte als Datenpunkte.** Der Adapter führt jetzt die Feldtabellen aller
+  DOP2-Leafs, die die öffentlichen Reverse-Engineering-Projekte `MieleRESTServer` (akappner) und
+  `ha-miele-at-lan` (tiehfood) dokumentieren - 52 Strukturen, darunter die für Backofen,
+  Kaffeevollautomat, Störungen und Kommunikationsmodul, nicht nur die der Waschmaschine.
+  Angelegt wird ein Datenpunkt erst, wenn das Gerät das Feld tatsächlich liefert; blind entsteht
+  nichts. Geschrieben wird aus Abrufen, die ohnehin laufen - es kommt keine einzige Anfrage hinzu.
+  Neuer Zweig je Gerät: `detail.<Kanal>.<Feld>`. Abschaltbar im Reiter „Diagnose".
+- **Fehlerbehebung: Generic-Wertehüllen wurden an der falschen Stelle gelesen.** Miele verpackt
+  jeden Messwert in eine kleine Struktur, und es gibt zwei Bauarten:
+  `[Maske, Wert, Deutung]` und `[Maske, min, max, Istwert, Schrittweite]`. Der Adapter las immer
+  den zweiten Eintrag - bei der ersten Bauart richtig, bei der zweiten das *Minimum*, und das ist
+  bei jedem beobachteten Feld 0. Betroffen waren sieben Felder des Eco-Leaf, darunter
+  `heatingTargetTemperature`: Während eines 40-Grad-Programms meldete das Gerät
+  `[9, 0, 0, 40, 0, 0]` und der Adapter 0. Die Feldnummern innerhalb von Strukturen bleiben jetzt
+  erhalten und werden benutzt.
+- **Wasser: das EcoFeedback des Geräts hat Vorrang.** Wo es DOP2 2/1585 gibt, gilt dessen Wert für
+  das letzte Programm; nur wo es ihn nicht gibt, zählt der Adapter weiter die Impulse des
+  Durchflusszählers (Feld 21 / 200, über 24 Programme gegen den Hauswasserzähler belegt). Der neue
+  Datenpunkt `eco.quelle` sagt, aus welcher der beiden Quellen ein Wert stammt.
+- **Der Datensammler schreibt alle Leafs mit.** Am Programmende liest der Adapter jedes
+  antwortende Leaf einmal, schonend (fünf Sekunden zwischen zwei Anfragen, im Hintergrund) und
+  hängt den Schlussstand an den Datensatz. Erst das macht die Sammlung für Geräte brauchbar, die
+  2/6195 gar nicht beantworten - eine Spülmaschine, die dort schweigt, antwortet auf neunzehn
+  andere Adressen. Die CSV führt sie als eigene Spalten, benannt wie `2/119.1 hoursOfOperation`.
+- **Der Leaf-Scan durchsucht Unit 14.** Ein Backofen, der alle 882 gescannten Adressen mit 404
+  beantwortete, wurde in den falschen Units gefragt: `ha-miele-at-lan` nennt die Programmlisten der
+  Gargeräte unter 14/1570 und 14/1571.
 
 ### 0.2.1 (2026-08-18)
 - Adopt ioBroker development guidelines and conformity rules.

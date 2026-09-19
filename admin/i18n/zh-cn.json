@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback 通过 DOP2 读取，仅在提供该功能的设备上可用（目前为洗衣机）。数值已与 Miele 云适配器比对核实；字段索引可能因型号而异。",
     "EcoFeedback-Intervall in Sekunden": "EcoFeedback 间隔（秒）",
     "Eingehender Push-Port (TCP)": "入站推送端口 (TCP)",
-    "Einheit Wasserfeld": "用水字段单位",
     "Einträge im Ringpuffer": "环形缓冲区条目数",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "每个程序的能耗、用水量和时长，时间戳取程序结束时刻——便于生成任意时间范围的图表。",
     "Energiezähler je Gerät (optional)": "每台设备的电能计量（可选）",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "注意：自动搜索使用组播（mDNS，UDP 5353），只能找到同一广播网络中的设备。在使用 bridge 网络的 Docker 容器中，组播无法通过——此时没有自动搜索，请在下方手动填写设备 IP（这不需要组播或端口）。自动搜索仅在主机网络（network_mode: host）中有效。",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "注意：并非所有设备都支持推送。较旧/简易的 Wi-Fi 模块（例如 XKM EK037/EK057）没有 SuperVision 端点——订阅会被接受，但不会收到推送事件。此时仍使用轮询。推送另外需要主机网络（见下文）。",
     "History-Instanz": "history 实例",
-    "Hundertstelliter": "百分之一升",
     "IP-Adresse": "IP 地址",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "勾选后，数据点名称以双语（en/de）创建，管理界面以德语显示。不勾选则仅英语。更改在保存/重启后生效。",
     "Italien": "意大利",
@@ -78,11 +76,12 @@
     "USA": "美国",
     "Verlauf": "历史记录",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "cyclesJson 中保留多少条最近的程序记录。用于快速查看；长期数据来自 history 适配器。",
-    "Zehntelliter": "十分之一升",
     "Zusätzlich in den History-Adapter schreiben": "同时写入 history 适配器",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "计量数据点（Wh，持续累加）",
-    "ganze Liter": "整升",
     "miele://-Redirect-URL": "miele:// 重定向 URL",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "较早的条目会从环形缓冲区中移出。730 天即两年。",
-    "Österreich": "奥地利"
+    "Österreich": "奥地利",
+    "Teilungsfaktor Wasserfeld": "水量字段除数",
+    "Rohwert ÷ Teilungsfaktor = Liter": "原始值 ÷ 除数 = 升",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "除数将水量字段的原始值换算为升。在 WCR860 上，字段 21 以 5 毫升为一步计数，因此除数为 200。也会出现非整数值：数据收集功能会根据已收集的程序估算除数，并在分析结果中给出。"
 }

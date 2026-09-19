@@ -420,22 +420,12 @@
           "xl": 2
         },
         "ecoWaterDiv": {
-          "type": "select",
-          "label": "Einheit Wasserfeld",
-          "options": [
-            {
-              "label": "ganze Liter",
-              "value": 1
-            },
-            {
-              "label": "Zehntelliter",
-              "value": 10
-            },
-            {
-              "label": "Hundertstelliter",
-              "value": 100
-            }
-          ],
+          "type": "number",
+          "label": "Teilungsfaktor Wasserfeld",
+          "help": "Rohwert ÷ Teilungsfaktor = Liter",
+          "min": 1,
+          "max": 100000,
+          "step": 0.01,
           "default": 200,
           "hidden": "!data.ecoFeedback",
           "xs": 12,
@@ -444,33 +434,22 @@
           "lg": 3,
           "xl": 3
         },
-        "_ecoIdxHint": {
+        "_ecoDivHint": {
           "type": "staticText",
           "newLine": true,
           "hidden": "!data.ecoFeedback",
-          "text": "Die Vorgaben stammen von einer WCR860 und stimmen dort. Bei einem anderen Modell können die Felder woanders sitzen - dann meldet der Adapter unplausible Werte, etwa eine Zahl, die sich über verschiedene Programme hinweg nie ändert. Mit dem Haken \"Rohfelder mitschreiben\" lässt sich der richtige Index finden: Das Feld, dessen Wert während eines laufenden Programms mitwächst, ist das gesuchte.",
+          "text": "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.",
           "xs": 12,
           "sm": 12,
           "md": 12,
           "lg": 12,
           "xl": 12
         },
-        "ecoRawFields": {
-          "type": "checkbox",
-          "label": "Rohfelder mitschreiben (nur zur Fehlersuche)",
-          "newLine": true,
-          "hidden": "!data.ecoFeedback",
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4
-        },
-        "_ecoRawHint": {
+        "_ecoIdxHint": {
           "type": "staticText",
           "newLine": true,
           "hidden": "!data.ecoFeedback",
-          "text": "Freiwillig und standardmäßig aus. Legt je Gerät den Datenpunkt eco.felderJson an und schreibt alle Felder des Eco-Leaf hinein statt nur der zwei ausgewerteten. Hilft, wenn Energie oder Wasser bei Ihrem Modell falsch oder gar nicht ankommen: Die Feldindizes unterscheiden sich je Baureihe, und aus einem aufgezeichneten Programmlauf lassen sich die richtigen ablesen. Die Werte bleiben in Ihrer ioBroker-Instanz - es wird nichts versendet und nichts ausgewertet.",
+          "text": "Die Vorgaben stammen von einer WCR860 und stimmen dort. Bei einem anderen Modell können die Felder woanders sitzen - dann meldet der Adapter unplausible Werte, etwa eine Zahl, die sich über verschiedene Programme hinweg nie ändert. Mit dem Haken \"Rohfelder mitschreiben\" lässt sich der richtige Index finden: Das Feld, dessen Wert während eines laufenden Programms mitwächst, ist das gesuchte.",
           "xs": 12,
           "sm": 12,
           "md": 12,
@@ -485,110 +464,6 @@
           "md": 12,
           "lg": 12,
           "xl": 12
-        },
-        "_sammlerKopf": {
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12,
-          "type": "header",
-          "size": 4,
-          "newLine": true,
-          "text": {
-            "de": "Datensammlung für andere Modelle",
-            "en": "Data collection for other models"
-          }
-        },
-        "_sammlerText": {
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12,
-          "type": "staticText",
-          "newLine": true,
-          "text": {
-            "de": "Die Feldindizes des EcoFeedback-Leaf sind je Baureihe verschieden. Die Vorgaben stammen von einer WCR860. Wer ein anderes Modell hat und mithelfen möchte, schaltet die Sammlung ein: Sie schreibt je Programm einen Datensatz mit (Modell, Programm, alle Rohfelder) und legt ihn unter \"sammlung.datenJson\" ab. Damit daraus eine Zuordnung wird, braucht es einen Vergleichswert - entweder aus der Cloud oder von Hand aus der Miele-App. Aussagekräftig wird es ab etwa 10 verschiedenen Programmen. Die Daten bleiben in dieser Instanz; der Adapter versendet nichts und schreibt die Seriennummer bewusst nicht mit.",
-            "en": "The EcoFeedback leaf field indices differ per series. The defaults come from a WCR860. If you own a different model and want to help, enable the collection: it records one dataset per programme (model, programme, all raw fields) under \"sammlung.datenJson\". A reference value is required - either from the cloud or entered manually from the Miele app. About 10 different programmes make it meaningful. The data stays in this instance; the adapter sends nothing and deliberately omits the serial number."
-          }
-        },
-        "sammlerAktiv": {
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4,
-          "type": "checkbox",
-          "newLine": true,
-          "label": {
-            "de": "Datensätze sammeln",
-            "en": "Collect datasets"
-          }
-        },
-        "leafScanAuto": {
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4,
-          "type": "checkbox",
-          "newLine": true,
-          "label": {
-            "de": "Leaf-Suche selbst starten, wenn ein Gerät eingeschaltet wird",
-            "en": "Start the leaf search when a device is switched on"
-          },
-          "help": {
-            "de": "Nur bei Geräten, deren Suche noch nie gelaufen ist. Ein Gerät, das meistens aus ist, wird sonst nie durchsucht. Die Suche liest ausschließlich und hält an, sobald das Gerät wieder aus ist.",
-            "en": "Only for devices whose search has never run. A device that is off most of the time would otherwise never be searched. The search only reads, and stops as soon as the device is off again."
-          }
-        },
-        "sammlerCloud": {
-          "xs": 12,
-          "sm": 6,
-          "md": 4,
-          "lg": 4,
-          "xl": 4,
-          "type": "checkbox",
-          "newLine": true,
-          "hidden": "!data.sammlerAktiv",
-          "label": {
-            "de": "Cloud-Werte als Vergleich mitschreiben",
-            "en": "Include cloud values for comparison"
-          },
-          "help": {
-            "de": "Braucht eine laufende Instanz des Adapters mielecloudservice.",
-            "en": "Requires a running instance of the mielecloudservice adapter."
-          }
-        },
-        "sammlerCloudInstanz": {
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "xl": 6,
-          "type": "text",
-          "newLine": true,
-          "hidden": "!data.sammlerCloud",
-          "label": {
-            "de": "Instanz des Cloud-Adapters",
-            "en": "Cloud adapter instance"
-          },
-          "default": "mielecloudservice.0"
-        },
-        "_sammlerHand": {
-          "xs": 12,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "xl": 12,
-          "type": "staticText",
-          "newLine": true,
-          "hidden": "!data.sammlerAktiv",
-          "text": {
-            "de": "Ohne Cloud: Nach jedem Programm Energie und Wasser aus der Miele-App in die Punkte \"sammlung.eingabeEnergie\" und \"sammlung.eingabeWasser\" eintragen - sie gehören dann zum zuletzt gesammelten Datensatz. Wie viele noch fehlen, steht in \"sammlung.fortschritt\".",
-            "en": "Without cloud: after each programme, enter energy and water from the Miele app into \"sammlung.eingabeEnergie\" and \"sammlung.eingabeWasser\" - they are attached to the most recent dataset. \"sammlung.fortschritt\" shows what is still missing."
-          }
         },
         "zaehlerHinweis": {
           "type": "staticText",
@@ -623,6 +498,46 @@
           "md": 12,
           "lg": 12,
           "xl": 12
+        },
+        "_dpKopf": {
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
+          "type": "header",
+          "size": 4,
+          "newLine": true,
+          "text": {
+            "de": "Geräteinterne Messwerte als Datenpunkte",
+            "en": "Device internals as datapoints"
+          }
+        },
+        "leafDatenpunkte": {
+          "type": "checkbox",
+          "newLine": true,
+          "label": {
+            "de": "Anlegen, was das Gerät liefert",
+            "en": "Create what the device delivers"
+          },
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4
+        },
+        "_dpHinweis": {
+          "type": "staticText",
+          "newLine": true,
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
+          "text": {
+            "de": "Miele-Geräte führen intern weit mehr Werte, als über die Zustandsabfrage herauskommen: Heizrelais, Wasserstand, Trommeldrehzahl, Zieltemperatur, Betriebszeiten, bei anderen Baureihen auch Bohnenbehälter oder Entkalkungszähler. Die Namen dieser Felder stammen aus den öffentlichen Reverse-Engineering-Projekten MieleRESTServer und ha-miele-at-lan; geprüft sind sie nicht, sie sind eine Lesehilfe. Mit dieser Option legt der Adapter unter jedem Gerät den Zweig \"detail\" an - aber nur für die Felder, die Ihr Gerät tatsächlich beantwortet. Was es nicht liefert, gibt es auch nicht. Zusätzliche Abfragen entstehen dadurch nicht: Geschrieben wird aus den Abrufen, die ohnehin laufen.",
+            "en": "Miele appliances track far more internally than the status query reveals: heater relay, water level, drum speed, target temperature, operating hours, and on other model lines bean containers or descaling counters. The field names come from the public reverse-engineering projects MieleRESTServer and ha-miele-at-lan; they are unverified reading aids. With this option the adapter creates a \"detail\" branch per device - but only for the fields your device actually answers. What it does not deliver does not appear. No extra requests are made: values are written from polls that run anyway."
+          }
         }
       }
     },
@@ -794,6 +709,197 @@
           "xs": 12,
           "sm": 12,
           "md": 6,
+          "lg": 4,
+          "xl": 4
+        }
+      }
+    },
+    "tabDiagnose": {
+      "type": "panel",
+      "label": {
+        "de": "Diagnose",
+        "en": "Diagnostics"
+      },
+      "items": {
+        "_diagIntro": {
+          "type": "staticText",
+          "newLine": true,
+          "text": {
+            "de": "Hier stehen die Einstellungen, die der Fehlersuche und der Feldzuordnung dienen. Für den täglichen Betrieb werden sie nicht gebraucht; alles hier ist ab Werk aus. Die gesammelten Daten bleiben in dieser Instanz.",
+            "en": "These settings serve troubleshooting and field mapping. They are not needed for daily operation and are off by default. Collected data stays in this instance."
+          },
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
+        },
+        "ecoRawFields": {
+          "type": "checkbox",
+          "label": "Rohfelder mitschreiben (nur zur Fehlersuche)",
+          "newLine": true,
+          "hidden": "!data.ecoFeedback",
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4
+        },
+        "_ecoRawHint": {
+          "type": "staticText",
+          "newLine": true,
+          "hidden": "!data.ecoFeedback",
+          "text": "Freiwillig und standardmäßig aus. Legt je Gerät den Datenpunkt eco.felderJson an und schreibt alle Felder des Eco-Leaf hinein statt nur der zwei ausgewerteten. Hilft, wenn Energie oder Wasser bei Ihrem Modell falsch oder gar nicht ankommen: Die Feldindizes unterscheiden sich je Baureihe, und aus einem aufgezeichneten Programmlauf lassen sich die richtigen ablesen. Die Werte bleiben in Ihrer ioBroker-Instanz - es wird nichts versendet und nichts ausgewertet.",
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
+        },
+        "_sammlerKopf": {
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
+          "type": "header",
+          "size": 4,
+          "newLine": true,
+          "text": {
+            "de": "Datensammlung für andere Modelle",
+            "en": "Data collection for other models"
+          }
+        },
+        "_sammlerText": {
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
+          "type": "staticText",
+          "newLine": true,
+          "text": {
+            "de": "Die Feldindizes des EcoFeedback-Leaf sind je Baureihe verschieden. Die Vorgaben stammen von einer WCR860. Wer ein anderes Modell hat und mithelfen möchte, schaltet die Sammlung ein: Sie schreibt je Programm einen Datensatz mit (Modell, Programm, alle Rohfelder) und legt ihn unter \"sammlung.datenJson\" ab. Damit daraus eine Zuordnung wird, braucht es einen Vergleichswert - entweder aus der Cloud oder von Hand aus der Miele-App. Aussagekräftig wird es ab etwa 10 verschiedenen Programmen. Die Daten bleiben in dieser Instanz; der Adapter versendet nichts und schreibt die Seriennummer bewusst nicht mit.",
+            "en": "The EcoFeedback leaf field indices differ per series. The defaults come from a WCR860. If you own a different model and want to help, enable the collection: it records one dataset per programme (model, programme, all raw fields) under \"sammlung.datenJson\". A reference value is required - either from the cloud or entered manually from the Miele app. About 10 different programmes make it meaningful. The data stays in this instance; the adapter sends nothing and deliberately omits the serial number."
+          }
+        },
+        "sammlerAktiv": {
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4,
+          "type": "checkbox",
+          "newLine": true,
+          "label": {
+            "de": "Datensätze sammeln",
+            "en": "Collect datasets"
+          }
+        },
+        "leafScanAuto": {
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4,
+          "type": "checkbox",
+          "newLine": true,
+          "label": {
+            "de": "Leaf-Suche selbst starten, wenn ein Gerät eingeschaltet wird",
+            "en": "Start the leaf search when a device is switched on"
+          },
+          "help": {
+            "de": "Nur bei Geräten, deren Suche noch nie gelaufen ist. Ein Gerät, das meistens aus ist, wird sonst nie durchsucht. Die Suche liest ausschließlich und hält an, sobald das Gerät wieder aus ist.",
+            "en": "Only for devices whose search has never run. A device that is off most of the time would otherwise never be searched. The search only reads, and stops as soon as the device is off again."
+          }
+        },
+        "sammlerCloud": {
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
+          "lg": 4,
+          "xl": 4,
+          "type": "checkbox",
+          "newLine": true,
+          "hidden": "!data.sammlerAktiv",
+          "label": {
+            "de": "Cloud-Werte als Vergleich mitschreiben",
+            "en": "Include cloud values for comparison"
+          },
+          "help": {
+            "de": "Braucht eine laufende Instanz des Adapters mielecloudservice.",
+            "en": "Requires a running instance of the mielecloudservice adapter."
+          }
+        },
+        "sammlerCloudInstanz": {
+          "xs": 12,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "xl": 6,
+          "type": "text",
+          "newLine": true,
+          "hidden": "!data.sammlerCloud",
+          "label": {
+            "de": "Instanz des Cloud-Adapters",
+            "en": "Cloud adapter instance"
+          },
+          "default": "mielecloudservice.0"
+        },
+        "_sammlerHand": {
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12,
+          "type": "staticText",
+          "newLine": true,
+          "hidden": "!data.sammlerAktiv",
+          "text": {
+            "de": "Ohne Cloud: Nach jedem Programm Energie und Wasser aus der Miele-App in die Punkte \"sammlung.eingabeEnergie\" und \"sammlung.eingabeWasser\" eintragen - sie gehören dann zum zuletzt gesammelten Datensatz. Wie viele noch fehlen, steht in \"sammlung.fortschritt\".",
+            "en": "Without cloud: after each programme, enter energy and water from the Miele app into \"sammlung.eingabeEnergie\" and \"sammlung.eingabeWasser\" - they are attached to the most recent dataset. \"sammlung.fortschritt\" shows what is still missing."
+          }
+        },
+        "_csvKopf": {
+          "type": "header",
+          "size": 4,
+          "newLine": true,
+          "text": {
+            "de": "Gesammelte Daten ausgeben",
+            "en": "Export collected data"
+          },
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
+        },
+        "_csvText": {
+          "type": "staticText",
+          "newLine": true,
+          "text": {
+            "de": "Legt die Sammlung aller Geräte als CSV-Tabelle ab und öffnet sie: je Programm eine Zeile mit Start und Ende, Programm, Dauer, den Vergleichswerten und jedem Rohfeld in einer eigenen Spalte. Semikolon als Trennzeichen, Komma als Dezimalzeichen. Achtung beim Weitergeben: Die Tabelle enthält die Zeitpunkte der Programme.",
+            "en": "Writes the collected data of all devices as a CSV table and opens it: one row per cycle with start and end, programme, duration, the reference values and every raw field in its own column. Semicolon as separator, comma as decimal mark. Note when sharing: the table contains the times when programmes ran."
+          },
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
+        },
+        "csvExport": {
+          "type": "sendTo",
+          "command": "csvExport",
+          "openUrl": true,
+          "newLine": true,
+          "label": {
+            "de": "CSV erzeugen und öffnen",
+            "en": "Create and open CSV"
+          },
+          "variant": "contained",
+          "xs": 12,
+          "sm": 6,
+          "md": 4,
           "lg": 4,
           "xl": 4
         }

@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback est lu via DOP2 et n'est disponible que sur les appareils qui le fournissent (jusqu'ici les lave-linge). Les valeurs ont été vérifiées par rapport à l'adaptateur cloud Miele ; les indices de champ peuvent varier selon le modèle.",
     "EcoFeedback-Intervall in Sekunden": "Intervalle EcoFeedback en secondes",
     "Eingehender Push-Port (TCP)": "Port push entrant (TCP)",
-    "Einheit Wasserfeld": "Unité du champ eau",
     "Einträge im Ringpuffer": "Entrées dans le tampon circulaire",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Énergie, eau et durée par cycle, horodatés à la fin du cycle – pour des graphiques sur n’importe quelle période.",
     "Energiezähler je Gerät (optional)": "Compteur d'énergie par appareil (facultatif)",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "Remarque : la recherche automatique utilise le multicast (mDNS, UDP 5353) et ne trouve que les appareils du même réseau de diffusion. Dans un conteneur Docker en réseau bridge, le multicast NE passe PAS – il n'y a alors pas de recherche automatique ; saisissez plutôt manuellement ci-dessous les IP des appareils (aucun multicast ni port n'est nécessaire pour cela). La recherche automatique ne fonctionne que dans le réseau de l'hôte (network_mode: host).",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "Remarque : tous les appareils ne prennent pas en charge le push. Les modules Wi-Fi anciens/simples (p. ex. XKM EK037/EK057) n'ont pas de point de terminaison SuperVision – les abonnements sont acceptés, mais aucun événement push n'arrive. Dans ce cas, l'interrogation reste. Le push exige en outre le réseau de l'hôte (voir ci-dessous).",
     "History-Instanz": "Instance history",
-    "Hundertstelliter": "centièmes de litre",
     "IP-Adresse": "Adresse IP",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "Si coché, les noms des points de données sont créés en deux langues (en/de) et l'admin les affiche en allemand. Sans la coche, uniquement en anglais. La modification prend effet après enregistrement/redémarrage.",
     "Italien": "Italie",
@@ -78,11 +76,12 @@
     "USA": "États-Unis",
     "Verlauf": "Historique",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Nombre de cycles récents conservés dans cyclesJson. Prévu pour l’affichage rapide ; les données à long terme proviennent de l’adaptateur history.",
-    "Zehntelliter": "dixièmes de litre",
     "Zusätzlich in den History-Adapter schreiben": "Écrire aussi dans l’adaptateur history",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "Point de données du compteur (Wh, croissant en continu)",
-    "ganze Liter": "litres entiers",
     "miele://-Redirect-URL": "URL de redirection miele://",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Les entrées plus anciennes sortent du tampon circulaire. 730 jours correspondent à deux ans.",
-    "Österreich": "Autriche"
+    "Österreich": "Autriche",
+    "Teilungsfaktor Wasserfeld": "Diviseur du champ d'eau",
+    "Rohwert ÷ Teilungsfaktor = Liter": "Valeur brute ÷ diviseur = litres",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "Le diviseur convertit la valeur brute du champ d'eau en litres. Sur la WCR860, le champ 21 compte par pas de 5 ml, le diviseur vaut donc 200. Des valeurs non entières existent : la collecte de données estime le diviseur à partir des programmes collectés et l'indique dans son analyse."
 }

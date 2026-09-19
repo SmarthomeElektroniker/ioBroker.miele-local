@@ -53,7 +53,26 @@ Feld:   [index(1B), type(1B), value(wireLength)]   (Padding 0x00 zwischen Struct
 ```
 Feldtypen (Auszug): 1=bool, 2=U8, 3=S8, 5=U16, 6=S16, 8=U32, 9=S32, 11=U64, 14=float32,
 15=float64, 16=struct, 18/32=string, 17/20/21/22/23/25/27=Arrays. Integer sind **Big-Endian**.
-„Interpretierte" Felder sind Structs `[mask, value, interpretation]`; Nutzwert = mittleres Sub-Feld.
+### Wertehüllen — zwei Bauarten, zwei Stellen
+
+Jeder Messwert steckt in einer kleinen Struktur. Es gibt **zwei** davon, und sie sind an ihrer
+Länge zu unterscheiden:
+
+| Bauart | Aufbau | Länge | Nutzwert |
+|---|---|---|---|
+| `Annotated<T>` | `[requestMask=8, WERT, interpretation]` | 3 | Sub-Feld **2** |
+| `Generic<T>` | `[requestMask=9, min, max, ISTWERT, stepSize, …]` | 5 oder mehr | Sub-Feld **4** |
+
+Die Sub-Felder tragen eigene Nummern (`decodeStruct` hebt sie seit 0.3.37 auf); die Nummer ist
+der zuverlässige Zugriff, die Position nur der Rückfall.
+
+**Belegt am laufenden Gerät (15.09.2026, WCR860, 40-°C-Programm):** Feld 24 des Eco-Leaf
+(`heatingTargetTemperature`, `GenericU8`) kam als `[9, 0, 0, 40, 0, 0]`. Wer das zweite Sub-Feld
+liest, bekommt das Minimum — und das ist bei jedem beobachteten Generic-Feld 0. Betroffen waren in
+2/6195 die Felder 1, 2, 3, 18, 19, 24 und 58.
+
+Welches Feld welche Bauart hat, steht in `lib/leafnamen.js` (`GENERIC`), erzeugt aus den
+Typangaben von `MieleRESTServer`.
 
 ## 5. Bekannte/genutzte Leaves
 
@@ -64,6 +83,27 @@ Feldtypen (Auszug): 1=bool, 2=U8, 3=S8, 5=U16, 6=S16, 8=U32, 9=S32, 11=U64, 14=f
 | `2/138` | Cycle Counter |
 | `2/119` | Hours of Operation |
 | `2/6195` | **ProcessData (Waschmaschine)** — Live-Prozess/EcoFeedback |
+| `2/6192` / `2/6193` | Aktoren / Sensoren der Waschmaschine |
+| `2/256` | DeviceState (Legacy-Vollzustand, u. a. #7 Restzeit s, #8 Laufzeit s) |
+| `2/1584` | Programmliste (IDs, Dauer, Temperatur) |
+| `2/1585` | GLOBAL_DeviceContext — Feld 6 trägt das **EcoFeedback des Geräts** |
+| `2/145` | Kennung: #1 Seriennummer, #3 Modell, #4 Materialnummer (eigene Messung, G5840) |
+| `14/1570` / `14/1571` | Programm- und Optionsliste der Gargeräte (ha-miele-at-lan) |
+
+Die vollständige Zuordnung Leaf → Struktur → Feldnamen steht in `lib/leafnamen.js`: 40 Leafs,
+52 Strukturen, erzeugt aus `MieleRESTServer/dop2rs/src/payloader/**` und ergänzt um die Adressen,
+die `ha-miele-at-lan` zusätzlich kennt.
+
+### Was die Geräte dieses Haushalts beantworten (Stand 15.09.2026)
+
+| Gerät | antwortende Leafs | Bemerkung |
+|---|---|---|
+| WCR860 (Waschmaschine) | 10 | 2/19, 2/20, 2/21, 2/23, 2/1583, 2/1584, 2/1586, 2/6192, 2/6193, 2/6195 |
+| G5840 (Spülmaschine) | 19 | u. a. 2/119, 2/145, 2/173, 2/174, 2/256 — **kein** 2/6195 |
+| H2469BP (Backofen) | 0 | alle 882 gescannten Adressen 404; Unit 14 war nie gefragt |
+
+Keines der drei Geräte kennt 2/1585 (XKM EK037/EK057, HTTP 404) — dort, wo das EcoFeedback des
+Herstellers stünde. Für sie zählt der Adapter die Impulse des Durchflusszählers (Feld 21 ÷ 200).
 
 ### UserRequest-Payload (2/1583)
 ```

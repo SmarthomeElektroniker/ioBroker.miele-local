@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback is read via DOP2 and is only available on appliances that provide it (so far washing machines). Values were checked for plausibility against the Miele cloud adapter; the field indices may differ per model.",
     "EcoFeedback-Intervall in Sekunden": "EcoFeedback interval in seconds",
     "Eingehender Push-Port (TCP)": "Inbound push port (TCP)",
-    "Einheit Wasserfeld": "Water field unit",
     "Einträge im Ringpuffer": "Entries in the ring buffer",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energy, water and duration per cycle, timestamped at the end of the cycle – so charts can cover any period.",
     "Energiezähler je Gerät (optional)": "Energy meter per appliance (optional)",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "Note: automatic discovery uses multicast (mDNS, UDP 5353) and only finds appliances in the same broadcast network. In a Docker container with bridge networking, multicast does NOT get through – in that case there is no auto-discovery; enter the appliance IPs below manually instead (no multicast/port is needed for that). Auto-discovery only works in the host network (network_mode: host).",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "Note: not all appliances support push. Older/simple Wi-Fi modules (e.g. XKM EK037/EK057) have no SuperVision endpoint – subscriptions are accepted, but no push events arrive. In that case polling remains. Push additionally requires the host network (see below).",
     "History-Instanz": "History instance",
-    "Hundertstelliter": "hundredths of a litre",
     "IP-Adresse": "IP address",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "If ticked, datapoint names are created bilingually (en/de) and the admin shows them in German. Without the tick, English only. The change takes effect after saving/restarting.",
     "Italien": "Italy",
@@ -78,11 +76,12 @@
     "USA": "USA",
     "Verlauf": "History",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "How many recent cycles are kept in cyclesJson. Meant for quick display; long-term data comes from the history adapter.",
-    "Zehntelliter": "tenths of a litre",
     "Zusätzlich in den History-Adapter schreiben": "Also write to the history adapter",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "Meter datapoint (Wh, monotonically increasing)",
-    "ganze Liter": "whole litres",
     "miele://-Redirect-URL": "miele:// redirect URL",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Older entries drop out of the ring buffer. 730 days is two years.",
-    "Österreich": "Austria"
+    "Österreich": "Austria",
+    "Teilungsfaktor Wasserfeld": "Water field divisor",
+    "Rohwert ÷ Teilungsfaktor = Liter": "Raw value ÷ divisor = litres",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "The divisor converts the raw value of the water field into litres. On the WCR860, field 21 counts in steps of 5 ml, so the divisor is 200. Uneven values do occur: the data collection estimates the divisor from collected programmes and reports it in its analysis."
 }

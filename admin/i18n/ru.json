@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback считывается через DOP2 и доступен только на приборах, которые его предоставляют (пока стиральные машины). Значения сверены с облачным адаптером Miele; индексы полей могут отличаться по моделям.",
     "EcoFeedback-Intervall in Sekunden": "Интервал EcoFeedback в секундах",
     "Eingehender Push-Port (TCP)": "Входящий push-порт (TCP)",
-    "Einheit Wasserfeld": "Единица поля воды",
     "Einträge im Ringpuffer": "Записей в кольцевом буфере",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Энергия, вода и длительность каждой программы с отметкой времени окончания — чтобы строить графики за любой период.",
     "Energiezähler je Gerät (optional)": "Счётчик энергии для каждого прибора (необязательно)",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "Примечание: автоматический поиск использует multicast (mDNS, UDP 5353) и находит только приборы в той же широковещательной сети. В контейнере Docker с сетью bridge multicast НЕ проходит — тогда автопоиска нет, а IP-адреса приборов вводятся ниже вручную (для этого не нужны ни multicast, ни порт). Автопоиск работает только в сети хоста (network_mode: host).",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "Примечание: не все приборы поддерживают push. Старые/простые Wi-Fi-модули (например, XKM EK037/EK057) не имеют конечной точки SuperVision — подписки принимаются, но push-события не приходят. В этом случае остаётся опрос. Push дополнительно требует сети хоста (см. ниже).",
     "History-Instanz": "Экземпляр history",
-    "Hundertstelliter": "сотые литра",
     "IP-Adresse": "IP-адрес",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "Если отмечено, имена точек данных создаются на двух языках (en/de), и админ показывает их по-немецки. Без отметки — только по-английски. Изменение действует после сохранения/перезапуска.",
     "Italien": "Италия",
@@ -78,11 +76,12 @@
     "USA": "США",
     "Verlauf": "История",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Сколько последних программ хранится в cyclesJson. Для быстрого просмотра; долговременные данные берутся из адаптера history.",
-    "Zehntelliter": "десятые литра",
     "Zusätzlich in den History-Adapter schreiben": "Записывать также в адаптер history",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "Точка данных счётчика (Вт·ч, постоянно возрастающая)",
-    "ganze Liter": "целые литры",
     "miele://-Redirect-URL": "URL перенаправления miele://",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Более старые записи выпадают из кольцевого буфера. 730 дней — это два года.",
-    "Österreich": "Австрия"
+    "Österreich": "Австрия",
+    "Teilungsfaktor Wasserfeld": "Делитель поля воды",
+    "Rohwert ÷ Teilungsfaktor = Liter": "Исходное значение ÷ делитель = литры",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "Делитель переводит исходное значение поля воды в литры. У WCR860 поле 21 считает шагами по 5 мл, поэтому делитель равен 200. Встречаются и нецелые значения: сбор данных оценивает делитель по собранным программам и указывает его в результате анализа."
 }

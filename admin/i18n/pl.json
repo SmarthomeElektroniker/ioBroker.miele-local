@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback jest odczytywany przez DOP2 i dostępny tylko w urządzeniach, które go dostarczają (dotąd pralki). Wartości sprawdzono z adapterem chmury Miele; indeksy pól mogą się różnić w zależności od modelu.",
     "EcoFeedback-Intervall in Sekunden": "Interwał EcoFeedback w sekundach",
     "Eingehender Push-Port (TCP)": "Przychodzący port push (TCP)",
-    "Einheit Wasserfeld": "Jednostka pola wody",
     "Einträge im Ringpuffer": "Wpisy w buforze cyklicznym",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energia, woda i czas trwania każdego programu ze znacznikiem czasu zakończenia – dzięki temu wykresy mogą obejmować dowolny okres.",
     "Energiezähler je Gerät (optional)": "Licznik energii na urządzenie (opcjonalnie)",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "Uwaga: wyszukiwanie automatyczne korzysta z multicastu (mDNS, UDP 5353) i znajduje tylko urządzenia w tej samej sieci rozgłoszeniowej. W kontenerze Dockera z siecią bridge multicast NIE przechodzi – wtedy nie ma autowyszukiwania, lecz adresy IP urządzeń wpisuje się niżej ręcznie (do tego nie potrzeba multicastu ani portu). Autowyszukiwanie działa tylko w sieci hosta (network_mode: host).",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "Uwaga: nie wszystkie urządzenia obsługują push. Starsze/proste moduły Wi-Fi (np. XKM EK037/EK057) nie mają punktu końcowego SuperVision – subskrypcje są przyjmowane, ale zdarzenia push nie przychodzą. W takim razie pozostaje odpytywanie. Push wymaga dodatkowo sieci hosta (patrz niżej).",
     "History-Instanz": "Instancja history",
-    "Hundertstelliter": "setne litra",
     "IP-Adresse": "Adres IP",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "Po zaznaczeniu nazwy punktów danych są tworzone dwujęzycznie (en/de), a admin pokazuje je po niemiecku. Bez zaznaczenia tylko po angielsku. Zmiana działa po zapisaniu/restarcie.",
     "Italien": "Włochy",
@@ -78,11 +76,12 @@
     "USA": "USA",
     "Verlauf": "Historia",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Ile ostatnich programów pozostaje w cyclesJson. Do szybkiego podglądu; dane długoterminowe pochodzą z adaptera history.",
-    "Zehntelliter": "dziesiąte litra",
     "Zusätzlich in den History-Adapter schreiben": "Zapisuj także do adaptera history",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "Punkt danych licznika (Wh, stale rosnący)",
-    "ganze Liter": "pełne litry",
     "miele://-Redirect-URL": "URL przekierowania miele://",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Starsze wpisy wypadają z bufora. 730 dni to dwa lata.",
-    "Österreich": "Austria"
+    "Österreich": "Austria",
+    "Teilungsfaktor Wasserfeld": "Dzielnik pola wody",
+    "Rohwert ÷ Teilungsfaktor = Liter": "Wartość surowa ÷ dzielnik = litry",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "Dzielnik przelicza wartość surową pola wody na litry. W WCR860 pole 21 liczy krokami po 5 ml, więc dzielnik wynosi 200. Zdarzają się też wartości niecałkowite: zbieranie danych szacuje dzielnik na podstawie zebranych programów i podaje go w analizie."
 }

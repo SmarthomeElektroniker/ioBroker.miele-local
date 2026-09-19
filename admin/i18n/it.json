@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback viene letto tramite DOP2 ed è disponibile solo sugli apparecchi che lo forniscono (finora lavatrici). I valori sono stati verificati con l'adattatore cloud Miele; gli indici dei campi possono variare a seconda del modello.",
     "EcoFeedback-Intervall in Sekunden": "Intervallo EcoFeedback in secondi",
     "Eingehender Push-Port (TCP)": "Porta push in entrata (TCP)",
-    "Einheit Wasserfeld": "Unità del campo acqua",
     "Einträge im Ringpuffer": "Voci nel buffer circolare",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energia, acqua e durata per programma, con l’orario di fine – così i grafici possono coprire qualsiasi periodo.",
     "Energiezähler je Gerät (optional)": "Contatore di energia per apparecchio (opzionale)",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "Nota: la ricerca automatica usa il multicast (mDNS, UDP 5353) e trova solo apparecchi nella stessa rete di broadcast. In un container Docker con rete bridge il multicast NON passa: in tal caso non c'è ricerca automatica, ma si inseriscono manualmente sotto gli IP degli apparecchi (per questo non servono multicast né porte). La ricerca automatica funziona solo nella rete host (network_mode: host).",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "Nota: non tutti gli apparecchi supportano il push. I moduli Wi-Fi più vecchi/semplici (ad es. XKM EK037/EK057) non hanno un endpoint SuperVision – le sottoscrizioni vengono accettate, ma non arrivano eventi push. In tal caso resta il polling. Il push richiede inoltre la rete host (vedi sotto).",
     "History-Instanz": "Istanza history",
-    "Hundertstelliter": "centesimi di litro",
     "IP-Adresse": "Indirizzo IP",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "Se selezionato, i nomi dei punti dati vengono creati in due lingue (en/de) e l'admin li mostra in tedesco. Senza selezione, solo in inglese. La modifica ha effetto dopo il salvataggio/riavvio.",
     "Italien": "Italia",
@@ -78,11 +76,12 @@
     "USA": "USA",
     "Verlauf": "Cronologia",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Quanti programmi recenti restano in cyclesJson. Pensato per la visualizzazione rapida; i dati a lungo termine arrivano dall’adapter history.",
-    "Zehntelliter": "decimi di litro",
     "Zusätzlich in den History-Adapter schreiben": "Scrivere anche nell’adapter history",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "Punto dati del contatore (Wh, in aumento continuo)",
-    "ganze Liter": "litri interi",
     "miele://-Redirect-URL": "URL di reindirizzamento miele://",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Le voci più vecchie escono dal buffer circolare. 730 giorni corrispondono a due anni.",
-    "Österreich": "Austria"
+    "Österreich": "Austria",
+    "Teilungsfaktor Wasserfeld": "Divisore del campo acqua",
+    "Rohwert ÷ Teilungsfaktor = Liter": "Valore grezzo ÷ divisore = litri",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "Il divisore converte il valore grezzo del campo acqua in litri. Sulla WCR860 il campo 21 conta a passi di 5 ml, quindi il divisore è 200. Esistono anche valori non interi: la raccolta dati stima il divisore dai programmi raccolti e lo indica nell'analisi."
 }

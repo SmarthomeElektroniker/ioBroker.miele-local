@@ -25,7 +25,6 @@
     "EcoFeedback wird per DOP2 gelesen und steht nur bei Geräten bereit, die es liefern (bisher Waschmaschinen). Werte wurden gegen den Miele-Cloud-Adapter plausibilisiert; die Feldindizes können je Modell abweichen.": "EcoFeedback wordt via DOP2 gelezen en is alleen beschikbaar bij apparaten die het leveren (tot nu toe wasmachines). De waarden zijn getoetst aan de Miele-cloudadapter; de veldindexen kunnen per model verschillen.",
     "EcoFeedback-Intervall in Sekunden": "EcoFeedback-interval in seconden",
     "Eingehender Push-Port (TCP)": "Inkomende push-poort (TCP)",
-    "Einheit Wasserfeld": "Eenheid waterveld",
     "Einträge im Ringpuffer": "Items in de ringbuffer",
     "Energie, Wasser und Dauer je Programm mit dem Zeitpunkt des Programmendes – damit lassen sich Diagramme über beliebige Zeiträume bauen.": "Energie, water en duur per programma, met het tijdstip van het programma-einde – zo kunnen grafieken elke periode beslaan.",
     "Energiezähler je Gerät (optional)": "Energiemeter per apparaat (optioneel)",
@@ -47,7 +46,6 @@
     "Hinweis: Die automatische Suche nutzt Multicast (mDNS, UDP 5353) und findet nur Geräte im selben Broadcast-Netz. In einem Docker-Container mit Bridge-Netzwerk kommt Multicast NICHT durch – dann keine Auto-Suche, sondern die Geräte-IPs unten manuell eintragen (dafür wird kein Multicast/Port benötigt). Auto-Suche funktioniert nur im Host-Netzwerk (network_mode: host).": "Let op: het automatisch zoeken gebruikt multicast (mDNS, UDP 5353) en vindt alleen apparaten in hetzelfde broadcastnetwerk. In een Docker-container met bridge-netwerk komt multicast er NIET door – dan geen autozoeken, maar de IP's van de apparaten hieronder handmatig invoeren (daarvoor is geen multicast/poort nodig). Autozoeken werkt alleen in het hostnetwerk (network_mode: host).",
     "Hinweis: Nicht alle Geräte unterstützen Push. Ältere/einfache WLAN-Module (z. B. XKM EK037/EK057) haben keinen SuperVision-Endpunkt – Subscriptions werden zwar angenommen, es kommen aber keine Push-Events. In dem Fall bleibt es beim Polling. Push zusätzlich Host-Netz voraussetzt (siehe unten).": "Let op: niet alle apparaten ondersteunen push. Oudere/eenvoudige wifi-modules (bijv. XKM EK037/EK057) hebben geen SuperVision-eindpunt – abonnementen worden wel aangenomen, maar er komen geen push-events. In dat geval blijft het bij pollen. Push vereist bovendien het host-netwerk (zie onder).",
     "History-Instanz": "History-instantie",
-    "Hundertstelliter": "honderdsten van een liter",
     "IP-Adresse": "IP-adres",
     "Ist der Haken gesetzt, werden die Datenpunkt-Namen zweisprachig (en/de) angelegt; der Admin zeigt sie dann auf Deutsch. Ohne Haken nur Englisch. Änderung wirkt nach Speichern/Neustart.": "Indien aangevinkt worden de namen van de datapunten tweetalig (en/de) aangemaakt; de admin toont ze dan in het Duits. Zonder vinkje alleen Engels. De wijziging werkt na opslaan/herstarten.",
     "Italien": "Italië",
@@ -78,11 +76,12 @@
     "USA": "VS",
     "Verlauf": "Historie",
     "Wie viele der letzten Programme in cyclesJson stehen. Für die Schnellanzeige gedacht; Langzeitdaten kommen aus dem History-Adapter.": "Hoeveel recente programma’s in cyclesJson blijven staan. Bedoeld voor snelle weergave; langetermijndata komt uit de history-adapter.",
-    "Zehntelliter": "tienden van een liter",
     "Zusätzlich in den History-Adapter schreiben": "Ook naar de history-adapter schrijven",
     "Zähler-Datenpunkt (Wh, laufend steigend)": "Meterdatapunt (Wh, doorlopend oplopend)",
-    "ganze Liter": "hele liters",
     "miele://-Redirect-URL": "miele://-omleidings-URL",
     "Ältere Einträge fallen aus dem Ringpuffer. 730 Tage sind zwei Jahre.": "Oudere items vallen uit de ringbuffer. 730 dagen is twee jaar.",
-    "Österreich": "Oostenrijk"
+    "Österreich": "Oostenrijk",
+    "Teilungsfaktor Wasserfeld": "Deelfactor waterveld",
+    "Rohwert ÷ Teilungsfaktor = Liter": "Ruwe waarde ÷ deelfactor = liter",
+    "Der Teilungsfaktor rechnet den Rohwert des Wasserfelds in Liter um. Bei der WCR860 zählt Feld 21 in Schritten von 5 ml, der Faktor ist also 200. Krumme Werte kommen vor: Die Datensammlung schätzt den Faktor aus gesammelten Programmen und nennt ihn im Befund.": "De deelfactor rekent de ruwe waarde van het waterveld om naar liters. Bij de WCR860 telt veld 21 in stappen van 5 ml, de factor is dus 200. Ook scheve waarden komen voor: de gegevensverzameling schat de factor uit verzamelde programma's en vermeldt hem in de analyse."
 }

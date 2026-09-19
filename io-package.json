@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.36",
+    "version": "0.3.37",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,10 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.37": {
+        "en": "Device internals as datapoints: the adapter now carries the field tables of every leaf documented by the public projects MieleRESTServer and ha-miele-at-lan, including those for ovens, coffee machines and the communication module. A datapoint is only created when the appliance actually delivers the field. Fix for the value wrappers: for Generic fields the adapter read the minimum instead of the current value, leaving seven eco-leaf fields permanently at 0 (the target temperature among them). Water now comes from the appliance's own EcoFeedback first, with the impulse count as the fallback. The collector records the final state of every answering leaf at the end of a programme, and the CSV export lists them as columns. The leaf scan also covers unit 14.",
+        "de": "Geräteinterne Messwerte als Datenpunkte: Der Adapter kennt jetzt die Feldtabellen aller Leafs aus den öffentlichen Projekten MieleRESTServer und ha-miele-at-lan - auch die für Backofen, Kaffeevollautomat und Kommunikationsmodul. Angelegt wird ein Datenpunkt aber nur, wenn das Gerät das Feld tatsächlich liefert. Korrektur an den Wertehüllen: Bei Generic-Feldern las der Adapter das Minimum statt des Istwerts, weshalb sieben Felder des Eco-Leaf dauerhaft auf 0 standen (u. a. die Zieltemperatur). Wasser kommt jetzt vorrangig aus dem EcoFeedback des Geräts, die Impulszählung ist der Rückfall. Der Datensammler schreibt am Programmende die Schlussstände aller antwortenden Leafs mit; die CSV führt sie als eigene Spalten. Der Leaf-Scan durchsucht zusätzlich Unit 14."
+      },
       "0.3.36": {
         "en": "Energy and water: water consumption is read from the correct DOP2 field (field 21, confirmed within 0.5% against the cloud); final readings of short programs are no longer lost; total operating hours added. New data collection with field analysis, an ongoing check of the field mapping and a leaf scan for model-specific fields. Admin translations completed, configurable intervals capped at runtime, all data point names translated into eleven languages.",
         "de": "Energie und Wasser: Der Wasserverbrauch wird aus dem richtigen DOP2-Feld gelesen (Feld 21, gegen die Cloud auf 0,5 % bestätigt); die letzten Werte kurzer Programme gehen nicht mehr verloren; Betriebsstunden gesamt ergänzt. Neue Datensammlung mit Feldanalyse, laufender Kontrolle der Feldzuordnung und einem Leaf-Scan für modellspezifische Felder. Admin-Übersetzungen vervollständigt, einstellbare Intervalle zur Laufzeit begrenzt, alle Datenpunktnamen in elf Sprachen übersetzt.",
@@ -165,6 +169,7 @@
     "germanNames": true,
     "ecoFeedback": true,
     "ecoRawFields": false,
+    "leafDatenpunkte": true,
     "ecoEnergyIdx": 25,
     "ecoWaterIdx": 21,
     "ecoWaterDiv": 200,
