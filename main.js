@@ -2248,7 +2248,7 @@ class MieleLocal extends utils.Adapter {
         if (this._sammlungCreated[deviceId]) return;
         const de = this.config.germanNames !== false;
 
-        const kanalDesc = namen.beschreibung('sammlung', de);
+        const kanalDesc = namen.beschreibung(ids.KANAL.collection, de);
         await this.extendObjectAsync(ids.kanal(deviceId), {
             type: 'channel',
             common: Object.assign({
@@ -2272,10 +2272,21 @@ class MieleLocal extends utils.Adapter {
              'Is the configured mapping still correct?', 'string', 'text', '', false],
             [ids.SAMMLUNG.checkJson, 'Vergleiche im Verlauf (JSON)', 'Comparisons over time (JSON)',
              'string', 'json', '', false],
-            // Der Leaf-Scan - siehe lib/leafscan.js. Der Schalter startet einen Durchgang;
-            // er setzt sich selbst zurueck, damit man ihn erneut druecken kann.
+            /*
+             * Der Leaf-Scan - siehe lib/leafscan.js.
+             *
+             * ROLLE "switch", NICHT "button". Ein Knopf loest aus und faellt zurueck; dieser
+             * Schalter BLEIBT stehen, solange die Suche laeuft, und der Dauerlauf fragt ihn bei
+             * jedem Durchgang ab (leafScanDauerlauf). Umlegen heisst also "suchen, bis fertig",
+             * nicht "einen Durchgang ausloesen".
+             *
+             * Die Objektpruefung des Aufnahmeantrags hat das am 19.09.2026 aufgedeckt: Ein
+             * "button" darf nicht lesbar sein (E1010), und genau lesbar muss dieser Punkt sein -
+             * sonst wuesste der Dauerlauf nicht, ob er weitermachen soll. Die Rolle war falsch,
+             * nicht das Leserecht.
+             */
             [ids.SAMMLUNG.scan, 'Leafs durchsuchen (laeuft bis fertig)', 'Scan leaves (until done)',
-             'boolean', 'button', '', true],
+             'boolean', 'switch', '', true],
             [ids.SAMMLUNG.scanState, 'Wie weit ist die Suche?', 'Scan progress', 'string', 'text', '', false],
             [ids.SAMMLUNG.trendJson, 'Werteverlauf der gefundenen Leafs (JSON)',
              'Value history of found leaves (JSON)', 'string', 'json', '', false],
