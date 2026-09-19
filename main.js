@@ -516,6 +516,8 @@ class MieleLocal extends utils.Adapter {
             const techType = ident ? objdef.pathGet(ident, ['DeviceIdentLabel', 'TechType']) : f.techType;
 
             await this.createDeviceTree(deviceId, techType, deviceType);
+            // Vor allem anderen: was aus 0.3.37 noch unter deutschen IDs liegt, umziehen.
+            await this.idsUmziehen(deviceId);
 
             this.devices[deviceId] = { ip: f.ip, route, deviceType, api, active: false };
             /*
@@ -534,6 +536,72 @@ class MieleLocal extends utils.Adapter {
             const cat = objdef.deviceCategory(deviceType);
             this.log.info(`Device detected: ${cat ? cat + ' - ' : ''}${techType || 'unknown'} (${deviceId}) @ ${f.ip}`);
         }
+    }
+
+    /**
+     * Die Datenpunkte aus 0.3.37 an ihre neuen, englischen IDs bringen.
+     *
+     * WARUM UMBENANNT WURDE. Der Adapter benannte seine Objekte durchgaengig englisch, bis auf
+     * den Kanal "sammlung" und vier Namen im Kanal "history" - zusammen 57 von 446. Der
+     * Pruefer des Aufnahmeantrags hielt sie deshalb fuer von Hand angelegte Skript-Objekte
+     * und verlangte eine Erklaerung oder einen sauberen Abzug. Die Erklaerung waere gewesen:
+     * "das ist historisch gewachsen". Das ist kein guter Grund, einen Baum halb in einer und
+     * halb in einer anderen Sprache zu fuehren.
+     *
+     * WARUM UMZIEHEN UND NICHT NEU ANLEGEN. Ein blosses Umbenennen liesse die alten Objekte
+     * samt ihren Werten stehen - in der Anlage des Betreibers liegen dort 67 gesammelte
+     * Datensaetze, der Leaf-Scan aus 882 geprueften Adressen und die Verlaufsaufzeichnung.
+     * Das ist wochenlange Sammelarbeit, die kein Neustart wiederbeschafft. Deshalb wandert
+     * jeder Wert mit, und erst danach faellt der alte Punkt weg.
+     *
+     * WAS MIT DER HISTORIE PASSIERT. Sie haengt am Objekt und zieht nicht mit um. Betroffen
+     * sind nur die vier Zahlen im Kanal "history"; die Sammlung selbst ist Text und wird nicht
+     * historisiert. Wer die alten Reihen braucht, findet sie im History-Adapter unter der
+     * alten ID - der Datenpunkt ist weg, die aufgezeichneten Werte sind es nicht.
+     *
+     * EINMAL, UND DANN NIE WIEDER. Gibt es den alten Punkt nicht, passiert nichts. Eine frisch
+     * aufgesetzte Anlage laeuft hier ohne einen einzigen Schreibvorgang durch.
+     */
+    async idsUmziehen(deviceId) {
+        let umgezogen = 0;
+        for (const { alt, neu } of ids.umzuege(deviceId)) {
+            let altesObjekt;
+            try {
+                altesObjekt = await this.getObjectAsync(alt);
+            } catch (e) {
+                continue;
+            }
+            if (!altesObjekt) continue;
+            try {
+                /*
+                 * Der Wert zuerst, das Loeschen zuletzt.
+                 *
+                 * Bricht der Adapter mittendrin ab, steht der Wert an beiden Orten - laestig,
+                 * aber harmlos, und der naechste Start raeumt auf. Andersherum waere er weg.
+                 */
+                const wert = await this.getStateAsync(alt);
+                await this.extendObjectAsync(neu, {
+                    type: altesObjekt.type,
+                    common: altesObjekt.common,
+                    native: altesObjekt.native || {},
+                });
+                if (wert && wert.val !== null && wert.val !== undefined) {
+                    await this.setStateAsync(neu, { val: wert.val, ack: true });
+                }
+                await this.delObjectAsync(alt);
+                umgezogen++;
+            } catch (e) {
+                this.log.warn(`${deviceId}: ${alt} liess sich nicht nach ${neu} umziehen - ${e.message}`);
+            }
+        }
+        if (!umgezogen) return;
+        // Der leere alte Kanal zuletzt - er faellt nur weg, wenn auch sein Inhalt weg ist.
+        try {
+            await this.delObjectAsync(ids.alterKanal(deviceId));
+        } catch (e) { /* war nie da oder traegt noch etwas */ }
+        this.log.info(`${deviceId}: ${umgezogen} Datenpunkte auf englische IDs umgezogen `
+            + '(aus "sammlung" wurde "collection"). Die alten Punkte sind entfernt; '
+            + 'aufgezeichnete Verlaeufe bleiben im History-Adapter unter der alten ID stehen.');
     }
 
     async createDeviceTree(deviceId, techType, deviceType) {

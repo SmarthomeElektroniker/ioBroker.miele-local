@@ -114,6 +114,23 @@ describe('Datenpunkte aus Leaf-Feldern', () => {
             .to.equal('ecoFeedbackWaterConsumptionLastProg');
     });
 
+    it('legt eine Unterstruktur in den Kanal ihres Leaf, nicht in einen eigenen', () => {
+        /*
+         * Feld 2 von 2/256 ist die Struktur RemoteEnable mit den vier Freigaben fuer die
+         * Fernbedienung. Am 19.09.2026 standen sie an der Spuelmaschine unter "leaf2_256",
+         * waehrend die uebrigen elf Felder desselben Abrufs unter "deviceState" lagen.
+         */
+        const fields = {
+            2: { type: 16, value: [
+                { id: 1, type: 1, value: true }, { id: 2, type: 1, value: true },
+                { id: 3, type: 1, value: false }, { id: 4, type: 1, value: true },
+            ] },
+            7: { type: 8, value: 2640 },
+        };
+        const kanaele = new Set(dp.fuerLeaf('2/256', fields, true).map(d => d.kanal));
+        expect([...kanaele]).to.deep.equal(['deviceState']);
+    });
+
     it('ordnet jedem Kanal einen Namen zu', () => {
         for (const kanal of Object.values(dp.KANAELE)) {
             expect(dp.KANAL_NAMEN[kanal], `Kanal ${kanal}`).to.be.an('array').with.length(2);

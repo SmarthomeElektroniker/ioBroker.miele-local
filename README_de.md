@@ -229,6 +229,26 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.38
+- **Die Objekt-IDs sind jetzt durchgängig englisch.** Der Diagnosekanal hieß `sammlung` und
+  trug ausschließlich deutsche Datenpunktnamen (`befund`, `fortschritt`, `datenJson`,
+  `leafVerlaufFein` …), dazu vier deutsche im sonst englischen Kanal `history`
+  (`laufendSeit`, `zaehlerStart`, `gemessenLetzter`, `gemessenTotal`) - zusammen 57 von
+  446 Objekten. Im Aufnahmeantrag hielt der Prüfer sie deshalb für von Hand angelegte
+  Skript-Datenpunkte. Aus `sammlung` wurde `collection`, aus `befund` wurde `finding`,
+  aus `laufendSeit` wurde `runningSince`.
+- **Beim ersten Start zieht der Adapter um.** Jeder vorhandene Wert wandert an seine neue ID,
+  erst danach fällt der alte Punkt weg. Gesammelte Daten gehen nicht verloren - in einer
+  laufenden Anlage sind das die Datensätze der Feldsuche, der Leaf-Scan über 882 geprüfte
+  Adressen und die Verlaufsaufzeichnung. Eine frisch aufgesetzte Instanz findet nichts
+  umzuziehen und schreibt nichts.
+- **Aufgezeichnete Verläufe bleiben stehen**, aber unter der alten ID: Die Historie hängt am
+  Objekt und zieht nicht mit. Betroffen sind nur die vier Zahlen im Kanal `history`.
+- **Wer die alten IDs in eigenen Skripten benutzt, muss nachziehen.** Geprüft vor der
+  Umbenennung: In 56 ioBroker-Skripten und in der Android-App des Betreibers kam keine
+  einzige davon vor.
+- Die IDs stehen jetzt in `lib/ids.js` an einer Stelle statt verstreut im Quelltext.
+
 ### 0.3.37
 - **Klartext am Rohwert.** `status`, `programType`, `programPhase` und `programId` tragen ihre
   Werteliste jetzt in `common.states`, gebaut aus denselben Tabellen, aus denen auch die

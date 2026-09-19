@@ -222,6 +222,24 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+### 0.3.38
+- **Object IDs are now consistently English.** The diagnostics channel was named `sammlung`
+  and carried German datapoint names throughout (`befund`, `fortschritt`, `datenJson`,
+  `leafVerlaufFein` …), plus four German ones in the otherwise English `history` channel
+  (`laufendSeit`, `zaehlerStart`, `gemessenLetzter`, `gemessenTotal`) - 57 of 446 objects in
+  total. In the repository request the reviewer therefore took them for hand-made script
+  datapoints. `sammlung` became `collection`, `befund` became `finding`, `laufendSeit`
+  became `runningSince`.
+- **On first start the adapter migrates.** Every existing value moves to its new ID, and only
+  then is the old datapoint removed. Collected data is not lost - in a running installation
+  that is the field-search records, the leaf scan over 882 probed addresses and the trend
+  recording. A freshly set up instance finds nothing to migrate and writes nothing.
+- **Recorded history stays**, but under the old ID: history is attached to the object and does
+  not move with it. Only the four numbers in the `history` channel are affected.
+- **Anyone using the old IDs in their own scripts must follow suit.** Checked before renaming:
+  none of them appeared in 56 ioBroker scripts or in the operator's Android app.
+- The IDs now live in one place, `lib/ids.js`, instead of scattered through the source.
+
 ### 0.3.37
 - **Plain text on the raw values.** `status`, `programType`, `programPhase` and `programId` now
   carry their value list in `common.states`, built from the same tables the `…Text` states come

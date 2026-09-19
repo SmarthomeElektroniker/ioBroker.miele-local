@@ -664,8 +664,8 @@
                     "newLine": true,
                     "hidden": "!data.sammlerAktiv",
                     "text": {
-                        "de": "Ohne Cloud: Nach jedem Programm Energie und Wasser aus der Miele-App in die Punkte \"sammlung.eingabeEnergie\" und \"sammlung.eingabeWasser\" eintragen - sie gehören dann zum zuletzt gesammelten Datensatz. Wie viele noch fehlen, steht in \"sammlung.fortschritt\".",
-                        "en": "Without cloud: after each programme, enter energy and water from the Miele app into \"sammlung.eingabeEnergie\" and \"sammlung.eingabeWasser\" - they are attached to the most recent dataset. \"sammlung.fortschritt\" shows what is still missing."
+                        "de": "Ohne Cloud: Nach jedem Programm Energie und Wasser aus der Miele-App in die Punkte \"collection.inputEnergy\" und \"collection.inputWater\" eintragen - sie gehören dann zum zuletzt gesammelten Datensatz. Wie viele noch fehlen, steht in \"collection.progress\".",
+                        "en": "Without cloud: after each programme, enter energy and water from the Miele app into \"collection.inputEnergy\" and \"collection.inputWater\" - they are attached to the most recent dataset. \"collection.progress\" shows what is still missing."
                     }
                 },
                 "_csvKopf": {
