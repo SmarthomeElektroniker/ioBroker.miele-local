@@ -30,7 +30,14 @@ function quelltexte() {
 function deutscheNamen(code) {
     const gefunden = new Set();
     const aufrufe = new RegExp(String.raw`(?:namen\.text|\bt)\(\s*${STRING}\s*,\s*${STRING}`, 'g');
-    const zeilen = new RegExp(String.raw`\[\s*'\w+'\s*,\s*${STRING}\s*,\s*${STRING}\s*,\s*'(?:string|number|boolean)'`, 'g');
+    /*
+     * Das erste Element ist entweder ein Stringliteral oder - seit die Objekt-IDs in
+     * lib/ids.js stehen - ein Verweis in jene Tabelle (ids.SAMMLUNG.records). Beides muss
+     * der Ausdruck finden, sonst rutschen die Namen der Datensammlung ungeprueft durch.
+     */
+    const KENNUNG = String.raw`(?:'\w+'|ids\.[A-Z]+\.\w+)`;
+    const zeilen = new RegExp(
+        String.raw`\[\s*${KENNUNG}\s*,\s*${STRING}\s*,\s*${STRING}\s*,\s*'(?:string|number|boolean)'`, 'g');
     for (const muster of [aufrufe, zeilen]) {
         for (const m of code.matchAll(muster)) gefunden.add(m[1].replace(/\\'/g, "'"));
     }

@@ -21,6 +21,7 @@ const feldsuche = require('./lib/feldsuche');
 const kontrolle = require('./lib/kontrolle');
 const leafscan = require('./lib/leafscan');
 const leafverlauf = require('./lib/leafverlauf');
+const ids = require('./lib/ids');
 const felder = require('./lib/felder');
 const csvBauer = require('./lib/csv');
 const datenpunkte = require('./lib/datenpunkte');
@@ -620,12 +621,6 @@ class MieleLocal extends utils.Adapter {
                 if (liste) common.states = liste;
                 const eigene = namen.beschreibung(`state.${s.sub}`, german);
                 if (eigene) common.desc = eigene;
-                // Der zugehoerige *Text-Datenpunkt ist damit entbehrlich geworden; das gehoert
-                // an ihn geschrieben, sonst raetselt man ueber den doppelten Eintrag.
-                if (s.sub.endsWith('Text')
-                    && objdef.zustandsTexte(s.sub.slice(0, -4), deviceType, german)) {
-                    common.desc = namen.altlast(s.sub.slice(0, -4), german);
-                }
                 await this.extendObjectAsync(`${deviceId}.state.${s.sub}`, {
                     type: 'state', common, native: {},
                 });
@@ -858,7 +853,7 @@ class MieleLocal extends utils.Adapter {
             if (gelaufen && typeof gelaufen.val === 'number' && gelaufen.val > 0) {
                 start = Date.now() - gelaufen.val * 60000;
             } else {
-                const gemerkt = await this.getStateAsync(`${deviceId}.history.laufendSeit`);
+                const gemerkt = await this.getStateAsync(ids.h(deviceId, 'runningSince'));
                 if (gemerkt && typeof gemerkt.val === 'number' && gemerkt.val > 0) start = gemerkt.val;
             }
             if (start) {
@@ -870,7 +865,7 @@ class MieleLocal extends utils.Adapter {
                  * mangels Startwert null zurueck - der gemessene Verbrauch blieb 0, ohne
                  * dass irgendwo ein Fehler stand. Am 06.09.2026 genau so passiert.
                  */
-                const gemerkterZaehler = await this.getStateAsync(`${deviceId}.history.zaehlerStart`);
+                const gemerkterZaehler = await this.getStateAsync(ids.h(deviceId, 'meterAtStart'));
                 let zaehlerStart = gemerkterZaehler && typeof gemerkterZaehler.val === 'number'
                     && gemerkterZaehler.val > 0 ? gemerkterZaehler.val : null;
                 /*
@@ -885,7 +880,7 @@ class MieleLocal extends utils.Adapter {
                 this._cycles[deviceId] = { start, zaehlerStart };
                 offen = this._cycles[deviceId];
                 await this.ensureHistoryObjects(deviceId);
-                await this.setStateAsync(`${deviceId}.history.laufendSeit`, { val: start, ack: true });
+                await this.setStateAsync(ids.h(deviceId, 'runningSince'), { val: start, ack: true });
                 this.log.debug(`Zyklus von ${deviceId} fortgesetzt `
                     + `(laeuft seit ${new Date(start).toLocaleString()})`);
             }
@@ -927,10 +922,10 @@ class MieleLocal extends utils.Adapter {
                     }).catch(() => { /* ohne Startstand bleibt es bei den Endwerten */ });
                 }
                 await this.ensureHistoryObjects(deviceId);
-                await this.setStateAsync(`${deviceId}.history.laufendSeit`,
+                await this.setStateAsync(ids.h(deviceId, 'runningSince'),
                     { val: this._cycles[deviceId].start, ack: true });
                 // Damit ein Neustart mitten im Programm die Messung nicht verliert.
-                await this.setStateAsync(`${deviceId}.history.zaehlerStart`,
+                await this.setStateAsync(ids.h(deviceId, 'meterAtStart'),
                     { val: this._cycles[deviceId].zaehlerStart, ack: true });
             } else if (offen.endeSeit) {
                 // War nur ein Aussetzer - das Geraet meldete kurz "Aus" und laeuft weiter.
@@ -956,7 +951,7 @@ class MieleLocal extends utils.Adapter {
         if (Date.now() - offen.endeSeit < CYCLE_END_GRACE_MS) return;
 
         delete this._cycles[deviceId];
-        await this.setStateAsync(`${deviceId}.history.laufendSeit`, { val: 0, ack: true });
+        await this.setStateAsync(ids.h(deviceId, 'runningSince'), { val: 0, ack: true });
         /*
          * Den Zaehlerstand mit wegraeumen - sonst erbt ihn das naechste Programm.
          *
@@ -967,7 +962,7 @@ class MieleLocal extends utils.Adapter {
          * Waschmaschine gesehen: Der zweite Waschgang des Tages startete mit dem
          * Zaehlerstand des ersten, was 1400 statt 2700 Wh ergeben haette.
          */
-        await this.setStateAsync(`${deviceId}.history.zaehlerStart`, { val: 0, ack: true });
+        await this.setStateAsync(ids.h(deviceId, 'meterAtStart'), { val: 0, ack: true });
         // Als Ende gilt der Zeitpunkt, an dem das Geraet zuerst nicht mehr lief - nicht das
         // Ende der Karenzzeit.
         const ende = offen.endeSeit;
@@ -1060,11 +1055,11 @@ class MieleLocal extends utils.Adapter {
 
         // Den gemessenen Verbrauch sichtbar machen - fuer die App und fuer die Auswertung.
         if (eintrag.gemessenWh != null) {
-            await this.setStateAsync(`${deviceId}.history.gemessenLetzter`,
+            await this.setStateAsync(ids.h(deviceId, 'measuredLast'),
                 { val: eintrag.gemessenWh, ack: true });
-            const bisher = await this.getStateAsync(`${deviceId}.history.gemessenTotal`);
+            const bisher = await this.getStateAsync(ids.h(deviceId, 'measuredTotal'));
             const summe = ((bisher && bisher.val) || 0) + eintrag.gemessenWh / 1000;
-            await this.setStateAsync(`${deviceId}.history.gemessenTotal`,
+            await this.setStateAsync(ids.h(deviceId, 'measuredTotal'),
                 { val: Math.round(summe * 1000) / 1000, ack: true });
             this.log.info(`${deviceId}: gemessener Verbrauch ${eintrag.gemessenWh} Wh `
                 + `(${eintrag.program || 'Programm'})`);
@@ -1166,12 +1161,13 @@ class MieleLocal extends utils.Adapter {
             });
 
             let bisher = [];
-            try { bisher = JSON.parse(await lies('sammlung.datenJson')) || []; } catch (e) { /* leer */ }
+            try { bisher = JSON.parse(await lies(`${ids.KANAL.collection}.${ids.SAMMLUNG.records}`)) || []; }
+            catch (e) { /* leer */ }
             const neu = sammler.aufnehmen(bisher, satz);
-            await this.setStateAsync(`${deviceId}.sammlung.datenJson`,
+            await this.setStateAsync(ids.s(deviceId, 'records'),
                 { val: JSON.stringify(neu), ack: true });
-            await this.setStateAsync(`${deviceId}.sammlung.zyklen`, { val: neu.length, ack: true });
-            await this.setStateAsync(`${deviceId}.sammlung.fortschritt`,
+            await this.setStateAsync(ids.s(deviceId, 'cycles'), { val: neu.length, ack: true });
+            await this.setStateAsync(ids.s(deviceId, 'progress'),
                 { val: sammler.fortschritt(neu), ack: true });
 
             /*
@@ -1203,7 +1199,7 @@ class MieleLocal extends utils.Adapter {
                 energie: this.config.ecoEnergyIdx,
                 wasser: this.config.ecoWaterIdx,
             });
-            await this.setStateAsync(`${deviceId}.sammlung.befund`, { val: befund, ack: true });
+            await this.setStateAsync(ids.s(deviceId, 'finding'), { val: befund, ack: true });
 
             /*
              * Die laufende Kontrolle - siehe lib/kontrolle.js.
@@ -1225,13 +1221,13 @@ class MieleLocal extends utils.Adapter {
             });
             if (vergleich) {
                 let bisherK = [];
-                try { bisherK = JSON.parse(await lies('sammlung.kontrolleJson')) || []; }
+                try { bisherK = JSON.parse(await lies(`${ids.KANAL.collection}.${ids.SAMMLUNG.checkJson}`)) || []; }
                 catch (e) { /* leer */ }
                 const verlauf = kontrolle.aufnehmen(bisherK, vergleich);
-                await this.setStateAsync(`${deviceId}.sammlung.kontrolleJson`,
+                await this.setStateAsync(ids.s(deviceId, 'checkJson'),
                     { val: JSON.stringify(verlauf), ack: true });
                 const text = kontrolle.bericht(verlauf);
-                await this.setStateAsync(`${deviceId}.sammlung.kontrolle`, { val: text, ack: true });
+                await this.setStateAsync(ids.s(deviceId, 'check'), { val: text, ack: true });
                 // Ins Log nur bei einer Reihe von Ausreissern - sonst stuende hier nach
                 // jedem Waschgang dieselbe Zeile.
                 for (const groesse of ['waterL', 'energyKwh']) {
@@ -1295,7 +1291,7 @@ class MieleLocal extends utils.Adapter {
         const dev = this.devices && this.devices[deviceId];
         if (!dev) return {};
 
-        const stand = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+        const stand = await this.getStateAsync(ids.s(deviceId, 'scanJson'));
         let gefunden = {};
         try { gefunden = JSON.parse((stand && stand.val) || '{}') || {}; } catch (e) { return {}; }
         const liste = Object.entries(gefunden).filter(([, v]) => v && v.antwortet).map(([k]) => k);
@@ -1334,11 +1330,11 @@ class MieleLocal extends utils.Adapter {
         const leafs = await this.leafStaendeLesen(deviceId);
         if (!Object.keys(leafs).length) return;
 
-        const alt = await this.getStateAsync(`${deviceId}.sammlung.datenJson`);
+        const alt = await this.getStateAsync(ids.s(deviceId, 'records'));
         let bisher = [];
         try { bisher = JSON.parse((alt && alt.val) || '[]') || []; } catch (e) { return; }
         const neu = sammler.leafsNachtragen(bisher, leafs);
-        await this.setStateAsync(`${deviceId}.sammlung.datenJson`,
+        await this.setStateAsync(ids.s(deviceId, 'records'),
             { val: JSON.stringify(neu), ack: true });
         this.log.debug(`${deviceId}: Schlussstand von ${Object.keys(leafs).length} Leafs nachgetragen.`);
     }
@@ -1646,9 +1642,9 @@ class MieleLocal extends utils.Adapter {
              *
              * Bleibt leer, solange kein Zaehler konfiguriert ist.
              */
-            ['gemessenLetzter', namen.text('Gemessener Verbrauch (letztes Programm)',
+            [ids.HISTORY.measuredLast, namen.text('Gemessener Verbrauch (letztes Programm)',
                 'Measured consumption (last cycle)', de), 'number', 'value.power.consumption', 'Wh', 0],
-            ['gemessenTotal', namen.text('Gemessener Verbrauch gesamt',
+            [ids.HISTORY.measuredTotal, namen.text('Gemessener Verbrauch gesamt',
                 'Measured consumption total', de), 'number', 'value.power.consumption', 'kWh', 0],
             ['waterTotal', namen.text('Wasser gesamt', 'Water total', de), 'number', 'value', 'l', 0],
             ['energyKwh', namen.text('Energie je Programm', 'Energy per cycle', de), 'number', 'value.power.consumption', 'kWh', 0],
@@ -1656,14 +1652,14 @@ class MieleLocal extends utils.Adapter {
             ['durationMin', namen.text('Dauer je Programm', 'Duration per cycle', de), 'number', 'value.interval', 'min', 0],
             // Startzeitpunkt des laufenden Programms - er ueberlebt einen Neustart des Adapters,
             // damit die Zyklusdauer danach nicht von vorn zaehlt (siehe trackCycle).
-            ['laufendSeit', namen.text('Laufendes Programm seit', 'Current cycle started', de), 'number', 'date', '', 0],  // Beschreibung siehe BESCHREIBUNGEN
+            [ids.HISTORY.runningSince, namen.text('Laufendes Programm seit', 'Current cycle started', de), 'number', 'date', '', 0],  // Beschreibung siehe BESCHREIBUNGEN
             // Der Zaehlerstand der Messsteckdose beim Programmstart - aus demselben Grund
             // dauerhaft: Ohne ihn kann am Programmende kein Verbrauch gebildet werden.
-            ['zaehlerStart', namen.text('Zaehlerstand bei Programmstart', 'Meter reading at cycle start', de),
+            [ids.HISTORY.meterAtStart, namen.text('Zaehlerstand bei Programmstart', 'Meter reading at cycle start', de),
              'number', 'value.power.consumption', 'Wh', 0],
         ];
         for (const [sub, name, typ, rolle, einheit, def] of defs) {
-            const hDesc = namen.beschreibung(`history.${sub}`, de);
+            const hDesc = namen.beschreibung(`history.${sub}`, de);  // Schluessel = tatsaechliche ID
             await this.extendObjectAsync(`${deviceId}.history.${sub}`, {
                 type: 'state',
                 common: Object.assign(
@@ -2185,7 +2181,7 @@ class MieleLocal extends utils.Adapter {
         const de = this.config.germanNames !== false;
 
         const kanalDesc = namen.beschreibung('sammlung', de);
-        await this.extendObjectAsync(`${deviceId}.sammlung`, {
+        await this.extendObjectAsync(ids.kanal(deviceId), {
             type: 'channel',
             common: Object.assign({
                 name: namen.text('Datensammlung (Feldzuordnung)',
@@ -2194,33 +2190,33 @@ class MieleLocal extends utils.Adapter {
             native: {},
         });
         const felder = [
-            ['datenJson', 'Gesammelte Datensaetze (JSON)', 'Collected records (JSON)',
+            [ids.SAMMLUNG.records, 'Gesammelte Datensaetze (JSON)', 'Collected records (JSON)',
              'string', 'json', '', false],
-            ['zyklen', 'Anzahl gesammelter Zyklen', 'Collected cycles', 'number', 'value', '', false],
-            ['fortschritt', 'Was noch fehlt', 'What is still missing', 'string', 'text', '', false],
+            [ids.SAMMLUNG.cycles, 'Anzahl gesammelter Zyklen', 'Collected cycles', 'number', 'value', '', false],
+            [ids.SAMMLUNG.progress, 'Was noch fehlt', 'What is still missing', 'string', 'text', '', false],
             // Das Ergebnis der Auswertung im Klartext - siehe lib/feldsuche.js. Der einzige
             // Datenpunkt hier, den man wirklich lesen muss: Er sagt, ob die eingestellte
             // Feldzuordnung zu den Vergleichswerten passt.
-            ['befund', 'Welches Feld passt (Auswertung)', 'Which field matches (analysis)',
+            [ids.SAMMLUNG.finding, 'Welches Feld passt (Auswertung)', 'Which field matches (analysis)',
              'string', 'text', '', false],
             // Die laufende Kontrolle der eingestellten Zuordnung - siehe lib/kontrolle.js.
-            ['kontrolle', 'Stimmt die eingestellte Zuordnung noch?',
+            [ids.SAMMLUNG.check, 'Stimmt die eingestellte Zuordnung noch?',
              'Is the configured mapping still correct?', 'string', 'text', '', false],
-            ['kontrolleJson', 'Vergleiche im Verlauf (JSON)', 'Comparisons over time (JSON)',
+            [ids.SAMMLUNG.checkJson, 'Vergleiche im Verlauf (JSON)', 'Comparisons over time (JSON)',
              'string', 'json', '', false],
             // Der Leaf-Scan - siehe lib/leafscan.js. Der Schalter startet einen Durchgang;
             // er setzt sich selbst zurueck, damit man ihn erneut druecken kann.
-            ['leafScan', 'Leafs durchsuchen (laeuft bis fertig)', 'Scan leaves (until done)',
+            [ids.SAMMLUNG.scan, 'Leafs durchsuchen (laeuft bis fertig)', 'Scan leaves (until done)',
              'boolean', 'button', '', true],
-            ['leafScanStand', 'Wie weit ist die Suche?', 'Scan progress', 'string', 'text', '', false],
-            ['leafVerlaufJson', 'Werteverlauf der gefundenen Leafs (JSON)',
+            [ids.SAMMLUNG.scanState, 'Wie weit ist die Suche?', 'Scan progress', 'string', 'text', '', false],
+            [ids.SAMMLUNG.trendJson, 'Werteverlauf der gefundenen Leafs (JSON)',
              'Value history of found leaves (JSON)', 'string', 'json', '', false],
-            ['leafVerlaufStand', 'Umfang des Verlaufs', 'History size', 'string', 'text', '', false],
+            [ids.SAMMLUNG.trendSize, 'Umfang des Verlaufs', 'History size', 'string', 'text', '', false],
             // Die Feinaufzeichnung - siehe leafVerlaufFeinRunde. Eintragen, was genau
             // beobachtet werden soll ("2/6192"); leer schaltet sie ab.
-            ['leafVerlaufFein', 'Ein Leaf engmaschig mitschreiben (z. B. 2/6192)',
+            [ids.SAMMLUNG.trendLeaf, 'Ein Leaf engmaschig mitschreiben (z. B. 2/6192)',
              'Record one leaf closely (e.g. 2/6192)', 'string', 'text', '', true],
-            ['leafScanJson', 'Gefundene Leafs mit Feldern (JSON)', 'Found leaves with fields (JSON)',
+            [ids.SAMMLUNG.scanJson, 'Gefundene Leafs mit Feldern (JSON)', 'Found leaves with fields (JSON)',
              'string', 'json', '', false],
             /*
              * Rolle "level", nicht value.*: Beide Felder sind EINGABEN des Nutzers und damit
@@ -2228,9 +2224,9 @@ class MieleLocal extends utils.Adapter {
              * meldete das am 11.09.2026 als E1011, und "value.volume" gibt es im Rollenkatalog
              * gar nicht (E1008, am 24.08.2026 schon einmal an anderer Stelle entfernt).
              */
-            ['eingabeEnergie', 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
+            [ids.SAMMLUNG.inputEnergy, 'Energie aus der Miele-App (kWh)', 'Energy from the Miele app (kWh)',
              'number', 'level', 'kWh', true],
-            ['eingabeWasser', 'Wasser aus der Miele-App (l)', 'Water from the Miele app (l)',
+            [ids.SAMMLUNG.inputWater, 'Wasser aus der Miele-App (l)', 'Water from the Miele app (l)',
              'number', 'level', 'l', true],
         ];
         for (const [k, nameDe, nameEn, typ, rolle, einheit, schreibbar] of felder) {
@@ -2242,21 +2238,21 @@ class MieleLocal extends utils.Adapter {
             };
             // Erklaerung im Objektbrowser. Ohne sie ist "Was noch fehlt" nicht zu deuten,
             // und bei leafVerlaufFein weiss niemand, was er eintragen soll.
-            const desc = namen.beschreibung(`sammlung.${k}`, de);
+            const desc = namen.beschreibung(`${ids.KANAL.collection}.${k}`, de);
             if (desc) common.desc = desc;
-            await this.extendObjectAsync(`${deviceId}.sammlung.${k}`, {
+            await this.extendObjectAsync(`${ids.kanal(deviceId)}.${k}`, {
                 type: 'state', common, native: {},
             });
         }
         // Die beiden Eingabefelder beobachten - sie sind der einzige Weg fuer alle, die keine
         // Cloud angebunden haben.
-        this.subscribeStates(`${deviceId}.sammlung.eingabeEnergie`);
-        this.subscribeStates(`${deviceId}.sammlung.eingabeWasser`);
+        this.subscribeStates(ids.s(deviceId, 'inputEnergy'));
+        this.subscribeStates(ids.s(deviceId, 'inputWater'));
         // Ohne dieses Abonnement bleibt der Schalter wirkungslos: Er laesst sich druecken,
         // der Adapter erfaehrt es nur nie.
-        this.subscribeStates(`${deviceId}.sammlung.leafScan`);
+        this.subscribeStates(ids.s(deviceId, 'scan'));
         // Ohne dieses Abonnement bliebe die Feinaufzeichnung ein Feld, das niemand liest.
-        this.subscribeStates(`${deviceId}.sammlung.leafVerlaufFein`);
+        this.subscribeStates(ids.s(deviceId, 'trendLeaf'));
         this._sammlungCreated[deviceId] = true;
     }
 
@@ -2267,18 +2263,18 @@ class MieleLocal extends utils.Adapter {
      * Wasserwert kennt, traegt eben nur den ein.
      */
     async sammlungHandeingabe(deviceId, feld, wert) {
-        const s = await this.getStateAsync(`${deviceId}.sammlung.datenJson`);
+        const s = await this.getStateAsync(ids.s(deviceId, 'records'));
         let liste = [];
         try { liste = JSON.parse(s && s.val) || []; } catch (e) { return; }
         if (!liste.length) {
             this.log.warn(`${deviceId}: Handeingabe ohne Datensatz - erst ein Programm abwarten`);
             return;
         }
-        const werte = feld === 'eingabeEnergie' ? { energyKwh: wert } : { waterL: wert };
+        const werte = feld === ids.SAMMLUNG.inputEnergy ? { energyKwh: wert } : { waterL: wert };
         const neu = sammler.manuellNachtragen(liste, werte);
-        await this.setStateAsync(`${deviceId}.sammlung.datenJson`,
+        await this.setStateAsync(ids.s(deviceId, 'records'),
             { val: JSON.stringify(neu), ack: true });
-        await this.setStateAsync(`${deviceId}.sammlung.fortschritt`,
+        await this.setStateAsync(ids.s(deviceId, 'progress'),
             { val: sammler.fortschritt(neu), ack: true });
         this.log.info(`${deviceId}: Handeingabe uebernommen (${feld} = ${wert})`);
     }
@@ -2566,7 +2562,7 @@ class MieleLocal extends utils.Adapter {
 
         let bisher = {};
         try {
-            const s = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+            const s = await this.getStateAsync(ids.s(deviceId, 'scanJson'));
             bisher = JSON.parse((s && s.val) || '{}') || {};
         } catch (e) { bisher = {}; }
 
@@ -2574,7 +2570,7 @@ class MieleLocal extends utils.Adapter {
         if (!offen.length) {
             const f = leafscan.fortschritt(bisher);
             this.log.info(`${deviceId}: Leaf-Scan abgeschlossen - ${f.text}`);
-            await this.setStateAsync(`${deviceId}.sammlung.leafScanStand`,
+            await this.setStateAsync(ids.s(deviceId, 'scanState'),
                 { val: f.text, ack: true });
             return;
         }
@@ -2666,19 +2662,19 @@ class MieleLocal extends utils.Adapter {
 
             // Zwischenspeichern, damit ein Abbruch nicht den ganzen Durchgang kostet.
             if (++geprueft % leafscan.SICHERN_ALLE === 0) {
-                await this.setStateAsync(`${deviceId}.sammlung.leafScanJson`,
+                await this.setStateAsync(ids.s(deviceId, 'scanJson'),
                     { val: JSON.stringify(bisher), ack: true });
-                await this.setStateAsync(`${deviceId}.sammlung.leafScanStand`,
+                await this.setStateAsync(ids.s(deviceId, 'scanState'),
                     { val: leafscan.fortschritt(bisher).text, ack: true });
             }
             // Dem Geraet Luft lassen - es bedient immer nur eine Verbindung.
             await new Promise(r => this.setTimeout(r, leafscan.PAUSE_MS));
         }
 
-        await this.setStateAsync(`${deviceId}.sammlung.leafScanJson`,
+        await this.setStateAsync(ids.s(deviceId, 'scanJson'),
             { val: JSON.stringify(bisher), ack: true });
         const f = leafscan.fortschritt(bisher);
-        await this.setStateAsync(`${deviceId}.sammlung.leafScanStand`, { val: f.text, ack: true });
+        await this.setStateAsync(ids.s(deviceId, 'scanState'), { val: f.text, ack: true });
         const t = leafscan.treffer(bisher).slice(0, 12)
             .map(x => `${x.leaf} (${x.felder} Felder)`).join(', ');
         this.log.info(`${deviceId}: Leaf-Scan - ${f.text}${t ? '. Bisher: ' + t : ''}`);
@@ -2867,7 +2863,7 @@ class MieleLocal extends utils.Adapter {
         const nr = st && Number(st.val);
         if (!nr || nr === 1 || nr === 7) {
             this.log.info(`${deviceId}: Feinaufzeichnung ${schluessel} beendet - Geraet im Ruhezustand`);
-            await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufFein`, { val: '', ack: true });
+            await this.setStateAsync(ids.s(deviceId, 'trendLeaf'), { val: '', ack: true });
             this.feinAbschalten(deviceId);
             return;
         }
@@ -2875,7 +2871,7 @@ class MieleLocal extends utils.Adapter {
         const [unit, attr] = String(schluessel).split('/').map(Number);
         if (!unit || !attr) return;
 
-        const alt = await this.getStateAsync(`${deviceId}.sammlung.leafVerlaufJson`);
+        const alt = await this.getStateAsync(ids.s(deviceId, 'trendJson'));
         let verlauf = {};
         try { verlauf = JSON.parse((alt && alt.val) || '{}') || {}; } catch (e) { verlauf = {}; }
 
@@ -2911,10 +2907,10 @@ class MieleLocal extends utils.Adapter {
                     if (this.feinFehler) this.feinFehler[deviceId] = 0;
                     await this.geraeteWerteSchreiben(deviceId, schluessel, fields);
                     verlauf = leafverlauf.aufnehmen(verlauf, schluessel, felder, jetzt);
-                    await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufJson`,
+                    await this.setStateAsync(ids.s(deviceId, 'trendJson'),
                         { val: JSON.stringify(verlauf), ack: true });
                     const u = leafverlauf.umfang(verlauf);
-                    await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufStand`,
+                    await this.setStateAsync(ids.s(deviceId, 'trendSize'),
                         { val: `${u.leafs} Leafs, ${u.felder} Felder, ${u.wechsel} Wechsel`,
                           ack: true });
                 }
@@ -2973,7 +2969,7 @@ class MieleLocal extends utils.Adapter {
         this.log.warn(`${deviceId}: Feinaufzeichnung ${schluessel} beendet - auch im `
             + `${alt / 1000}-Sekunden-Takt keine Antwort (zuletzt: ${grund}).`);
         delete this.feinTakt[deviceId];
-        await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufFein`, { val: '', ack: true });
+        await this.setStateAsync(ids.s(deviceId, 'trendLeaf'), { val: '', ack: true });
         this.feinAbschalten(deviceId);
     }
 
@@ -2986,7 +2982,7 @@ class MieleLocal extends utils.Adapter {
     async feinFortsetzen() {
         if (!this.feinTimer) this.feinTimer = {};
         for (const deviceId of Object.keys(this.devices || {})) {
-            const st = await this.getStateAsync(`${deviceId}.sammlung.leafVerlaufFein`);
+            const st = await this.getStateAsync(ids.s(deviceId, 'trendLeaf'));
             const wunsch = String((st && st.val) || '').trim();
             if (!wunsch || this.feinTimer[deviceId]) continue;
             this.log.info(`${deviceId}: Feinaufzeichnung ${wunsch} nach Neustart fortgesetzt`);
@@ -3002,7 +2998,7 @@ class MieleLocal extends utils.Adapter {
      */
     async scanFortsetzen() {
         for (const deviceId of Object.keys(this.devices || {})) {
-            const st = await this.getStateAsync(`${deviceId}.sammlung.leafScan`);
+            const st = await this.getStateAsync(ids.s(deviceId, 'scan'));
             if (!st || st.val !== true) continue;
             this.log.info(`${deviceId}: Leaf-Scan nach Neustart fortgesetzt`);
             this.leafScanDauerlauf(deviceId)
@@ -3044,13 +3040,13 @@ class MieleLocal extends utils.Adapter {
         // Feinaufzeichnung sonst still ins Leere schriebe.
         await this.ensureSammlungObjects(deviceId, true);
 
-        const stand = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+        const stand = await this.getStateAsync(ids.s(deviceId, 'scanJson'));
         let gefunden = {};
         try { gefunden = JSON.parse((stand && stand.val) || '{}') || {}; } catch (e) { return; }
         const leafs = Object.entries(gefunden).filter(([, v]) => v && v.antwortet).map(([k]) => k);
         if (!leafs.length) return;
 
-        const alt = await this.getStateAsync(`${deviceId}.sammlung.leafVerlaufJson`);
+        const alt = await this.getStateAsync(ids.s(deviceId, 'trendJson'));
         let verlauf = {};
         try { verlauf = JSON.parse((alt && alt.val) || '{}') || {}; } catch (e) { verlauf = {}; }
 
@@ -3092,10 +3088,10 @@ class MieleLocal extends utils.Adapter {
         }
         if (!gelesen) return;
 
-        await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufJson`,
+        await this.setStateAsync(ids.s(deviceId, 'trendJson'),
             { val: JSON.stringify(verlauf), ack: true });
         const u = leafverlauf.umfang(verlauf);
-        await this.setStateAsync(`${deviceId}.sammlung.leafVerlaufStand`,
+        await this.setStateAsync(ids.s(deviceId, 'trendSize'),
             { val: `${u.leafs} Leafs, ${u.felder} Felder, ${u.wechsel} Wertwechsel`, ack: true });
     }
 
@@ -3117,8 +3113,8 @@ class MieleLocal extends utils.Adapter {
      */
     async leafScanBeimEinschalten(deviceId, vorher, nachher) {
         if (!this.config.leafScanAuto) return;
-        const schalter = await this.getStateAsync(`${deviceId}.sammlung.leafScan`);
-        const bisher = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+        const schalter = await this.getStateAsync(ids.s(deviceId, 'scan'));
+        const bisher = await this.getStateAsync(ids.s(deviceId, 'scanJson'));
         let stand = {};
         try { stand = JSON.parse((bisher && bisher.val) || '{}') || {}; } catch (e) { stand = {}; }
 
@@ -3131,14 +3127,14 @@ class MieleLocal extends utils.Adapter {
         this.log.info(`${deviceId}: eingeschaltet - die Leaf-Suche wird gestartet `
             + `(${leafscan.adressen().length} Adressen, laeuft ueber viele Durchgaenge).`);
         await this.ensureSammlungObjects(deviceId, true);
-        await this.setStateAsync(`${deviceId}.sammlung.leafScan`, { val: true, ack: true });
+        await this.setStateAsync(ids.s(deviceId, 'scan'), { val: true, ack: true });
         this.leafScanDauerlauf(deviceId)
             .catch(e => this.log.warn(`${deviceId}: Leaf-Scan fehlgeschlagen - ${e.message}`));
     }
 
     async leafScanDauerlauf(deviceId) {
         for (;;) {
-            const laeuft = await this.getStateAsync(`${deviceId}.sammlung.leafScan`);
+            const laeuft = await this.getStateAsync(ids.s(deviceId, 'scan'));
             if (!laeuft || laeuft.val !== true) {
                 this.log.info(`${deviceId}: Leaf-Scan angehalten.`);
                 return;
@@ -3181,12 +3177,12 @@ class MieleLocal extends utils.Adapter {
                 continue;
             }
 
-            const vorher = await this.getStateAsync(`${deviceId}.sammlung.leafScanJson`);
+            const vorher = await this.getStateAsync(ids.s(deviceId, 'scanJson'));
             let stand = {};
             try { stand = JSON.parse((vorher && vorher.val) || '{}') || {}; } catch (e) { stand = {}; }
             if (!leafscan.naechste(stand, 1).length) {
                 this.log.info(`${deviceId}: Leaf-Scan abgeschlossen - nichts mehr offen.`);
-                await this.setStateAsync(`${deviceId}.sammlung.leafScan`, { val: false, ack: true });
+                await this.setStateAsync(ids.s(deviceId, 'scan'), { val: false, ack: true });
                 return;
             }
 
@@ -3239,7 +3235,7 @@ class MieleLocal extends utils.Adapter {
          * Grenze, bis zu der die Last der normalen Runde entspricht (siehe
          * leafVerlaufFeinRunde).
          */
-        if (scanIdx > 0 && parts[scanIdx + 1] === 'leafVerlaufFein') {
+        if (scanIdx > 0 && parts[scanIdx + 1] === ids.SAMMLUNG.trendLeaf) {
             const geraet = parts[scanIdx - 1];
             const wunsch = String(state.val || '').trim();
             if (!this.feinTimer) this.feinTimer = {};
@@ -3261,7 +3257,7 @@ class MieleLocal extends utils.Adapter {
             return;
         }
 
-        if (scanIdx > 0 && parts[scanIdx + 1] === 'leafScan') {
+        if (scanIdx > 0 && parts[scanIdx + 1] === ids.SAMMLUNG.scan) {
             const geraet = parts[scanIdx - 1];
             if (state.val === true) {
                 /*
@@ -3289,7 +3285,7 @@ class MieleLocal extends utils.Adapter {
         const sIdx = parts.indexOf('sammlung');
         if (sIdx > 0 && typeof state.val === 'number' && state.val > 0) {
             const feld = parts[sIdx + 1];
-            if (feld === 'eingabeEnergie' || feld === 'eingabeWasser') {
+            if (feld === ids.SAMMLUNG.inputEnergy || feld === ids.SAMMLUNG.inputWater) {
                 await this.sammlungHandeingabe(parts[sIdx - 1], feld, state.val)
                     .catch(e => this.log.warn(`Handeingabe fehlgeschlagen: ${e.message}`));
                 await this.setStateAsync(id, { val: state.val, ack: true });
@@ -3377,7 +3373,7 @@ class MieleLocal extends utils.Adapter {
         for (const deviceId of Object.keys(this.devices || {})) {
             let saetze = [];
             try {
-                const s = await this.getStateAsync(`${deviceId}.sammlung.datenJson`);
+                const s = await this.getStateAsync(ids.s(deviceId, 'records'));
                 saetze = JSON.parse((s && s.val) || '[]') || [];
             } catch (e) {
                 this.log.debug(`CSV: ${deviceId} hat keine lesbare Sammlung (${e.message})`);
