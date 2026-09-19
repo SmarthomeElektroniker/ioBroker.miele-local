@@ -37,8 +37,22 @@ function deutscheNamen(code) {
     return [...gefunden];
 }
 
+/*
+ * Die Namen der geraeteinternen Werte stehen in Tabellen, nicht in Aufrufen.
+ *
+ * lib/datenpunkte.js fuehrt die Beschriftungen als Nachschlagewerk (DEUTSCH je Feld,
+ * KANAL_NAMEN je Kanal) und reicht sie erst zur Laufzeit an namen.text weiter. Der Regelausdruck
+ * oben findet sie deshalb nicht - und ohne diese Ergaenzung waeren seit 0.3.37 rund vierzig
+ * Datenpunktnamen ungeprueft durchgerutscht, genau die Sorte Luecke, derentwegen es diesen Test
+ * gibt.
+ */
+function tabellenNamen() {
+    const dp = require('../lib/datenpunkte');
+    return [...Object.values(dp.DEUTSCH), ...Object.values(dp.KANAL_NAMEN).map(p => p[0])];
+}
+
 describe('Datenpunktnamen', () => {
-    const liste = deutscheNamen(quelltexte());
+    const liste = [...new Set([...deutscheNamen(quelltexte()), ...tabellenNamen()])];
 
     it('findet die Namen im Quelltext', () => {
         expect(liste.length).to.be.greaterThan(30);
