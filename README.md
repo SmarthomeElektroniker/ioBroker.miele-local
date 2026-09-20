@@ -222,6 +222,11 @@ engineering work of the projects `MieleRESTServer` (akappner),
 
 ## Changelog
 
+<!--
+	Placeholder for the next version (at the beginning of the line):
+	### **WORK IN PROGRESS**
+-->
+
 ### 0.3.38
 - **Object IDs are now consistently English.** The diagnostics channel was named `sammlung`
   and carried German datapoint names throughout (`befund`, `fortschritt`, `datenJson`,

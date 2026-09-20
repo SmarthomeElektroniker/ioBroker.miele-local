@@ -229,6 +229,11 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 
 ## Changelog
 
+<!--
+	Placeholder for the next version (at the beginning of the line):
+	### **WORK IN PROGRESS**
+-->
+
 ### 0.3.38
 - **Die Objekt-IDs sind jetzt durchgängig englisch.** Der Diagnosekanal hieß `sammlung` und
   trug ausschließlich deutsche Datenpunktnamen (`befund`, `fortschritt`, `datenJson`,

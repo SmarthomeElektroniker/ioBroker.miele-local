@@ -1,21 +1,12 @@
-import js from '@eslint/js';
-import globals from 'globals';
+import config from '@iobroker/eslint-config';
 
 export default [
-    js.configs.recommended,
+    ...config,
     {
-        languageOptions: {
-            ecmaVersion: 2023,
-            sourceType: 'commonjs',
-            globals: {
-                ...globals.node,
-            },
-        },
         rules: {
-            'no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
-            'no-empty': ['error', { allowEmptyCatch: true }],
+            // Der Adapter loggt ueber this.log; console bleibt den Werkzeugen vorbehalten.
             'no-console': 'off',
-            // Das Miele-DOP2-Protokoll ist binär; \x00 in Regex ist hier beabsichtigt.
+            // Das Miele-DOP2-Protokoll ist binaer; \x00 in Regex ist hier beabsichtigt.
             'no-control-regex': 'off',
         },
     },
