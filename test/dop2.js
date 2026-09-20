@@ -55,7 +55,8 @@ describe('DOP2 EcoFeedback', () => {
 
     it('rechnet auf kWh und Liter um - die gegen die Cloud geprüften Werte', () => {
         const { fields } = dop2.parseLeaf(leafBauen({ 25: 1991, 40: 953 }));
-        const eco = dop2.ecoValues(fields, 25, 40);
+        // Teiler ausdruecklich 10: Feld 40 war bis 0.3.14 mit Zehntellitern eingestellt.
+        const eco = dop2.ecoValues(fields, 25, 40, 10);
         expect(eco.energyWh, 'Wh bleibt roh').to.equal(1991);
         expect(eco.energyKwh, '1991 Wh = 1,991 kWh').to.equal(1.991);
         expect(eco.waterL, '953 Zehntelliter = 95,3 l').to.equal(95.3);
@@ -71,11 +72,13 @@ describe('DOP2 EcoFeedback', () => {
         expect(dop2.ecoValues(fields, 25, 4, 100).waterL, 'Hundertstel').to.equal(0.17);
     });
 
-    it('faellt auf Zehntelliter zurueck, wenn kein Teiler angegeben ist', () => {
-        const { fields } = dop2.parseLeaf(leafBauen({ 25: 894, 40: 953 }));
-        expect(dop2.ecoValues(fields, 25, 40).waterL).to.equal(95.3);
+    it('faellt auf den Teilungsfaktor 200 zurueck, wenn kein Teiler angegeben ist', () => {
+        // Bis zum 11.09.2026 war der Rueckfall hier 10 (Zehntelliter), in main.js 100 - beides passte
+        // nicht zu Feld 21 der WCR860, das in Schritten von 5 ml zaehlt. Siehe test/wasserteiler.js.
+        const { fields } = dop2.parseLeaf(leafBauen({ 25: 894, 21: 23200 }));
+        expect(dop2.ecoValues(fields, 25, 21).waterL, '23200 / 200 = 116 l').to.equal(116);
         // Auch ein unsinniger Teiler darf nicht durch null teilen.
-        expect(dop2.ecoValues(fields, 25, 40, 0).waterL).to.equal(95.3);
+        expect(dop2.ecoValues(fields, 25, 21, 0).waterL).to.equal(116);
     });
 
     it('liefert null statt 0, wenn ein Feld fehlt', () => {
@@ -96,5 +99,55 @@ describe('DOP2 EcoFeedback', () => {
         const eco = dop2.ecoValues(fields, 25, 40);
         expect(eco.energyWh).to.equal(null);
         expect(eco.waterL).to.equal(null);
+    });
+});
+
+/*
+ * Die Wertehuellen - der Fehler, der bis 0.3.36 sieben Felder auf 0 stehen liess.
+ *
+ * Miele verpackt jeden Messwert in eine kleine Struktur, und es gibt zwei Bauarten. Der Adapter
+ * las immer die zweite Stelle: bei "Annotated" der Wert, bei "Generic" das MINIMUM - und das ist
+ * bei allen beobachteten Feldern 0. Aufgefallen ist es am 15.09.2026 an Feld 24 des Eco-Leaf:
+ * Die Maschine fuhr ein 40-Grad-Programm und meldete [9, 0, 0, 40, 0, 0], der Adapter 0 Grad.
+ */
+describe('Wertehuellen', () => {
+    const dop2neu = require('../lib/dop2');
+
+    it('nimmt bei drei Eintraegen den zweiten', () => {
+        expect(dop2neu.wertAusStruktur([
+            { id: 1, type: 2, value: 8 }, { id: 2, type: 5, value: 2020 }, { id: 3, type: 4, value: 0 },
+        ])).to.equal(2020);
+    });
+
+    it('nimmt bei sechs Eintraegen den vierten - den Istwert, nicht das Minimum', () => {
+        expect(dop2neu.wertAusStruktur([
+            { id: 1, type: 2, value: 9 }, { id: 2, type: 2, value: 0 }, { id: 3, type: 2, value: 0 },
+            { id: 4, type: 2, value: 40 }, { id: 5, type: 2, value: 0 }, { id: 6, type: 4, value: 0 },
+        ])).to.equal(40);
+    });
+
+    it('kommt auch ohne Feldnummern zurecht - alte Abzuege tragen keine', () => {
+        expect(dop2neu.wertAusStruktur([
+            { type: 2, value: 9 }, { type: 2, value: 0 }, { type: 2, value: 0 },
+            { type: 2, value: 40 }, { type: 2, value: 0 }, { type: 4, value: 0 },
+        ])).to.equal(40);
+        expect(dop2neu.wertAusStruktur([
+            { type: 2, value: 8 }, { type: 5, value: 714 }, { type: 4, value: 0 },
+        ])).to.equal(714);
+    });
+
+    it('gibt bei unbrauchbarer Eingabe null zurueck, statt zu werfen', () => {
+        expect(dop2neu.wertAusStruktur(null)).to.equal(null);
+        expect(dop2neu.wertAusStruktur([])).to.equal(null);
+        expect(dop2neu.wertAusStruktur([{ type: 2, value: 8 }])).to.equal(null);
+    });
+
+    it('interpValue greift auf dieselbe Regel zurueck', () => {
+        const fields = { 24: { type: 16, value: [
+            { id: 1, type: 2, value: 9 }, { id: 2, type: 2, value: 0 }, { id: 3, type: 2, value: 0 },
+            { id: 4, type: 2, value: 40 }, { id: 5, type: 2, value: 0 },
+        ] } };
+        expect(dop2neu.interpValue(fields, 24)).to.equal(40);
+        expect(dop2neu.interpValue(fields, 25)).to.equal(null);
     });
 });

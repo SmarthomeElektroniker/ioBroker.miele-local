@@ -30,15 +30,36 @@ function quelltexte() {
 function deutscheNamen(code) {
     const gefunden = new Set();
     const aufrufe = new RegExp(String.raw`(?:namen\.text|\bt)\(\s*${STRING}\s*,\s*${STRING}`, 'g');
-    const zeilen = new RegExp(String.raw`\[\s*'\w+'\s*,\s*${STRING}\s*,\s*${STRING}\s*,\s*'(?:string|number|boolean)'`, 'g');
+    /*
+     * Das erste Element ist entweder ein Stringliteral oder - seit die Objekt-IDs in
+     * lib/ids.js stehen - ein Verweis in jene Tabelle (ids.SAMMLUNG.records). Beides muss
+     * der Ausdruck finden, sonst rutschen die Namen der Datensammlung ungeprueft durch.
+     */
+    const KENNUNG = String.raw`(?:'\w+'|ids\.[A-Z]+\.\w+)`;
+    const zeilen = new RegExp(
+        String.raw`\[\s*${KENNUNG}\s*,\s*${STRING}\s*,\s*${STRING}\s*,\s*'(?:string|number|boolean)'`, 'g');
     for (const muster of [aufrufe, zeilen]) {
         for (const m of code.matchAll(muster)) gefunden.add(m[1].replace(/\\'/g, "'"));
     }
     return [...gefunden];
 }
 
+/*
+ * Die Namen der geraeteinternen Werte stehen in Tabellen, nicht in Aufrufen.
+ *
+ * lib/datenpunkte.js fuehrt die Beschriftungen als Nachschlagewerk (DEUTSCH je Feld,
+ * KANAL_NAMEN je Kanal) und reicht sie erst zur Laufzeit an namen.text weiter. Der Regelausdruck
+ * oben findet sie deshalb nicht - und ohne diese Ergaenzung waeren seit 0.3.37 rund vierzig
+ * Datenpunktnamen ungeprueft durchgerutscht, genau die Sorte Luecke, derentwegen es diesen Test
+ * gibt.
+ */
+function tabellenNamen() {
+    const dp = require('../lib/datenpunkte');
+    return [...Object.values(dp.DEUTSCH), ...Object.values(dp.KANAL_NAMEN).map(p => p[0])];
+}
+
 describe('Datenpunktnamen', () => {
-    const liste = deutscheNamen(quelltexte());
+    const liste = [...new Set([...deutscheNamen(quelltexte()), ...tabellenNamen()])];
 
     it('findet die Namen im Quelltext', () => {
         expect(liste.length).to.be.greaterThan(30);
