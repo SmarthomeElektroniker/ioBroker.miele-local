@@ -355,6 +355,15 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 
 [Ältere Einträge sind hier zu finden](CHANGELOG_OLD.md)
 
+## Danksagung
+
+Die Programm- und Phasentabellen in `lib/enums.js` und die Zuordnung der Gerätetypen stammen aus
+[Home Assistant](https://github.com/home-assistant/core) (Apache License 2.0, © Home Assistant
+Authors), übernommen über [ha-miele-at-lan](https://github.com/tiehfood/ha-miele-at-lan) (MIT, ©
+tiehfood) und abgeglichen mit
+[ioBroker.miele-unbound](https://github.com/meistermopper/ioBroker.miele-unbound) (MIT, ©
+meistermopper). Danke an alle drei Projekte.
+
 ## Lizenz
 
 MIT License - Copyright (c) 2026 Immanuel <github@freitag.online>

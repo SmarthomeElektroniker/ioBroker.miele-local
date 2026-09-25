@@ -237,6 +237,13 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	### **WORK IN PROGRESS**
 -->
 
+### 0.3.41
+
+- (SmarthomeElektroniker) Device types corrected: 16 is the microwave (was: steam oven combi), 67 the dialog oven (was: dish warmer, now 25), the washer-dryer (24) uses the washing machine programs, the oven with microwave (13) its own phases
+- (SmarthomeElektroniker) New device types: semi-professional/professional washers, dryers and dishwashers, robot vacuum (23), steam oven combi (31), steam oven with microwave (45, 418 programs), steam oven MK2 (73); dishwasher program 5 added
+- (SmarthomeElektroniker) Programs without a German name are shown readably ("Artichokes small") instead of as raw identifier
+- (SmarthomeElektroniker) Credits for the tables taken over from Home Assistant, ha-miele-at-lan and ioBroker.miele-unbound
+
 ### 0.3.40
 
 - (SmarthomeElektroniker) README: hints for a failing login (ad blocker), moving to another system and why mDNS may find nothing; clearer log message when no appliance is found (#12, thanks @meistermopper)
@@ -479,6 +486,15 @@ Most of the above was contributed by [meistermopper](https://github.com/meisterm
   First release under the new package name.
 
 [Older changelog entries can be found here](CHANGELOG_OLD.md)
+
+## Credits
+
+The program and phase tables in `lib/enums.js` and the mapping of device types to tables come
+from [Home Assistant](https://github.com/home-assistant/core) (Apache License 2.0, © Home Assistant
+Authors), taken over via [ha-miele-at-lan](https://github.com/tiehfood/ha-miele-at-lan) (MIT, ©
+tiehfood) and cross-checked against
+[ioBroker.miele-unbound](https://github.com/meistermopper/ioBroker.miele-unbound) (MIT, ©
+meistermopper). Thanks to all three projects.
 
 ## License
 

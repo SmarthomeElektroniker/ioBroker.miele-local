@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.40",
+    "version": "0.3.41",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.41": {
+        "en": "Device types corrected (16 microwave, 67 dialog oven, 25 dish warmer, washer-dryer uses washing machine programs); new types: robot vacuum, steam oven combi, steam oven with microwave (418 programs), professional appliances. Credits for tables from Home Assistant.",
+        "de": "Gerätetypen berichtigt (16 Mikrowelle, 67 Dialoggarer, 25 Wärmeschublade, Waschtrockner mit Waschmaschinenprogrammen); neue Typen: Saugroboter, Dampfbackofen, Dampfgarer mit Mikrowelle (418 Programme), Profi-Geräte. Danksagung für die Tabellen aus Home Assistant.",
+        "ru": "Исправлены типы устройств (16 микроволновка, 67 Dialog-печь, 25 подогреватель посуды, стирально-сушильная машина с программами стиральной машины); новые типы: робот-пылесос, пароконвектомат, пароварка с микроволновкой (418 программ), профессиональные приборы. Благодарность Home Assistant за таблицы.",
+        "pt": "Tipos de aparelho corrigidos (16 micro-ondas, 67 forno Dialog, 25 aquecedor de loiça, máquina de lavar e secar com programas de lavagem); novos tipos: aspirador robô, forno a vapor combinado, forno a vapor com micro-ondas (418 programas), aparelhos profissionais. Créditos pelas tabelas do Home Assistant.",
+        "nl": "Apparaattypes gecorrigeerd (16 magnetron, 67 Dialog-oven, 25 servieswarmer, was-droogcombinatie met wasmachineprogramma's); nieuwe types: robotstofzuiger, combi-stoomoven, stoomoven met magnetron (418 programma's), professionele apparaten. Dank aan Home Assistant voor de tabellen.",
+        "fr": "Types d'appareils corrigés (16 micro-ondes, 67 four Dialog, 25 chauffe-vaisselle, lave-linge séchant avec programmes de lave-linge) ; nouveaux types : aspirateur robot, four vapeur combiné, four vapeur avec micro-ondes (418 programmes), appareils professionnels. Remerciements à Home Assistant pour les tables.",
+        "it": "Tipi di apparecchio corretti (16 microonde, 67 forno Dialog, 25 scaldavivande, lavasciuga con programmi della lavatrice); nuovi tipi: robot aspirapolvere, forno a vapore combinato, forno a vapore con microonde (418 programmi), apparecchi professionali. Ringraziamenti a Home Assistant per le tabelle.",
+        "es": "Tipos de aparato corregidos (16 microondas, 67 horno Dialog, 25 calientaplatos, lavadora-secadora con programas de lavadora); nuevos tipos: robot aspirador, horno de vapor combinado, horno de vapor con microondas (418 programas), aparatos profesionales. Agradecimientos a Home Assistant por las tablas.",
+        "pl": "Poprawiono typy urządzeń (16 mikrofalówka, 67 piekarnik Dialog, 25 podgrzewacz naczyń, pralko-suszarka z programami pralki); nowe typy: robot sprzątający, piekarnik parowy kombi, piekarnik parowy z mikrofalą (418 programów), urządzenia profesjonalne. Podziękowania dla Home Assistant za tabele.",
+        "uk": "Виправлено типи пристроїв (16 мікрохвильова піч, 67 піч Dialog, 25 підігрівач посуду, прально-сушильна машина з програмами пральної машини); нові типи: робот-пилосос, комбі-пароварка, пароварка з мікрохвильовою піччю (418 програм), професійні прилади. Подяка Home Assistant за таблиці.",
+        "zh-cn": "修正设备类型（16 微波炉、67 Dialog 烤箱、25 暖碟机、洗干一体机使用洗衣机程序）；新增类型：扫地机器人、蒸烤箱、微波蒸箱（418 个程序）、专业设备。感谢 Home Assistant 提供的表格。"
+      },
       "0.3.40": {
         "en": "README: hints for a failing login (ad blocker), moving to another system and why mDNS may find nothing; clearer log message when no appliance is found (#12).",
         "de": "README: Hinweise bei scheiterndem Login (Werbeblocker), zum Umzug auf ein anderes System und warum mDNS nichts findet; deutlichere Logmeldung, wenn kein Gerät gefunden wird (#12).",
