@@ -227,6 +227,11 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	### **WORK IN PROGRESS**
 -->
 
+### 0.3.39
+
+- (SmarthomeElektroniker) Unknown program or phase IDs are now shown as "Programm 201" / "Phase 1234" instead of keeping the text of the previous program (#13)
+- (SmarthomeElektroniker) Dishwasher program IDs of the G7771 added (201, 206, 208, 211, 212, 213) (#13)
+
 ### 0.3.38
 - **Object IDs are now consistently English.** The diagnostics channel was named `sammlung`
   and carried German datapoint names throughout (`befund`, `fortschritt`, `datenJson`,

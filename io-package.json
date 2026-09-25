@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.38",
+    "version": "0.3.39",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.39": {
+        "en": "Unknown program or phase IDs are shown as \"Programm 201\" instead of keeping the text of the previous program. Dishwasher program IDs of the G7771 added (#13).",
+        "de": "Unbekannte Programm- oder Phasennummern erscheinen als „Programm 201“, statt den Text des vorigen Programms stehen zu lassen. Programmnummern des Geschirrspülers G7771 ergänzt (#13).",
+        "ru": "Неизвестные номера программ или фаз отображаются как «Programm 201», а не сохраняют текст предыдущей программы. Добавлены номера программ посудомоечной машины G7771 (#13).",
+        "pt": "IDs de programa ou fase desconhecidos aparecem como \"Programm 201\" em vez de manter o texto do programa anterior. Adicionados os IDs de programa da máquina de lavar loiça G7771 (#13).",
+        "nl": "Onbekende programma- of fasenummers verschijnen als \"Programm 201\" in plaats van de tekst van het vorige programma te laten staan. Programmanummers van de vaatwasser G7771 toegevoegd (#13).",
+        "fr": "Les numéros de programme ou de phase inconnus s'affichent comme « Programm 201 » au lieu de conserver le texte du programme précédent. Numéros de programme du lave-vaisselle G7771 ajoutés (#13).",
+        "it": "I numeri di programma o di fase sconosciuti vengono mostrati come \"Programm 201\" invece di mantenere il testo del programma precedente. Aggiunti i numeri di programma della lavastoviglie G7771 (#13).",
+        "es": "Los números de programa o fase desconocidos se muestran como \"Programm 201\" en lugar de conservar el texto del programa anterior. Añadidos los números de programa del lavavajillas G7771 (#13).",
+        "pl": "Nieznane numery programów lub faz są wyświetlane jako „Programm 201” zamiast pozostawiać tekst poprzedniego programu. Dodano numery programów zmywarki G7771 (#13).",
+        "uk": "Невідомі номери програм або фаз відображаються як «Programm 201», а не зберігають текст попередньої програми. Додано номери програм посудомийної машини G7771 (#13).",
+        "zh-cn": "未知的程序或阶段编号显示为“Programm 201”，不再保留上一个程序的文本。新增 G7771 洗碗机的程序编号 (#13)。"
+      },
       "0.3.38": {
         "en": "Object IDs are now consistently English: \"sammlung\" became \"collection\", \"befund\" became \"finding\", \"laufendSeit\" became \"runningSince\". On first start the adapter moves existing values to the new IDs; own scripts must follow suit, while recorded history stays under the old ID in the history adapter. Also since 0.3.5: water is read from the verified DOP2 field and taken from the appliance's own EcoFeedback first, device internals can be created as datapoints, a separate diagnostics tab with CSV export collects the raw fields, and the configurable intervals are capped at runtime.",
         "de": "Objekt-IDs jetzt durchgängig englisch: Aus \"sammlung\" wurde \"collection\", aus \"befund\" wurde \"finding\", aus \"laufendSeit\" wurde \"runningSince\". Beim ersten Start zieht der Adapter vorhandene Werte an die neuen IDs um; eigene Skripte müssen nachgezogen werden, aufgezeichnete Verläufe bleiben unter der alten ID im History-Adapter. Außerdem seit 0.3.5: Wasser kommt aus dem geprüften DOP2-Feld und vorrangig aus dem EcoFeedback des Geräts, geräteinterne Messwerte lassen sich als Datenpunkte anlegen, ein eigener Diagnose-Reiter mit CSV-Ausdruck sammelt die Rohfelder, und die einstellbaren Intervalle sind zur Laufzeit begrenzt.",
