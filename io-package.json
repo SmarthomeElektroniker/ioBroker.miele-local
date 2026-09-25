@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.39",
+    "version": "0.3.40",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.40": {
+        "en": "README: hints for a failing login (ad blocker), moving to another system and why mDNS may find nothing; clearer log message when no appliance is found (#12).",
+        "de": "README: Hinweise bei scheiterndem Login (Werbeblocker), zum Umzug auf ein anderes System und warum mDNS nichts findet; deutlichere Logmeldung, wenn kein Gerät gefunden wird (#12).",
+        "ru": "README: подсказки при неудачном входе (блокировщик рекламы), при переносе на другую систему и о том, почему mDNS ничего не находит; более понятное сообщение в журнале, если устройство не найдено (#12).",
+        "pt": "README: dicas para um login falhado (bloqueador de anúncios), para mudar para outro sistema e porque o mDNS pode não encontrar nada; mensagem de registo mais clara quando nenhum aparelho é encontrado (#12).",
+        "nl": "README: tips bij een mislukte login (adblocker), bij verhuizing naar een ander systeem en waarom mDNS niets vindt; duidelijkere logmelding als er geen apparaat wordt gevonden (#12).",
+        "fr": "README : conseils en cas d'échec de connexion (bloqueur de publicités), pour migrer vers un autre système et pourquoi mDNS ne trouve rien ; message de journal plus clair lorsqu'aucun appareil n'est trouvé (#12).",
+        "it": "README: suggerimenti per un login non riuscito (blocco pubblicità), per il trasferimento su un altro sistema e perché mDNS non trova nulla; messaggio di log più chiaro quando non viene trovato alcun apparecchio (#12).",
+        "es": "README: consejos para un inicio de sesión fallido (bloqueador de anuncios), para migrar a otro sistema y por qué mDNS no encuentra nada; mensaje de registro más claro cuando no se encuentra ningún aparato (#12).",
+        "pl": "README: wskazówki przy nieudanym logowaniu (bloker reklam), przy przenoszeniu na inny system i dlaczego mDNS nic nie znajduje; czytelniejszy komunikat w dzienniku, gdy nie znaleziono urządzenia (#12).",
+        "uk": "README: підказки при невдалому вході (блокувальник реклами), при перенесенні на іншу систему та чому mDNS нічого не знаходить; зрозуміліше повідомлення в журналі, якщо пристрій не знайдено (#12).",
+        "zh-cn": "README：登录失败（广告拦截器）、迁移到其他系统以及 mDNS 找不到设备原因的提示；未找到设备时日志信息更清晰 (#12)。"
+      },
       "0.3.39": {
         "en": "Unknown program or phase IDs are shown as \"Programm 201\" instead of keeping the text of the previous program. Dishwasher program IDs of the G7771 added (#13).",
         "de": "Unbekannte Programm- oder Phasennummern erscheinen als „Programm 201“, statt den Text des vorigen Programms stehen zu lassen. Programmnummern des Geschirrspülers G7771 ergänzt (#13).",

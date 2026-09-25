@@ -49,6 +49,15 @@ selbst aus dem Browser heraus.
 GroupID und GroupKey stehen danach in der Instanzkonfiguration, der Schlüssel verschlüsselt.
 Diese Prozedur braucht man nie wieder.
 
+**Anmeldung scheitert mit `invalid_request … unknown contextId`?** Mieles Anmeldedienst wechselt
+beim Login zwischen zwei Domains und verliert die Sitzung, wenn ein Werbeblocker oder ein strenger
+Schutz vor Drittanbieter-Cookies dazwischenfunkt. Die Login-Seite dann in einem privaten Fenster
+ohne Erweiterungen öffnen.
+
+**Umzug auf ein anderes System.** GroupID und GroupKey ändern sich nie. Eine Sicherung der
+ioBroker-Konfiguration (etwa mit BackItUp) nimmt sie mit; auf einem frischen System dauert der
+Login erneut zwei Minuten. Die Admin-Seite zeigt den Schlüssel nur als Platzhalter.
+
 ## Was dabei herauskommt
 
 Jedes Gerät wird ein Objekt mit seiner Seriennummer als Kennung. Darunter:
@@ -125,7 +134,9 @@ Jedes Feld trägt seine Erklärung im Admin direkt unter sich; diese Seite wiede
 | ausgehend | TCP 443 → miele-iot.com | GroupKey abrufen | nur bei der Anmeldung |
 
 Ohne Push ist **kein eingehender Port** nötig. Für mDNS müssen ioBroker und die Geräte im selben
-Broadcast-Segment liegen.
+Broadcast-Segment liegen. Getrennte IoT-WLANs oder VLANs, Firewalls (auch die Windows-Firewall auf
+einem Testrechner) und Router, die Multicast filtern, verhindern die Suche genauso. In all diesen
+Fällen ist die manuelle IP-Liste der verlässliche Weg.
 
 **Docker.** In einem Container mit Bridge-Netz wird Multicast nicht weitergereicht, die Suche
 findet also nichts – die IP-Adressen von Hand eintragen, das Abfragen läuft dann normal. Push
