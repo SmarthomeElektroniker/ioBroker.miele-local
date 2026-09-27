@@ -237,6 +237,11 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	### **WORK IN PROGRESS**
 -->
 
+### 0.3.42
+
+- (SmarthomeElektroniker) All program phases have German names now, a new test keeps it that way; status codes 144 (default) and 145 (locked) added. Translations and test idea by @meistermopper (#14)
+- (SmarthomeElektroniker) Tumble dryer phases no longer point at the washing machine phase table (no visible change, the numbers never overlapped)
+
 ### 0.3.41
 
 - (SmarthomeElektroniker) Device types corrected: 16 is the microwave (was: steam oven combi), 67 the dialog oven (was: dish warmer, now 25), the washer-dryer (24) uses the washing machine programs, the oven with microwave (13) its own phases

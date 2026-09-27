@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.41",
+    "version": "0.3.42",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.42": {
+        "en": "All program phases now have German names; status codes 144 (default) and 145 (locked) added. Translations and test idea by meistermopper (#14).",
+        "de": "Alle Programmphasen haben jetzt deutsche Namen; Statuswerte 144 (Standard) und 145 (Gesperrt) ergänzt. Übersetzungen und Testidee von meistermopper (#14).",
+        "ru": "Все фазы программ теперь имеют немецкие названия; добавлены коды состояния 144 (стандарт) и 145 (заблокировано). Переводы и идея теста от meistermopper (#14).",
+        "pt": "Todas as fases de programa têm agora nomes em alemão; adicionados os estados 144 (padrão) e 145 (bloqueado). Traduções e ideia de teste de meistermopper (#14).",
+        "nl": "Alle programmafasen hebben nu Duitse namen; statuscodes 144 (standaard) en 145 (vergrendeld) toegevoegd. Vertalingen en testidee van meistermopper (#14).",
+        "fr": "Toutes les phases de programme ont désormais des noms allemands ; codes d'état 144 (par défaut) et 145 (verrouillé) ajoutés. Traductions et idée de test par meistermopper (#14).",
+        "it": "Tutte le fasi del programma hanno ora nomi tedeschi; aggiunti i codici di stato 144 (predefinito) e 145 (bloccato). Traduzioni e idea del test di meistermopper (#14).",
+        "es": "Todas las fases de programa tienen ahora nombres en alemán; añadidos los estados 144 (predeterminado) y 145 (bloqueado). Traducciones e idea de prueba de meistermopper (#14).",
+        "pl": "Wszystkie fazy programów mają teraz niemieckie nazwy; dodano kody stanu 144 (domyślny) i 145 (zablokowany). Tłumaczenia i pomysł testu od meistermopper (#14).",
+        "uk": "Усі фази програм тепер мають німецькі назви; додано коди стану 144 (стандарт) і 145 (заблоковано). Переклади та ідея тесту від meistermopper (#14).",
+        "zh-cn": "所有程序阶段现已有德语名称；新增状态码 144（默认）和 145（锁定）。翻译和测试思路来自 meistermopper (#14)。"
+      },
       "0.3.41": {
         "en": "Device types corrected (16 microwave, 67 dialog oven, 25 dish warmer, washer-dryer uses washing machine programs); new types: robot vacuum, steam oven combi, steam oven with microwave (418 programs), professional appliances. Credits for tables from Home Assistant.",
         "de": "Gerätetypen berichtigt (16 Mikrowelle, 67 Dialoggarer, 25 Wärmeschublade, Waschtrockner mit Waschmaschinenprogrammen); neue Typen: Saugroboter, Dampfbackofen, Dampfgarer mit Mikrowelle (418 Programme), Profi-Geräte. Danksagung für die Tabellen aus Home Assistant.",
