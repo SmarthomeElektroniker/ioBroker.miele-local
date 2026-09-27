@@ -177,13 +177,13 @@ evaluated ones.
 **Data collection.** Records one dataset per completed programme — model, programme, all raw
 fields, and at the end the final state of every answering leaf. To turn that into a mapping the
 adapter needs a reference value: either from a cloud adapter, or entered by hand into
-`sammlung.eingabeEnergie` and `sammlung.eingabeWasser` after a programme. `sammlung.fortschritt`
-says what is still missing, `sammlung.befund` holds the result: which field fits, with which
+`collection.inputEnergy` and `collection.inputWater` after a programme. `collection.progress`
+says what is still missing, `collection.finding` holds the result: which field fits, with which
 divisor, and how closely.
 
 **Leaf scan.** DOP2 addresses data as `unit/attribute`, and only a handful of those addresses are
 documented anywhere. The scan works through the address space gently enough not to overwhelm the
-module; `sammlung.leafScanJson` collects what answered. `sammlung.leafVerlaufFein` records a
+module; `collection.scanJson` collects what answered. `collection.trendLeaf` records a
 single leaf closely while a programme runs — the field whose value grows with consumption is the
 one you are looking for.
 
@@ -236,6 +236,13 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+
+### 0.3.43
+
+- (SmarthomeElektroniker) All log messages are English now; diagnostic texts in states (`finding`, `check`, `progress`, `scanState`, `trendSize`), error messages and the CSV export too (review 2026-09-27)
+- (SmarthomeElektroniker) Admin UI: all texts use English i18n keys; the diagnostics tab is translated into all 11 languages
+- (SmarthomeElektroniker) README: diagnostics section uses the current English state IDs
+- (SmarthomeElektroniker) `@iobroker/testing` 6.2.2; `common.news` limited to 7 entries
 
 ### 0.3.42
 

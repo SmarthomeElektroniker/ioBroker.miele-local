@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.3.42",
+    "version": "0.3.43",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.3.43": {
+        "en": "All log messages, diagnostic texts in states, error messages and the CSV export are English now; the admin UI uses English i18n keys and the diagnostics tab is translated into all 11 languages.",
+        "de": "Alle Logmeldungen, Diagnosetexte in Datenpunkten, Fehlermeldungen und der CSV-Export sind jetzt englisch; die Admin-Oberfläche nutzt englische i18n-Schlüssel, der Diagnose-Reiter ist in alle 11 Sprachen übersetzt.",
+        "ru": "Все сообщения журнала, диагностические тексты в состояниях, сообщения об ошибках и экспорт CSV теперь на английском; интерфейс администратора использует английские ключи i18n, вкладка диагностики переведена на все 11 языков.",
+        "pt": "Todas as mensagens de registo, textos de diagnóstico nos estados, mensagens de erro e a exportação CSV estão agora em inglês; a interface de administração usa chaves i18n em inglês e o separador de diagnóstico está traduzido para as 11 línguas.",
+        "nl": "Alle logmeldingen, diagnoseteksten in states, foutmeldingen en de CSV-export zijn nu Engels; de beheerinterface gebruikt Engelse i18n-sleutels en het diagnosetabblad is in alle 11 talen vertaald.",
+        "fr": "Tous les messages de journal, textes de diagnostic dans les états, messages d'erreur et l'export CSV sont désormais en anglais ; l'interface d'administration utilise des clés i18n anglaises et l'onglet de diagnostic est traduit dans les 11 langues.",
+        "it": "Tutti i messaggi di log, i testi diagnostici negli stati, i messaggi di errore e l'esportazione CSV sono ora in inglese; l'interfaccia di amministrazione usa chiavi i18n inglesi e la scheda di diagnostica è tradotta in tutte le 11 lingue.",
+        "es": "Todos los mensajes de registro, textos de diagnóstico en los estados, mensajes de error y la exportación CSV están ahora en inglés; la interfaz de administración usa claves i18n en inglés y la pestaña de diagnóstico está traducida a los 11 idiomas.",
+        "pl": "Wszystkie komunikaty dziennika, teksty diagnostyczne w stanach, komunikaty o błędach i eksport CSV są teraz po angielsku; interfejs administratora używa angielskich kluczy i18n, a zakładka diagnostyki jest przetłumaczona na wszystkie 11 języków.",
+        "uk": "Усі повідомлення журналу, діагностичні тексти в станах, повідомлення про помилки та експорт CSV тепер англійською; інтерфейс адміністратора використовує англійські ключі i18n, вкладку діагностики перекладено всіма 11 мовами.",
+        "zh-cn": "所有日志消息、状态中的诊断文本、错误消息和 CSV 导出现均为英文；管理界面使用英文 i18n 键，诊断选项卡已翻译成全部 11 种语言。"
+      },
       "0.3.42": {
         "en": "All program phases now have German names; status codes 144 (default) and 145 (locked) added. Translations and test idea by meistermopper (#14).",
         "de": "Alle Programmphasen haben jetzt deutsche Namen; Statuswerte 144 (Standard) und 145 (Gesperrt) ergänzt. Übersetzungen und Testidee von meistermopper (#14).",
@@ -129,45 +142,6 @@
         "pl": "Poprawka: stan urządzenia nie przełącza się już na „wyłączone” w trakcie trwającego programu, a pozostały czas jest odczytywany z właściwego pola. Zamrożone wartości EcoFeedback nie są już księgowane jako zużycie, zapytania są szeregowane dla każdego urządzenia, a cykl przetrwa ponowne uruchomienie adaptera. EcoFeedback jest odpytywany tylko wtedy, gdy urządzenie faktycznie pracuje. Instrukcje logowania i nazwy punktów danych przetłumaczono na wszystkie obsługiwane języki.",
         "uk": "Виправлено: під час роботи програми статус приладу більше не перемикається на «вимк.», а час, що залишився, зчитується з правильного поля. Застиглі значення EcoFeedback більше не враховуються як споживання, запити до кожного приладу виконуються послідовно, а цикл зберігається після перезапуску адаптера. EcoFeedback запитується лише тоді, коли прилад справді працює. Інструкції з входу та назви точок даних перекладено всіма підтримуваними мовами.",
         "zh-cn": "修复：程序运行期间设备状态不再跳变为“关闭”，剩余时间从正确的字段读取。冻结的 EcoFeedback 数值不再计为能耗，每台设备的请求按顺序处理，程序周期可在适配器重启后保留。仅在设备实际运行时才请求 EcoFeedback。登录说明和数据点名称已翻译为所有支持的语言。"
-      },
-      "0.3.3": {
-        "en": "Fix object structure errors reported by the repository checker",
-        "de": "Beanstandungen des Objektstruktur-Pruefers behoben",
-        "ru": "Исправлены замечания проверки структуры объектов",
-        "pt": "Corrigidos erros de estrutura de objetos",
-        "nl": "Door de repository-checker gemelde fouten in de objectstructuur verholpen",
-        "fr": "Corrections des erreurs de structure d objets",
-        "it": "Corretti errori di struttura degli oggetti",
-        "es": "Corregidos errores de estructura de objetos",
-        "pl": "Naprawiono błędy struktury obiektów zgłoszone przez narzędzie sprawdzające repozytorium",
-        "uk": "Виправлено помилки структури об'єктів, про які повідомив перевіряльник репозиторію",
-        "zh-cn": "修复对象结构检查报告的错误"
-      },
-      "0.2.1": {
-        "en": "Released via GitHub Actions with npm provenance (trusted publishing). No functional changes.",
-        "de": "Veröffentlichung über GitHub Actions mit npm-Provenance (Trusted Publishing). Keine funktionalen Änderungen.",
-        "ru": "Выпуск через GitHub Actions с npm-provenance (trusted publishing). Функциональных изменений нет.",
-        "pt": "Publicado via GitHub Actions com proveniência npm (trusted publishing). Sem alterações funcionais.",
-        "nl": "Uitgebracht via GitHub Actions met npm-provenance (trusted publishing). Geen functionele wijzigingen.",
-        "fr": "Publié via GitHub Actions avec provenance npm (trusted publishing). Aucun changement fonctionnel.",
-        "it": "Pubblicato tramite GitHub Actions con provenance npm (trusted publishing). Nessuna modifica funzionale.",
-        "es": "Publicado mediante GitHub Actions con procedencia npm (trusted publishing). Sin cambios funcionales.",
-        "pl": "Opublikowano przez GitHub Actions z npm provenance (trusted publishing). Bez zmian funkcjonalnych.",
-        "uk": "Випуск через GitHub Actions з npm-provenance (trusted publishing). Функціональних змін немає.",
-        "zh-cn": "通过 GitHub Actions 发布并带有 npm provenance（可信发布）。无功能变更。"
-      },
-      "0.2.0": {
-        "en": "Renamed from miele-lokal to miele-local: English adapter name and title.",
-        "de": "Umbenennung von miele-lokal in miele-local: englischer Adaptername und Titel.",
-        "ru": "Переименование miele-lokal в miele-local: английское имя и заголовок адаптера.",
-        "pt": "Renomeado de miele-lokal para miele-local: nome e título do adaptador em inglês.",
-        "nl": "Hernoemd van miele-lokal naar miele-local: Engelse adapternaam en titel.",
-        "fr": "Renommé de miele-lokal en miele-local : nom et titre de l'adaptateur en anglais.",
-        "it": "Rinominato da miele-lokal a miele-local: nome e titolo adattatore in inglese.",
-        "es": "Renombrado de miele-lokal a miele-local: nombre y título del adaptador en inglés.",
-        "pl": "Zmiana nazwy z miele-lokal na miele-local: angielska nazwa i tytuł adaptera.",
-        "uk": "Перейменовано з miele-lokal на miele-local: англійська назва та заголовок адаптера.",
-        "zh-cn": "从 miele-lokal 重命名为 miele-local：英文适配器名称和标题。"
       }
     },
     "mode": "daemon",

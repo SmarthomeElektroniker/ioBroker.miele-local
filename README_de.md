@@ -182,14 +182,14 @@ ausgewerteten.
 **Datensammlung.** Legt je abgeschlossenem Programm einen Datensatz an – Modell, Programm, alle
 Rohfelder und am Ende den Schlussstand jedes antwortenden Leafs. Damit daraus eine Zuordnung
 wird, braucht der Adapter einen Vergleichswert: entweder aus einem Cloud-Adapter oder nach jedem
-Programm von Hand in `sammlung.eingabeEnergie` und `sammlung.eingabeWasser` eingetragen. In
-`sammlung.fortschritt` steht, was noch fehlt; in `sammlung.befund` das Ergebnis: welches Feld
+Programm von Hand in `collection.inputEnergy` und `collection.inputWater` eingetragen. In
+`collection.progress` steht, was noch fehlt; in `collection.finding` das Ergebnis: welches Feld
 passt, mit welchem Teiler und wie genau.
 
 **Leaf-Suche.** DOP2 adressiert Daten als `Unit/Attribut`, und nur eine Handvoll dieser Adressen
 ist überhaupt irgendwo dokumentiert. Die Suche arbeitet den Adressraum schonend genug ab, um das
-Modul nicht zu überlasten; in `sammlung.leafScanJson` sammelt sich, was geantwortet hat. Mit
-`sammlung.leafVerlaufFein` lässt sich ein einzelnes Leaf während eines laufenden Programms
+Modul nicht zu überlasten; in `collection.scanJson` sammelt sich, was geantwortet hat. Mit
+`collection.trendLeaf` lässt sich ein einzelnes Leaf während eines laufenden Programms
 engmaschig mitschreiben – das Feld, dessen Wert mit dem Verbrauch mitwächst, ist das gesuchte.
 
 **CSV-Ausdruck.** Der Knopf im Diagnose-Reiter legt zwei Tabellen im Dateibereich der Instanz ab

@@ -458,21 +458,21 @@ class MieleLocal extends utils.Adapter {
             const seitLetztem = Date.now() - (this.letzterScan || 0);
             if (vermisst.length && seitLetztem < 30 * 60 * 1000) {
                 this.log.debug(
-                    `${vermisst.length} Gerät(e) nicht erreichbar, letzter Subnetz-Scan ` +
-                        `vor ${Math.round(seitLetztem / 60000)} min - warte noch`,
+                    `${vermisst.length} device(s) not reachable, last subnet scan ` +
+                        `${Math.round(seitLetztem / 60000)} min ago - waiting`,
                 );
             } else if (vermisst.length) {
                 this.letzterScan = Date.now();
                 this.log.info(
-                    `${vermisst.length} konfigurierte(s) Gerät(e) antworten nicht ` +
-                        `(${vermisst.join(', ')}) - suche im Subnetz nach der neuen Adresse`,
+                    `${vermisst.length} configured device(s) not responding ` +
+                        `(${vermisst.join(', ')}) - searching the subnet for the new address`,
                 );
                 const imNetz = await scanSubnet(konfigurierte[0], m => this.log.info(m));
                 for (const ip of imNetz) {
                     if (!seenIp.has(ip)) {
                         found.push({ ip, techType: '', deviceType: null });
                         seenIp.add(ip);
-                        this.log.info(`Neue Adresse gefunden: ${ip}`);
+                        this.log.info(`New address found: ${ip}`);
                     }
                 }
             }
@@ -627,7 +627,7 @@ class MieleLocal extends utils.Adapter {
                 await this.delObjectAsync(alt);
                 umgezogen++;
             } catch (e) {
-                this.log.warn(`${deviceId}: ${alt} liess sich nicht nach ${neu} umziehen - ${e.message}`);
+                this.log.warn(`${deviceId}: could not move ${alt} to ${neu} - ${e.message}`);
             }
         }
         if (!umgezogen) {
@@ -640,9 +640,9 @@ class MieleLocal extends utils.Adapter {
             /* war nie da oder traegt noch etwas */
         }
         this.log.info(
-            `${deviceId}: ${umgezogen} Datenpunkte auf englische IDs umgezogen ` +
-                '(aus "sammlung" wurde "collection"). Die alten Punkte sind entfernt; ' +
-                'aufgezeichnete Verlaeufe bleiben im History-Adapter unter der alten ID stehen.',
+            `${deviceId}: moved ${umgezogen} states to English IDs ` +
+                '("sammlung" became "collection"). The old states are removed; ' +
+                'recorded history stays in the history adapter under the old ID.',
         );
     }
 
@@ -853,16 +853,16 @@ class MieleLocal extends utils.Adapter {
         const verstrichen = Date.now() - seit;
         if (restMin > 2 && verstrichen < MieleLocal.AUS_VERDACHT_MAX_MS) {
             this.log.info(
-                `${deviceId}: Status ${vorher} (laeuft) -> 1 (Aus) bei ${restMin} min ` +
-                    `Restzeit - verworfen (seit ${Math.round(verstrichen / 1000)} s)`,
+                `${deviceId}: status ${vorher} (running) -> 1 (off) with ${restMin} min ` +
+                    `remaining - ignored (for ${Math.round(verstrichen / 1000)} s)`,
             );
             return false;
         }
         delete this._statusVerdacht[deviceId];
         if (restMin > 2) {
             this.log.warn(
-                `${deviceId}: meldet seit ${Math.round(verstrichen / 1000)} s "Aus", obwohl noch ` +
-                    `${restMin} min Restzeit gemeldet waren - wird jetzt uebernommen`,
+                `${deviceId}: reports "off" for ${Math.round(verstrichen / 1000)} s although ` +
+                    `${restMin} min were still remaining - accepting it now`,
             );
         }
         return true;
@@ -970,8 +970,8 @@ class MieleLocal extends utils.Adapter {
                 dev.ecoNachlaufBis = Date.now() + ecoRegel.NACHLAUF_MS;
                 dev.ecoStabil = 0;
                 this.log.debug(
-                    `Eco ${deviceId}: Programm beendet, Nachlauf bis ` +
-                        `${new Date(dev.ecoNachlaufBis).toLocaleTimeString('de-DE')}`,
+                    `Eco ${deviceId}: program finished, follow-up reading until ` +
+                        `${new Date(dev.ecoNachlaufBis).toLocaleTimeString()}`,
                 );
                 this.ecoSchlussstandHolen(deviceId);
             }
@@ -1048,9 +1048,7 @@ class MieleLocal extends utils.Adapter {
                 offen = this._cycles[deviceId];
                 await this.ensureHistoryObjects(deviceId);
                 await this.setStateAsync(ids.h(deviceId, 'runningSince'), { val: start, ack: true });
-                this.log.debug(
-                    `Zyklus von ${deviceId} fortgesetzt ` + `(laeuft seit ${new Date(start).toLocaleString()})`,
-                );
+                this.log.debug(`Cycle of ${deviceId} resumed ` + `(running since ${new Date(start).toLocaleString()})`);
             }
         }
 
@@ -1178,8 +1176,7 @@ class MieleLocal extends utils.Adapter {
             }
             if (vorher != null && wert === vorher) {
                 this.log.debug(
-                    `${deviceId}: ${id.split('.').pop()} steht unveraendert auf ${wert} ` +
-                        '- nicht als Zyklusverbrauch uebernommen',
+                    `${deviceId}: ${id.split('.').pop()} unchanged at ${wert} ` + '- not taken as cycle consumption',
                 );
                 return null;
             }
@@ -1236,7 +1233,7 @@ class MieleLocal extends utils.Adapter {
         if (!bewertung.vollstaendig) {
             eintrag.unvollstaendig = { waterL: bewertung.grund };
             this.log.info(
-                `${deviceId}: Wasserwert ${eintrag.waterL} l wird nicht als Endwert ` + `gewertet - ${bewertung.grund}`,
+                `${deviceId}: water value ${eintrag.waterL} l not taken as final value ` + `- ${bewertung.grund}`,
             );
         }
         // Fuer den naechsten Lauf zuruecksetzen, sonst erbt er die Ablesung dieses Programms.
@@ -1259,7 +1256,7 @@ class MieleLocal extends utils.Adapter {
                 ack: true,
             });
             this.log.info(
-                `${deviceId}: gemessener Verbrauch ${eintrag.gemessenWh} Wh ` + `(${eintrag.program || 'Programm'})`,
+                `${deviceId}: measured consumption ${eintrag.gemessenWh} Wh ` + `(${eintrag.program || 'program'})`,
             );
         }
     }
@@ -1294,7 +1291,7 @@ class MieleLocal extends utils.Adapter {
             const st = await this.getForeignStateAsync(dp);
             return st && typeof st.val === 'number' ? st.val : null;
         } catch (e) {
-            this.log.debug(`${deviceId}: Zaehler ${dp} nicht lesbar - ${e.message}`);
+            this.log.debug(`${deviceId}: meter ${dp} not readable - ${e.message}`);
             return null;
         }
     }
@@ -1404,7 +1401,7 @@ class MieleLocal extends utils.Adapter {
              * Verlauf und Push-Meldung.
              */
             this.leafsAbschlussNachtragen(deviceId).catch(e =>
-                this.log.debug(`${deviceId}: Leaf-Schlussstand - ${e.message}`),
+                this.log.debug(`${deviceId}: final leaf reading - ${e.message}`),
             );
 
             /*
@@ -1466,15 +1463,15 @@ class MieleLocal extends utils.Adapter {
                 }
             }
 
-            this.log.info(`${deviceId}: Datensatz fuer die Feldzuordnung aufgenommen ` + `(${neu.length} gesammelt)`);
+            this.log.info(`${deviceId}: record for the field mapping added ` + `(${neu.length} collected)`);
             // Ins Log nur, wenn die Suche der Einstellung widerspricht - sonst waere es
             // bei jedem Waschgang dieselbe Zeile.
-            if (/eingestellt ist aber/.test(befund)) {
+            if (/ is configured/.test(befund)) {
                 this.log.warn(`${deviceId}: ${befund}`);
             }
         } catch (e) {
             // Die Sammlung darf den Zyklus nie stoeren - sie ist eine Zugabe, kein Kernstueck.
-            this.log.warn(`${deviceId}: Datensatz konnte nicht aufgenommen werden - ${e.message}`);
+            this.log.warn(`${deviceId}: record could not be added - ${e.message}`);
         }
     }
 
@@ -1595,7 +1592,7 @@ class MieleLocal extends utils.Adapter {
         }
         const neu = sammler.leafsNachtragen(bisher, leafs);
         await this.setStateAsync(ids.s(deviceId, 'records'), { val: JSON.stringify(neu), ack: true });
-        this.log.debug(`${deviceId}: Schlussstand von ${Object.keys(leafs).length} Leafs nachgetragen.`);
+        this.log.debug(`${deviceId}: final reading of ${Object.keys(leafs).length} leafs added.`);
     }
 
     async cloudWerteLesen(deviceId) {
@@ -2269,18 +2266,16 @@ class MieleLocal extends utils.Adapter {
 
         if (soll && !dev.ecoEndspurtTimer) {
             this.log.debug(
-                `Eco ${deviceId}: Endspurt - noch ${restMin} min, ` +
-                    `Ablesung jetzt alle ${ecoRegel.ENDSPURT_TAKT_MS / 1000} s`,
+                `Eco ${deviceId}: final phase - ${restMin} min left, ` +
+                    `reading every ${ecoRegel.ENDSPURT_TAKT_MS / 1000} s now`,
             );
             dev.ecoEndspurtTimer = this.setInterval(() => {
-                this.pollEco().catch(e =>
-                    this.log.debug(`Eco ${deviceId}: Endspurt-Ablesung fehlgeschlagen - ${e.message}`),
-                );
+                this.pollEco().catch(e => this.log.debug(`Eco ${deviceId}: final-phase reading failed - ${e.message}`));
             }, ecoRegel.ENDSPURT_TAKT_MS);
         } else if (!soll && dev.ecoEndspurtTimer) {
             this.clearInterval(dev.ecoEndspurtTimer);
             dev.ecoEndspurtTimer = null;
-            this.log.debug(`Eco ${deviceId}: Endspurt beendet`);
+            this.log.debug(`Eco ${deviceId}: final phase ended`);
         }
     }
 
@@ -2297,8 +2292,8 @@ class MieleLocal extends utils.Adapter {
                 if (!dev.ecoNachlaufBis) {
                     return;
                 }
-                this.log.debug(`Eco ${deviceId}: Schlussstand-Versuch ${i + 1} von ${abstaende.length}`);
-                this.pollEco().catch(e => this.log.debug(`Eco ${deviceId}: Versuch fehlgeschlagen - ${e.message}`));
+                this.log.debug(`Eco ${deviceId}: final reading attempt ${i + 1} of ${abstaende.length}`);
+                this.pollEco().catch(e => this.log.debug(`Eco ${deviceId}: attempt failed - ${e.message}`));
                 if (i === abstaende.length - 1) {
                     dev.ecoSchlussLaeuft = false;
                 }
@@ -2336,8 +2331,8 @@ class MieleLocal extends utils.Adapter {
                     this._kontextAbsagen[deviceId] = (this._kontextAbsagen[deviceId] || 0) + 1;
                     if (this._kontextAbsagen[deviceId] >= MieleLocal.ECO_ABSAGEN_MAX) {
                         this.log.debug(
-                            `Eco ${deviceId}: Dieses Modell fuehrt kein eigenes ` +
-                                'EcoFeedback (2/1585), der Durchflusszaehler bleibt die Quelle.',
+                            `Eco ${deviceId}: this model has no own ` +
+                                'EcoFeedback (2/1585), the flow meter remains the source.',
                         );
                     }
                 }
@@ -2400,7 +2395,7 @@ class MieleLocal extends utils.Adapter {
                     if (MieleLocal.kenntLeafNicht(res.status)) {
                         this._ecoAbsagen[deviceId] = (this._ecoAbsagen[deviceId] || 0) + 1;
                         if (this._ecoAbsagen[deviceId] >= MieleLocal.ECO_ABSAGEN_MAX) {
-                            schluss = ' - dieses Modell führt kein EcoFeedback, wird nicht mehr abgefragt';
+                            schluss = ' - this model has no EcoFeedback, no longer queried';
                             await this.removeEcoObjects(deviceId);
                         }
                     }
@@ -2631,7 +2626,7 @@ class MieleLocal extends utils.Adapter {
             const vorher = dev.ecoNachlaufBis;
             Object.assign(dev, ecoRegel.nachlaufFortschreiben(dev, `${eco.energyWh}/${eco.waterL}`));
             if (vorher && !dev.ecoNachlaufBis) {
-                this.log.debug(`Eco ${deviceId}: Schlussstand steht (${dev.ecoLetzter}), Nachlauf beendet`);
+                this.log.debug(`Eco ${deviceId}: final reading settled (${dev.ecoLetzter}), follow-up ended`);
             }
         }
     }
@@ -2664,13 +2659,13 @@ class MieleLocal extends utils.Adapter {
                 const state = await this.getStateAsync(id);
                 // Ein Wert ungleich 0 heißt: das Gerät konnte es doch einmal. Dann nichts löschen.
                 if (state && state.val) {
-                    this.log.debug(`Eco ${deviceId}: ${sub} hat Werte, bleibt erhalten`);
+                    this.log.debug(`Eco ${deviceId}: ${sub} has values, kept`);
                     continue;
                 }
                 await this.delObjectAsync(id);
-                this.log.debug(`Eco ${deviceId}: leeren Datenpunkt ${sub} entfernt`);
+                this.log.debug(`Eco ${deviceId}: removed empty state ${sub}`);
             } catch (e) {
-                this.log.debug(`Eco ${deviceId}: ${sub} nicht entfernt (${e.message})`);
+                this.log.debug(`Eco ${deviceId}: ${sub} not removed (${e.message})`);
             }
         }
         try {
@@ -2680,7 +2675,7 @@ class MieleLocal extends utils.Adapter {
                 await this.delObjectAsync(`${deviceId}.eco`);
             }
         } catch (e) {
-            this.log.debug(`Eco ${deviceId}: Kanal nicht entfernt (${e.message})`);
+            this.log.debug(`Eco ${deviceId}: channel not removed (${e.message})`);
         }
     }
 
@@ -2907,14 +2902,14 @@ class MieleLocal extends utils.Adapter {
             return;
         }
         if (!liste.length) {
-            this.log.warn(`${deviceId}: Handeingabe ohne Datensatz - erst ein Programm abwarten`);
+            this.log.warn(`${deviceId}: manual input without a record - wait for a program first`);
             return;
         }
         const werte = feld === ids.SAMMLUNG.inputEnergy ? { energyKwh: wert } : { waterL: wert };
         const neu = sammler.manuellNachtragen(liste, werte);
         await this.setStateAsync(ids.s(deviceId, 'records'), { val: JSON.stringify(neu), ack: true });
         await this.setStateAsync(ids.s(deviceId, 'progress'), { val: sammler.fortschritt(neu), ack: true });
-        this.log.info(`${deviceId}: Handeingabe uebernommen (${feld} = ${wert})`);
+        this.log.info(`${deviceId}: manual input accepted (${feld} = ${wert})`);
     }
 
     async ensureEcoObjects(deviceId) {
@@ -2971,15 +2966,15 @@ class MieleLocal extends utils.Adapter {
                         }
                         this._hoursUnbekannt[deviceId] = true;
                         this.log.debug(
-                            `Betriebsstunden ${deviceId}: Leaf 2/119 unbekannt ` +
-                                `(HTTP ${res.status}), wird nicht mehr abgefragt`,
+                            `Operating hours ${deviceId}: leaf 2/119 unknown ` +
+                                `(HTTP ${res.status}), no longer queried`,
                         );
                     }
                     continue;
                 }
                 ({ fields } = dop2.parseLeaf(this.mc.decryptResponse(res.headers['x-signature'], res.body)));
             } catch (e) {
-                this.log.debug(`Betriebsstunden ${deviceId}: ${e.message}`);
+                this.log.debug(`Operating hours ${deviceId}: ${e.message}`);
                 continue;
             }
             await this.geraeteWerteSchreiben(deviceId, `${HOURS_LEAF.unit}/${HOURS_LEAF.attr}`, fields);
@@ -3017,7 +3012,7 @@ class MieleLocal extends utils.Adapter {
                 native: {},
             });
             await this.setStateAsync(`${deviceId}.info.operatingHours`, { val: stunden, ack: true });
-            this.log.debug(`Betriebsstunden ${deviceId}: ${roh} min = ${stunden} h`);
+            this.log.debug(`Operating hours ${deviceId}: ${roh} min = ${stunden} h`);
         }
     }
 
@@ -3164,7 +3159,7 @@ class MieleLocal extends utils.Adapter {
                 } catch (e) {
                     fehler = e;
                     if (versuch === 1) {
-                        this.log.debug(`Polling ${deviceId} failed: ${e.message} - zweiter Versuch`);
+                        this.log.debug(`Polling ${deviceId} failed: ${e.message} - second attempt`);
                         wiederholt = true;
                         await new Promise(r => this.setTimeout(r, MieleLocal.RETRY_PAUSE_MS));
                     } else {
@@ -3253,9 +3248,9 @@ class MieleLocal extends utils.Adapter {
 
         if (this._kontrollTaub[deviceId] === KONTROLLE_TAUB_MAX) {
             this.log.info(
-                `${deviceId}: Kontrolladresse ${unit}/${attr} blieb ${KONTROLLE_TAUB_MAX} mal ` +
-                    'ohne Antwort - dieses Modell kennt den Bereich offenbar nicht. Der Scan wird ' +
-                    'trotzdem versucht und bricht von selbst ab, wenn das Geraet nicht mag.',
+                `${deviceId}: control address ${unit}/${attr} did not answer ${KONTROLLE_TAUB_MAX} times ` +
+                    '- this model apparently does not know the range. The scan is ' +
+                    'tried anyway and stops by itself if the appliance refuses.',
             );
         }
         return true;
@@ -3264,7 +3259,7 @@ class MieleLocal extends utils.Adapter {
     async leafScanDurchgang(deviceId) {
         const dev = this.devices && this.devices[deviceId];
         if (!dev) {
-            this.log.warn(`Leaf-Scan: ${deviceId} ist nicht verbunden`);
+            this.log.warn(`Leaf scan: ${deviceId} is not connected`);
             return;
         }
         // erzwingen: Der Scan ist selbst eine Diagnosefunktion und braucht den Kanal.
@@ -3286,7 +3281,7 @@ class MieleLocal extends utils.Adapter {
             return;
         }
         this.log.info(
-            `${deviceId}: Leaf-Scan - ${offen.length} Adressen in diesem Durchgang ` +
+            `${deviceId}: leaf scan - ${offen.length} addresses in this pass ` +
                 `(${leafscan.fortschritt(bisher).text})`,
         );
         let geprueft = 0;
@@ -3340,14 +3335,13 @@ class MieleLocal extends utils.Adapter {
                 if (++absagen <= leafscan.ABSAGEN_JE_ADRESSE) {
                     const warten = leafscan.wartezeitMs(absagen);
                     this.log.debug(
-                        `${deviceId}: ${unit}/${attr} ist beschaeftigt - ` +
-                            `${warten / 1000}s warten und erneut fragen`,
+                        `${deviceId}: ${unit}/${attr} is busy - ` + `waiting ${warten / 1000}s and asking again`,
                     );
                     await new Promise(r => this.setTimeout(r, warten));
                     continue; // dieselbe Adresse noch einmal
                 }
                 // Nach mehreren Anlaeufen weiterziehen - die Adresse bleibt offen.
-                this.log.info(`${deviceId}: ${unit}/${attr} bleibt beschaeftigt, ` + 'spaeter noch einmal');
+                this.log.info(`${deviceId}: ${unit}/${attr} stays busy, ` + 'trying again later');
                 absagen = 0;
                 stoerungen = 0;
                 continue;
@@ -3364,9 +3358,9 @@ class MieleLocal extends utils.Adapter {
                      * je etwas zu tun gewesen waere - und verdeckte damit echte Warnungen.
                      */
                     this.log.info(
-                        `${deviceId}: Leaf-Scan abgebrochen - ${stoerungen} ` +
-                            'Verbindungsstoerungen in Folge. Das Geraet kommt nicht mit; ' +
-                            'spaeter weitermachen, der Fortschritt ist gesichert.',
+                        `${deviceId}: leaf scan aborted - ${stoerungen} ` +
+                            'connection errors in a row. The appliance cannot keep up; ' +
+                            'continuing later, the progress is saved.',
                     );
                     ueberlastet = true;
                     break;
@@ -3393,9 +3387,9 @@ class MieleLocal extends utils.Adapter {
         const t = leafscan
             .treffer(bisher)
             .slice(0, 12)
-            .map(x => `${x.leaf} (${x.felder} Felder)`)
+            .map(x => `${x.leaf} (${x.felder} fields)`)
             .join(', ');
-        this.log.info(`${deviceId}: Leaf-Scan - ${f.text}${t ? `. Bisher: ${t}` : ''}`);
+        this.log.info(`${deviceId}: leaf scan - ${f.text}${t ? `. So far: ${t}` : ''}`);
         return { ueberlastet };
     }
 
@@ -3435,7 +3429,7 @@ class MieleLocal extends utils.Adapter {
             try {
                 await this.leafVerlaufSchreiben(deviceId);
             } catch (e) {
-                this.log.debug(`${deviceId}: Verlauf nicht geschrieben - ${e.message}`);
+                this.log.debug(`${deviceId}: history not written - ${e.message}`);
             }
         }
     }
@@ -3508,7 +3502,7 @@ class MieleLocal extends utils.Adapter {
         try {
             defs = datenpunkte.fuerLeaf(leaf, fields, deutsch);
         } catch (e) {
-            this.log.debug(`${deviceId}: ${leaf} nicht deutbar - ${e.message}`);
+            this.log.debug(`${deviceId}: ${leaf} could not be decoded - ${e.message}`);
             return 0;
         }
         if (!defs.length) {
@@ -3600,7 +3594,7 @@ class MieleLocal extends utils.Adapter {
         const st = await this.getStateAsync(`${deviceId}.state.status`);
         const nr = st && Number(st.val);
         if (!nr || nr === 1 || nr === 7) {
-            this.log.info(`${deviceId}: Feinaufzeichnung ${schluessel} beendet - Geraet im Ruhezustand`);
+            this.log.info(`${deviceId}: fine recording ${schluessel} ended - appliance idle`);
             await this.setStateAsync(ids.s(deviceId, 'trendLeaf'), { val: '', ack: true });
             this.feinAbschalten(deviceId);
             return;
@@ -3660,7 +3654,7 @@ class MieleLocal extends utils.Adapter {
                     await this.setStateAsync(ids.s(deviceId, 'trendJson'), { val: JSON.stringify(verlauf), ack: true });
                     const u = leafverlauf.umfang(verlauf);
                     await this.setStateAsync(ids.s(deviceId, 'trendSize'), {
-                        val: `${u.leafs} Leafs, ${u.felder} Felder, ${u.wechsel} Wechsel`,
+                        val: `${u.leafs} leafs, ${u.felder} fields, ${u.wechsel} changes`,
                         ack: true,
                     });
                 }
@@ -3720,8 +3714,7 @@ class MieleLocal extends utils.Adapter {
         if (neu <= FEIN_TAKT_MAX_MS) {
             this.feinTakt[deviceId] = neu;
             this.log.info(
-                `${deviceId}: Feinaufzeichnung ${schluessel} gedrosselt auf ` +
-                    `${neu / 1000} Sekunden (zuletzt: ${grund}).`,
+                `${deviceId}: fine recording ${schluessel} slowed down to ` + `${neu / 1000} seconds (last: ${grund}).`,
             );
             this.feinAbschalten(deviceId);
             this.feinTimer[deviceId] = this.setInterval(
@@ -3731,8 +3724,8 @@ class MieleLocal extends utils.Adapter {
             return;
         }
         this.log.warn(
-            `${deviceId}: Feinaufzeichnung ${schluessel} beendet - auch im ` +
-                `${alt / 1000}-Sekunden-Takt keine Antwort (zuletzt: ${grund}).`,
+            `${deviceId}: fine recording ${schluessel} ended - no answer even at ` +
+                `${alt / 1000}-second intervals (last: ${grund}).`,
         );
         delete this.feinTakt[deviceId];
         await this.setStateAsync(ids.s(deviceId, 'trendLeaf'), { val: '', ack: true });
@@ -3755,7 +3748,7 @@ class MieleLocal extends utils.Adapter {
             if (!wunsch || this.feinTimer[deviceId]) {
                 continue;
             }
-            this.log.info(`${deviceId}: Feinaufzeichnung ${wunsch} nach Neustart fortgesetzt`);
+            this.log.info(`${deviceId}: fine recording ${wunsch} resumed after restart`);
             this.feinTimer[deviceId] = this.setInterval(
                 () => this.leafVerlaufFeinRunde(deviceId, wunsch).catch(() => {}),
                 20000,
@@ -3774,10 +3767,8 @@ class MieleLocal extends utils.Adapter {
             if (!st || st.val !== true) {
                 continue;
             }
-            this.log.info(`${deviceId}: Leaf-Scan nach Neustart fortgesetzt`);
-            this.leafScanDauerlauf(deviceId).catch(e =>
-                this.log.warn(`${deviceId}: Leaf-Scan fehlgeschlagen - ${e.message}`),
-            );
+            this.log.info(`${deviceId}: leaf scan resumed after restart`);
+            this.leafScanDauerlauf(deviceId).catch(e => this.log.warn(`${deviceId}: leaf scan failed - ${e.message}`));
         }
     }
 
@@ -3897,7 +3888,7 @@ class MieleLocal extends utils.Adapter {
         await this.setStateAsync(ids.s(deviceId, 'trendJson'), { val: JSON.stringify(verlauf), ack: true });
         const u = leafverlauf.umfang(verlauf);
         await this.setStateAsync(ids.s(deviceId, 'trendSize'), {
-            val: `${u.leafs} Leafs, ${u.felder} Felder, ${u.wechsel} Wertwechsel`,
+            val: `${u.leafs} leafs, ${u.felder} fields, ${u.wechsel} value changes`,
             ack: true,
         });
     }
@@ -3948,14 +3939,12 @@ class MieleLocal extends utils.Adapter {
         }
 
         this.log.info(
-            `${deviceId}: eingeschaltet - die Leaf-Suche wird gestartet ` +
-                `(${leafscan.adressen().length} Adressen, laeuft ueber viele Durchgaenge).`,
+            `${deviceId}: switched on - starting the leaf search ` +
+                `(${leafscan.adressen().length} addresses, runs over many passes).`,
         );
         await this.ensureSammlungObjects(deviceId, true);
         await this.setStateAsync(ids.s(deviceId, 'scan'), { val: true, ack: true });
-        this.leafScanDauerlauf(deviceId).catch(e =>
-            this.log.warn(`${deviceId}: Leaf-Scan fehlgeschlagen - ${e.message}`),
-        );
+        this.leafScanDauerlauf(deviceId).catch(e => this.log.warn(`${deviceId}: leaf scan failed - ${e.message}`));
     }
 
     async leafScanDauerlauf(deviceId) {
@@ -3993,12 +3982,12 @@ class MieleLocal extends utils.Adapter {
              */
             const zustand = await this.getStateAsync(`${deviceId}.state.status`);
             if (zustand && Number(zustand.val) === 1) {
-                this.log.debug(`${deviceId}: Leaf-Scan wartet - Geraet ist aus`);
+                this.log.debug(`${deviceId}: leaf scan waiting - appliance is off`);
                 await new Promise(r => this.setTimeout(r, PAUSE_ZWISCHEN_DURCHGAENGEN_MS));
                 continue;
             }
             if (!(await this.gespraechsbereit(deviceId))) {
-                this.log.debug(`${deviceId}: Leaf-Scan wartet - Modul gibt keine Auskunft`);
+                this.log.debug(`${deviceId}: leaf scan waiting - module does not answer`);
                 await new Promise(r => this.setTimeout(r, PAUSE_ZWISCHEN_DURCHGAENGEN_MS));
                 continue;
             }
@@ -4030,7 +4019,7 @@ class MieleLocal extends utils.Adapter {
             const pause = lauf && lauf.ueberlastet ? PAUSE_NACH_UEBERLASTUNG_MS : PAUSE_ZWISCHEN_DURCHGAENGEN_MS;
             if (lauf && lauf.ueberlastet) {
                 this.log.info(
-                    `${deviceId}: Leaf-Scan pausiert ` + `${pause / 60000} Minuten - das Geraet braucht Ruhe.`,
+                    `${deviceId}: leaf scan paused for ` + `${pause / 60000} minutes - the appliance needs a rest.`,
                 );
             }
             await new Promise(r => this.setTimeout(r, pause));
@@ -4084,16 +4073,14 @@ class MieleLocal extends utils.Adapter {
                 }
                 this.feinFehler[geraet] = 0;
                 this.feinTakt[geraet] = FEIN_TAKT_MS;
-                this.log.info(
-                    `${geraet}: Feinaufzeichnung ${wunsch} laeuft, alle ` + `${FEIN_TAKT_MS / 1000} Sekunden`,
-                );
+                this.log.info(`${geraet}: fine recording ${wunsch} running, every ` + `${FEIN_TAKT_MS / 1000} seconds`);
                 this.leafVerlaufFeinRunde(geraet, wunsch).catch(() => {});
                 this.feinTimer[geraet] = this.setInterval(
                     () => this.leafVerlaufFeinRunde(geraet, wunsch).catch(() => {}),
                     FEIN_TAKT_MS,
                 );
             } else {
-                this.log.info(`${geraet}: Feinaufzeichnung abgeschaltet`);
+                this.log.info(`${geraet}: fine recording switched off`);
             }
             return;
         }
@@ -4115,9 +4102,7 @@ class MieleLocal extends utils.Adapter {
                  * ab, und der Scan wartet geduldig (siehe leafscan.beschaeftigt).
                  */
                 await this.setStateAsync(id, { val: true, ack: true });
-                this.leafScanDauerlauf(geraet).catch(e =>
-                    this.log.warn(`${geraet}: Leaf-Scan fehlgeschlagen - ${e.message}`),
-                );
+                this.leafScanDauerlauf(geraet).catch(e => this.log.warn(`${geraet}: leaf scan failed - ${e.message}`));
             } else {
                 await this.setStateAsync(id, { val: false, ack: true });
             }
@@ -4129,7 +4114,7 @@ class MieleLocal extends utils.Adapter {
             const feld = parts[sIdx + 1];
             if (feld === ids.SAMMLUNG.inputEnergy || feld === ids.SAMMLUNG.inputWater) {
                 await this.sammlungHandeingabe(parts[sIdx - 1], feld, state.val).catch(e =>
-                    this.log.warn(`Handeingabe fehlgeschlagen: ${e.message}`),
+                    this.log.warn(`Manual input failed: ${e.message}`),
                 );
                 await this.setStateAsync(id, { val: state.val, ack: true });
             }
@@ -4234,7 +4219,7 @@ class MieleLocal extends utils.Adapter {
                 const s = await this.getStateAsync(ids.s(deviceId, 'records'));
                 saetze = JSON.parse((s && s.val) || '[]') || [];
             } catch (e) {
-                this.log.debug(`CSV: ${deviceId} hat keine lesbare Sammlung (${e.message})`);
+                this.log.debug(`CSV: ${deviceId} has no readable collection (${e.message})`);
             }
             let name = deviceId;
             try {
@@ -4273,12 +4258,12 @@ class MieleLocal extends utils.Adapter {
             await this.writeFileAsync(this.namespace, befundDatei, csvBauer.befundCsv(geraete, version));
         } catch (e) {
             befundDatei = null;
-            this.log.warn(`CSV: die Auswertung liess sich nicht ablegen (${e.message})`);
+            this.log.warn(`CSV: the evaluation could not be stored (${e.message})`);
         }
 
         this.log.info(
-            `Sammlung als CSV abgelegt: ${datei} (${zeilen} Datensätze)${
-                befundDatei ? `, Auswertung in ${befundDatei}` : ''
+            `Collection stored as CSV: ${datei} (${zeilen} records)${
+                befundDatei ? `, evaluation in ${befundDatei}` : ''
             }`,
         );
         return { url: `/files/${this.namespace}/${datei}`, datei, zeilen, befundDatei };
@@ -4369,7 +4354,7 @@ class MieleLocal extends utils.Adapter {
                         openUrl: url,
                         // Nach dem Öffnen nicht die Konfiguration speichern - es wurde nichts geändert.
                         saveConfig: false,
-                        result: `${zeilen} Datensätze in ${datei}${befundDatei ? ` · Auswertung: ${befundDatei}` : ''}`,
+                        result: `${zeilen} records in ${datei}${befundDatei ? ` · evaluation: ${befundDatei}` : ''}`,
                     },
                     obj.callback,
                 );

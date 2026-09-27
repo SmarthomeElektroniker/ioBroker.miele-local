@@ -179,7 +179,7 @@ describe('Eco: war die letzte Ablesung der Endstand?', () => {
             wert: 20.77, vorletzterWert: 10.11,
         });
         expect(r.vollstaendig).to.equal(false);
-        expect(r.grund).to.contain('Zwischenstand');
+        expect(r.grund).to.contain('interim value');
     });
 
     it('nimmt eine alte Ablesung an, wenn der Zaehler laengst steht', () => {
