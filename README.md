@@ -237,6 +237,9 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	### **WORK IN PROGRESS**
 -->
 
+### 0.3.44
+- (SmarthomeElektroniker) History objects are only rewritten when they actually changed - this prevents an empty (null) point in the history adapter after every adapter restart
+
 ### 0.3.43
 
 - (SmarthomeElektroniker) All log messages are English now; diagnostic texts in states (`finding`, `check`, `progress`, `scanState`, `trendSize`), error messages and the CSV export too (review 2026-09-27)

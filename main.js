@@ -48,6 +48,7 @@ const { MielePushListener } = require('./lib/push');
 const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
 const stats = require('./lib/stats');
+const { mussNachziehen } = require('./lib/objektabgleich');
 
 /*
  * EcoFeedback: DOP2-Leaf 2/6195 (bislang nur Waschmaschinen liefern ihn).
@@ -2003,6 +2004,21 @@ class MieleLocal extends utils.Adapter {
         this._statsCreated[deviceId] = true;
     }
 
+    /**
+     * extendObject nur, wenn das Objekt fehlt oder sich etwas geaendert hat.
+     *
+     * Ein unnoetiger Schreibvorgang setzt beim history-Adapter einen Leerpunkt in den Verlauf
+     * (siehe lib/objektabgleich.js) - bei jedem Adapterstart eine Luecke im Diagramm.
+     *
+     * @param {string} id Objekt-ID relativ zur Instanz
+     * @param {object} soll Objekt, wie extendObject es bekaeme
+     */
+    async objektNachziehen(id, soll) {
+        if (mussNachziehen(await this.getObjectAsync(id), soll)) {
+            await this.extendObjectAsync(id, soll);
+        }
+    }
+
     async ensureHistoryObjects(deviceId) {
         if (!this._histCreated) {
             this._histCreated = {};
@@ -2019,7 +2035,7 @@ class MieleLocal extends utils.Adapter {
          */
         await this.ensureSammlungObjects(deviceId);
         const de = this.config.germanNames !== false;
-        await this.extendObjectAsync(`${deviceId}.history`, {
+        await this.objektNachziehen(`${deviceId}.history`, {
             type: 'channel',
             common: { name: namen.text('Verlauf', 'History', de) },
             native: {},
@@ -2111,7 +2127,7 @@ class MieleLocal extends utils.Adapter {
         ];
         for (const [sub, name, typ, rolle, einheit, def] of defs) {
             const hDesc = namen.beschreibung(`history.${sub}`, de); // Schluessel = tatsaechliche ID
-            await this.extendObjectAsync(`${deviceId}.history.${sub}`, {
+            await this.objektNachziehen(`${deviceId}.history.${sub}`, {
                 type: 'state',
                 common: Object.assign(
                     { name, type: typ, role: rolle, unit: einheit || undefined, def, read: true, write: false },
@@ -2127,10 +2143,12 @@ class MieleLocal extends utils.Adapter {
          * so seinen alten, nur zweisprachigen Namen, bis das Geraet wieder lief - die Objektpruefung
          * des PR #6471 fand das am 11.09.2026 an der ausgeschalteten Spuelmaschine.
          */
-        if (await this.getObjectAsync(`${deviceId}.info.operatingHours`)) {
-            await this.extendObjectAsync(`${deviceId}.info.operatingHours`, {
-                common: { name: namen.text('Betriebsstunden gesamt', 'Total operating hours', de) },
-            });
+        const stunden = await this.getObjectAsync(`${deviceId}.info.operatingHours`);
+        if (stunden) {
+            const soll = { common: { name: namen.text('Betriebsstunden gesamt', 'Total operating hours', de) } };
+            if (mussNachziehen(stunden, soll)) {
+                await this.extendObjectAsync(`${deviceId}.info.operatingHours`, soll);
+            }
         }
         this._histCreated[deviceId] = true;
     }
