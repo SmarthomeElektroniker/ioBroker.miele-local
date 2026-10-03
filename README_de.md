@@ -91,7 +91,7 @@ wird damit an den meisten Stellen entbehrlich.
 ### `eco` – Energie und Wasser
 
 `eco.energy` (kWh), `eco.energyWh` (Wh), `eco.water` (l), soweit das Gerät sie liefert, dazu
-`eco.quelle` mit der Herkunft des Werts. Gelesen wird über DOP2; bislang liefern das
+`eco.source` mit der Herkunft des Werts. Gelesen wird über DOP2; bislang liefern das
 Waschmaschinen. **Der vom Gerät gemeldete Wert ist seine eigene Erwartung, keine Messung.** Wer
 eine echte Zahl will, trägt im Reiter **Abfrage & Werte** den Zähler-Datenpunkt einer
 Messsteckdose ein – dann schreibt der Adapter mit, was ein Programm wirklich gezogen hat.
@@ -195,10 +195,10 @@ engmaschig mitschreiben – das Feld, dessen Wert mit dem Verbrauch mitwächst, 
 **CSV-Ausdruck.** Der Knopf im Diagnose-Reiter legt zwei Tabellen im Dateibereich der Instanz ab
 und öffnet die erste:
 
-- `sammlung-<Datum>.csv` – eine Zeile je Programm: Zeiten, Programm, die Vergleichswerte, jedes
+- `collection-<Datum>.csv` – eine Zeile je Programm: Zeiten, Programm, die Vergleichswerte, jedes
   Rohfeld in einer eigenen Spalte, und je Leaf-Feld der Stand bei Beginn, bei Ende und die
   Differenz dazwischen. Bei Lebenszählern sagt allein die Differenz etwas aus.
-- `befund-<Datum>.csv` – eine Zeile je Feld: Übereinstimmung mit dem Vergleichswert, bester
+- `finding-<Datum>.csv` – eine Zeile je Feld: Übereinstimmung mit dem Vergleichswert, bester
   Teiler, mittlere und größte Abweichung. Das ist die Antwort, wegen der die Sammlung läuft.
 
 Semikolon als Trennzeichen, Komma als Dezimalzeichen, BOM – ein Doppelklick öffnet sie in der
@@ -244,6 +244,12 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+- Die letzte deutsche Datenpunkt-ID ist weg: `eco.quelle` heißt jetzt `eco.source`, der Wert ist immer englisch. Vorhandene Installationen ziehen beim Start um.
+- `statusText`, `programText`, `programPhaseText`, `programTypeText` und `dryingStepText` folgen der Option „Deutsche Namen“ - ist sie aus, sind die Texte englisch (bisher immer deutsch).
+- Restliche deutsche Log- und Fehlermeldungen übersetzt; die CSV-Dateien heißen `collection-<Datum>.csv` und `finding-<Datum>.csv`.
+- Alle JSDoc-Kommentare vollständig (keine Lint-Warnungen mehr); `@iobroker/testing` 6.3.0.
 
 ### 0.3.38
 - **Die Objekt-IDs sind jetzt durchgängig englisch.** Der Diagnosekanal hieß `sammlung` und
@@ -321,7 +327,7 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 - **Wasser: das EcoFeedback des Geräts hat Vorrang.** Wo es DOP2 2/1585 gibt, gilt dessen Wert für
   das letzte Programm; nur wo es ihn nicht gibt, zählt der Adapter weiter die Impulse des
   Durchflusszählers (Feld 21 / 200, über 24 Programme gegen den Hauswasserzähler belegt). Der neue
-  Datenpunkt `eco.quelle` sagt, aus welcher der beiden Quellen ein Wert stammt.
+  Datenpunkt `eco.source` (bis 0.3.44 `eco.quelle`) sagt, aus welcher der beiden Quellen ein Wert stammt.
 - **Der Datensammler schreibt alle Leafs mit.** Am Programmende liest der Adapter jedes
   antwortende Leaf einmal, schonend (fünf Sekunden zwischen zwei Anfragen, im Hintergrund) und
   hängt den Schlussstand an den Datensatz. Erst das macht die Sammlung für Geräte brauchbar, die

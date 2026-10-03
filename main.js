@@ -266,7 +266,7 @@ class MieleLocal extends utils.Adapter {
      * alten Namen. Geloescht werden sie bewusst nicht, weil ihre Historie erhalten bleiben
      * soll, also werden sie hier wenigstens im Namen nachgezogen.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async aktualisiereEcoNamen(deviceId) {
         const german = this.config.germanNames !== false;
@@ -501,7 +501,7 @@ class MieleLocal extends utils.Adapter {
     /**
      * Gerät initialisieren: Route (Seriennr.) ermitteln, Objektbaum anlegen, Ident lesen.
      *
-     * @param f
+     * @param f gefundenes Geraet aus der Konfiguration oder Suche
      */
     async initDevice(f) {
         // 20 s statt 8: die Module antworten meist in 25 ms, waehrend eines laufenden Programms
@@ -559,7 +559,7 @@ class MieleLocal extends utils.Adapter {
              */
             if (this.config.sammlerAktiv) {
                 await this.ensureSammlungObjects(deviceId).catch(e =>
-                    this.log.debug(`${deviceId}: Sammlungsobjekte - ${e.message}`),
+                    this.log.debug(`${deviceId}: collection objects - ${e.message}`),
                 );
             }
             await this.setStateAsync(`${deviceId}.info.connected`, { val: true, ack: true });
@@ -595,7 +595,7 @@ class MieleLocal extends utils.Adapter {
      * EINMAL, UND DANN NIE WIEDER. Gibt es den alten Punkt nicht, passiert nichts. Eine frisch
      * aufgesetzte Anlage laeuft hier ohne einen einzigen Schreibvorgang durch.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async idsUmziehen(deviceId) {
         let umgezogen = 0;
@@ -642,7 +642,7 @@ class MieleLocal extends utils.Adapter {
         }
         this.log.info(
             `${deviceId}: moved ${umgezogen} states to English IDs ` +
-                '("sammlung" became "collection"). The old states are removed; ' +
+                '("sammlung" became "collection", "eco.quelle" became "eco.source"). The old states are removed; ' +
                 'recorded history stays in the history adapter under the old ID.',
         );
     }
@@ -871,7 +871,7 @@ class MieleLocal extends utils.Adapter {
 
     async applyState(deviceId, state) {
         const dev = this.devices[deviceId];
-        const ctx = { deviceType: dev ? dev.deviceType : null };
+        const ctx = { deviceType: dev ? dev.deviceType : null, german: this.config.germanNames !== false };
         // Unmoegliche Sprünge nach "Aus" gar nicht erst in die Datenpunkte lassen - sonst
         // schreiben Status, Restzeit und Laufzeit gemeinsam Unsinn (siehe statusPlausibel).
         if ('Status' in state && !(await this.statusPlausibel(deviceId, state.Status))) {
@@ -990,8 +990,8 @@ class MieleLocal extends utils.Adapter {
      * in einen Endzustand ein Eintrag geschrieben. Genau dann stehen auch die Eco-Werte final
      * da - waehrend des Programms meldet die Waschmaschine dort 0.
      *
-     * @param deviceId
-     * @param statusVal
+     * @param deviceId Geraete-ID
+     * @param statusVal aktueller Statuswert
      */
     async trackCycle(deviceId, statusVal) {
         if (this.config.cycleHistory === false) {
@@ -1269,7 +1269,7 @@ class MieleLocal extends utils.Adapter {
      * Geraeteschluessel ist. Fehlt der Eintrag, gibt es eben keinen gemessenen Verbrauch;
      * alles andere laeuft unveraendert weiter.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     zaehlerDatenpunkt(deviceId) {
         const liste = this.config.zaehler || [];
@@ -1281,7 +1281,7 @@ class MieleLocal extends utils.Adapter {
     /**
      * Den aktuellen Zaehlerstand lesen - null, wenn es keinen gibt.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async zaehlerStand(deviceId) {
         const dp = this.zaehlerDatenpunkt(deviceId);
@@ -1304,8 +1304,8 @@ class MieleLocal extends utils.Adapter {
      * Steckdose getauscht. Dann ist die Differenz unbrauchbar und es gibt lieber keinen Wert
      * als einen falschen.
      *
-     * @param deviceId
-     * @param standBeimStart
+     * @param deviceId Geraete-ID
+     * @param standBeimStart Zaehlerstand beim Programmstart
      */
     async gemessenerVerbrauch(deviceId, standBeimStart) {
         if (standBeimStart == null) {
@@ -1329,8 +1329,8 @@ class MieleLocal extends utils.Adapter {
      * wertet nichts aus. Die Seriennummer wird bewusst nicht mitgeschrieben - sie benennt einen
      * Haushalt, und fuer die Feldzuordnung genuegt das Modell. Siehe lib/sammler.js.
      *
-     * @param deviceId
-     * @param eintrag
+     * @param deviceId Geraete-ID
+     * @param eintrag der Datensatz
      */
     async sammlungAufnehmen(deviceId, eintrag) {
         if (!this.config.sammlerAktiv) {
@@ -1511,7 +1511,7 @@ class MieleLocal extends utils.Adapter {
      * und genau diese Adressen sind der einzige Weg bei Geraeten, die 2/6195 nicht beantworten
      * (die Spuelmaschine dieses Haushalts etwa). Deshalb wird jetzt beides gelesen.
      *
-     * @param {string} deviceId
+     * @param {string} deviceId Geraete-ID
      * @returns {Promise<object>} {"2/119": {"1": 4711, ...}, ...} - leer, wenn nichts zu holen war
      */
     async leafStaendeLesen(deviceId) {
@@ -1573,7 +1573,7 @@ class MieleLocal extends utils.Adapter {
     /**
      * Den Schlussstand der Leafs an den zuletzt gesammelten Datensatz haengen.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async leafsAbschlussNachtragen(deviceId) {
         if (!this.config.sammlerAktiv) {
@@ -1610,8 +1610,8 @@ class MieleLocal extends utils.Adapter {
     /**
      * Haengt einen Zyklus an Ringpuffer und Summen an und schreibt ihn in die Historie.
      *
-     * @param deviceId
-     * @param eintrag
+     * @param deviceId Geraete-ID
+     * @param eintrag der abgeschlossene Zyklus
      */
     async appendCycle(deviceId, eintrag) {
         await this.ensureHistoryObjects(deviceId);
@@ -1676,8 +1676,8 @@ class MieleLocal extends utils.Adapter {
      * zeigt: Verbrauch pro Programm, Programmnutzung und der Vergleich mit dem Vorzeitraum.
      * Der Zustand liegt im Geraeteobjekt, damit er einen Neustart uebersteht.
      *
-     * @param deviceId
-     * @param eintrag
+     * @param deviceId Geraete-ID
+     * @param eintrag der abgeschlossene Zyklus
      */
     async updateStats(deviceId, eintrag) {
         const obj = await this.getObjectAsync(deviceId);
@@ -1777,7 +1777,7 @@ class MieleLocal extends utils.Adapter {
      * die Waschmaschine zeitweise jede zweite Abfrage verwarf, liess sich deshalb nur mit einer
      * eigens laufenden Messung zeigen. Die Quote steht jetzt dauerhaft am Geraet.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async ensureDiagObjects(deviceId) {
         if (!this._diagCreated) {
@@ -1838,9 +1838,9 @@ class MieleLocal extends utils.Adapter {
      * Daten sind ja da), wird aber getrennt ausgewiesen: Nur so bleibt sichtbar, wie oft ein
      * Geraet zickt, ohne dass die Fehlerquote Alarm schlaegt, obwohl nichts fehlt.
      *
-     * @param deviceId
-     * @param fehler
-     * @param erholt
+     * @param deviceId Geraete-ID
+     * @param fehler Fehler des Abrufs, null bei Erfolg
+     * @param erholt ob er erst im zweiten Versuch gelang
      */
     async verbucheAbfrage(deviceId, fehler, erholt = false) {
         if (!this._diag) {
@@ -2191,8 +2191,8 @@ class MieleLocal extends utils.Adapter {
     /**
      * Siehe lib/eco.js - die Regel steht dort, damit sie ohne Adapter pruefbar ist.
      *
-     * @param deviceId
-     * @param dev
+     * @param deviceId Geraete-ID
+     * @param dev Laufzeitzustand des Geraets
      */
     ecoAbfragenSinnvoll(deviceId, dev) {
         if (!this._ecoErkundet) {
@@ -2209,7 +2209,7 @@ class MieleLocal extends utils.Adapter {
      * im Aus-Zustand, im laufenden Betrieb kann derselbe Leaf antworten. Und Zeitüberschreitungen
      * oder Verbindungsfehler sagen über die Fähigkeiten des Geräts gar nichts.
      *
-     * @param status
+     * @param status Statuscode der Antwort
      */
     static kenntLeafNicht(status) {
         return status === 404 || status === 501;
@@ -2330,8 +2330,8 @@ class MieleLocal extends utils.Adapter {
      * Die Felder selbst landen als Datenpunkte unter "detail.ecoFeedback" - dafuer ist hier
      * nichts zu tun, das erledigt geraeteWerteSchreiben aus demselben Abruf.
      *
-     * @param deviceId
-     * @param dev
+     * @param deviceId Geraete-ID
+     * @param dev Laufzeitzustand des Geraets
      * @returns {{energieWh: number|null, wasserL: number|null}|null} null = kein EcoFeedback
      */
     async ecoKontextLesen(deviceId, dev) {
@@ -2494,21 +2494,13 @@ class MieleLocal extends utils.Adapter {
             await this.ensureEcoObjects(deviceId);
             await this.ensureSammlungObjects(deviceId);
             /*
-             * Der Inhalt eines Datenpunkts ist ein Text, kein Sprachobjekt.
-             *
-             * namen.text() liefert bei deutscher Einstellung ein i18n-Objekt - richtig fuer
-             * common.name, falsch fuer einen Wert: Im Datenpunkt staende dann "[object Object]".
-             * Deshalb hier eine schlichte Fallunterscheidung.
+             * Der Inhalt eines Datenpunkts ist ein Text, kein Sprachobjekt - und Texte in
+             * Datenpunkten sind englisch (Review 27.09.2026: Werte entweder englisch oder i18n,
+             * ein Wert kann aber kein i18n-Objekt sein). Bis 0.3.44 stand hier bei deutscher
+             * Einstellung "Gerät"/"Durchflusszähler" unter der ID eco.quelle.
              */
-            const deutsch = this.config.germanNames !== false;
-            await this.setStateChangedAsync(`${deviceId}.eco.quelle`, {
-                val: dev.ecoAmtlich
-                    ? deutsch
-                        ? 'Gerät (EcoFeedback)'
-                        : 'Appliance (EcoFeedback)'
-                    : deutsch
-                      ? 'Adapter (Durchflusszähler)'
-                      : 'Adapter (flow meter)',
+            await this.setStateChangedAsync(`${deviceId}.eco.source`, {
+                val: dev.ecoAmtlich ? 'Appliance (EcoFeedback)' : 'Adapter (flow meter)',
                 ack: true,
             });
 
@@ -2575,9 +2567,7 @@ class MieleLocal extends utils.Adapter {
                     vorherige.val !== '{}'
                 );
                 if (zurueckgesetzt && hatteWerte) {
-                    this.log.debug(
-                        `Eco ${deviceId}: Rohfelder zurueckgesetzt, ` + 'die des letzten Programms bleiben stehen',
-                    );
+                    this.log.debug(`Eco ${deviceId}: raw fields reset, ` + 'the values of the last programme are kept');
                 } else {
                     const alleFelder = {};
                     for (const idx of Object.keys(fields)) {
@@ -2634,8 +2624,8 @@ class MieleLocal extends utils.Adapter {
                     await this.setStateAsync(`${deviceId}.eco.water`, { val: eco.waterL, ack: true });
                 } else {
                     this.log.debug(
-                        `Eco ${deviceId}: Wasserfeld auf 0 zurueckgesetzt, ` +
-                            `${alterWert} l des letzten Programms bleiben stehen`,
+                        `Eco ${deviceId}: water field reset to 0, ` +
+                            `the ${alterWert} l of the last programme are kept`,
                     );
                 }
             }
@@ -2657,7 +2647,7 @@ class MieleLocal extends utils.Adapter {
      * selbst angelegt hat und was leer geblieben ist: hat ein Gerät je einen Wert geliefert,
      * bleiben die Punkte samt Historie erhalten.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async removeEcoObjects(deviceId) {
         if (!this._ecoRemoved) {
@@ -2717,7 +2707,7 @@ class MieleLocal extends utils.Adapter {
      * Sie schreibt nach `sammlung.leafScan*`, und ein setState auf ein nicht vorhandenes Objekt
      * verpufft mit einer Warnung im Protokoll, die niemand liest.
      *
-     * @param {string} deviceId
+     * @param {string} deviceId Geraete-ID
      * @param {boolean} [erzwingen] Von den Diagnosefunktionen selbst gesetzt: Sie schreiben in
      *   den Kanal und muessen ihn deshalb mitbringen duerfen, auch wenn beide Schalter aus sind
      *   (etwa beim von Hand gedrueckten Scan).
@@ -2907,9 +2897,9 @@ class MieleLocal extends utils.Adapter {
      * Aufgerufen aus onStateChange. Beide Felder koennen einzeln kommen - wer nur den
      * Wasserwert kennt, traegt eben nur den ein.
      *
-     * @param deviceId
-     * @param feld
-     * @param wert
+     * @param deviceId Geraete-ID
+     * @param feld Name des Eingabefeldes
+     * @param wert eingegebener Wert
      */
     async sammlungHandeingabe(deviceId, feld, wert) {
         const s = await this.getStateAsync(ids.s(deviceId, 'records'));
@@ -3226,7 +3216,7 @@ class MieleLocal extends utils.Adapter {
      * Antwortet die Adresse mit 200, existiert sie bei diesem Modell eben doch - auch das
      * heisst "gespraechsbereit". Nur 500 und Stoerungen sprechen dagegen.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async gespraechsbereit(deviceId) {
         const dev = this.devices && this.devices[deviceId];
@@ -3245,7 +3235,7 @@ class MieleLocal extends utils.Adapter {
                 return true;
             }
         } catch (e) {
-            this.log.debug(`${deviceId}: Kontrollfrage ${unit}/${attr} - ${e.message}`);
+            this.log.debug(`${deviceId}: control request ${unit}/${attr} - ${e.message}`);
         }
 
         // Ein Geraet, das die Kontrolladresse kennt, ist jetzt eben beschaeftigt.
@@ -3294,7 +3284,7 @@ class MieleLocal extends utils.Adapter {
         const offen = leafscan.naechste(bisher);
         if (!offen.length) {
             const f = leafscan.fortschritt(bisher);
-            this.log.info(`${deviceId}: Leaf-Scan abgeschlossen - ${f.text}`);
+            this.log.info(`${deviceId}: leaf scan finished - ${f.text}`);
             await this.setStateAsync(ids.s(deviceId, 'scanState'), { val: f.text, ack: true });
             return;
         }
@@ -3462,7 +3452,7 @@ class MieleLocal extends utils.Adapter {
      * Stand hier zweimal - im Scan und beim Verlaufschreiben. Eine Kopie haette bedeutet, dass
      * beide Ablagen bei der naechsten Aenderung auseinanderlaufen.
      *
-     * @param res
+     * @param res Antwort der Leaf-Abfrage
      */
     leafFelder(res) {
         return this.leafLesen(res).werte;
@@ -3479,7 +3469,7 @@ class MieleLocal extends utils.Adapter {
      * Und beides aus EINEM Abruf: Ein Miele-Modul bedient nur eine Verbindung; dasselbe Leaf
      * zweimal zu lesen, waere die doppelte Last fuer dieselbe Auskunft.
      *
-     * @param res
+     * @param res Antwort der Leaf-Abfrage
      * @returns {{werte: object, fields: object}} werte = flach fuer den Verlauf,
      *          fields = wie parseLeaf sie liefert, fuer die Datenpunkte
      */
@@ -3506,7 +3496,7 @@ class MieleLocal extends utils.Adapter {
      * WAS ES AN ZUSAETZLICHER LAST KOSTET: nichts. Geschrieben wird aus Abrufen, die ohnehin
      * laufen (Verlauf, Feinaufzeichnung, Eco-Abfrage). Es kommt kein einziger Aufruf hinzu.
      *
-     * @param {string} deviceId
+     * @param {string} deviceId Geraete-ID
      * @param {string} leaf    "2/6195"
      * @param {object} fields  wie parseLeaf sie liefert
      * @returns {number} wie viele Werte geschrieben wurden
@@ -3573,7 +3563,7 @@ class MieleLocal extends utils.Adapter {
      * BigInt wird zu Number, weil JSON es sonst nicht darstellen kann; Puffer werden zu Text
      * ohne die Nullen am Ende.
      *
-     * @param v
+     * @param v geparstes Feld, auch verschachtelt
      */
     static reinerWert(v) {
         // Die Umsetzung steht in lib/dop2.js - lib/datenpunkte.js braucht sie ebenso, und zwei
@@ -3601,8 +3591,8 @@ class MieleLocal extends utils.Adapter {
      * Programm endet - eine vergessene Feinaufzeichnung wuerde das Modul sonst im Standby
      * mit einer Anfrage alle zwanzig Sekunden beschaeftigen.
      *
-     * @param deviceId
-     * @param schluessel
+     * @param deviceId Geraete-ID
+     * @param schluessel Leaf-Schluessel, etwa "2/6192"
      */
     async leafVerlaufFeinRunde(deviceId, schluessel) {
         const dev = this.devices && this.devices[deviceId];
@@ -3678,7 +3668,7 @@ class MieleLocal extends utils.Adapter {
                 }
             }
         } catch (e) {
-            this.log.debug(`${deviceId}: Feinaufzeichnung ${schluessel} - ${e.message}`);
+            this.log.debug(`${deviceId}: fine recording ${schluessel} - ${e.message}`);
             await this.feinFehlschlag(deviceId, schluessel, e.message);
         }
     }
@@ -3701,9 +3691,9 @@ class MieleLocal extends utils.Adapter {
      * Aufzeichnung vermutet, die nicht laeuft - genau diese stille Taeuschung war der Fehler,
      * der in 0.3.26 und 0.3.27 dreimal auftrat.
      *
-     * @param deviceId
-     * @param schluessel
-     * @param grund
+     * @param deviceId Geraete-ID
+     * @param schluessel Leaf-Schluessel
+     * @param grund Grund des Fehlschlags fuer das Log
      */
     async feinFehlschlag(deviceId, schluessel, grund) {
         if (!this.feinFehler) {
@@ -3793,7 +3783,7 @@ class MieleLocal extends utils.Adapter {
     /**
      * Die Feinaufzeichnung eines Geraets anhalten.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     feinAbschalten(deviceId) {
         if (this.feinTimer && this.feinTimer[deviceId]) {
@@ -3820,7 +3810,7 @@ class MieleLocal extends utils.Adapter {
      * WAS ES KOSTET: eine Anfrage je gefundenem Leaf. Das sind derzeit sechs - deutlich
      * weniger als ein Scan-Durchgang, und mit derselben Pause dazwischen.
      *
-     * @param deviceId
+     * @param deviceId Geraete-ID
      */
     async leafVerlaufSchreiben(deviceId) {
         const dev = this.devices && this.devices[deviceId];
@@ -3927,9 +3917,9 @@ class MieleLocal extends utils.Adapter {
      * WARUM ABSCHALTBAR UND AUS. Der Adapter laeuft auch bei anderen Leuten. Deren Geraete
      * ungefragt zu befragen, waere nicht in Ordnung - auch wenn der Scan nur liest.
      *
-     * @param deviceId
-     * @param vorher
-     * @param nachher
+     * @param deviceId Geraete-ID
+     * @param vorher vorheriger Statuswert
+     * @param nachher neuer Statuswert
      */
     async leafScanBeimEinschalten(deviceId, vorher, nachher) {
         if (!this.config.leafScanAuto) {
@@ -3969,7 +3959,7 @@ class MieleLocal extends utils.Adapter {
         for (;;) {
             const laeuft = await this.getStateAsync(ids.s(deviceId, 'scan'));
             if (!laeuft || laeuft.val !== true) {
-                this.log.info(`${deviceId}: Leaf-Scan angehalten.`);
+                this.log.info(`${deviceId}: leaf scan stopped.`);
                 return;
             }
 
@@ -4018,7 +4008,7 @@ class MieleLocal extends utils.Adapter {
                 stand = {};
             }
             if (!leafscan.naechste(stand, 1).length) {
-                this.log.info(`${deviceId}: Leaf-Scan abgeschlossen - nichts mehr offen.`);
+                this.log.info(`${deviceId}: leaf scan finished - nothing left to scan.`);
                 await this.setStateAsync(ids.s(deviceId, 'scan'), { val: false, ack: true });
                 return;
             }
@@ -4226,7 +4216,7 @@ class MieleLocal extends utils.Adapter {
      * Das dafuer noetige meta-Objekt entsteht erst beim ersten Ausdruck. Wer die Diagnose nie
      * benutzt, bekommt dadurch auch kein zusaetzliches Objekt in seine Instanz.
      *
-     * @returns {Promise<{url: string, datei: string, zeilen: number}>}
+     * @returns {Promise<{url: string, datei: string, zeilen: number}>} Adresse und Name der Datei sowie die Zahl der Zeilen
      */
     async sammlungAlsCsv() {
         const geraete = [];

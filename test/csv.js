@@ -74,7 +74,7 @@ describe('CSV-Ausgabe der Sammlung', () => {
     });
 
     it('nennt die Datei nach dem Zeitpunkt', () => {
-        expect(csv.dateiname(new Date(2026, 8, 15, 6, 7))).to.equal('sammlung-2026-09-15-0607.csv');
+        expect(csv.dateiname(new Date(2026, 8, 15, 6, 7))).to.equal('collection-2026-09-15-0607.csv');
     });
 });
 
@@ -233,6 +233,6 @@ describe('CSV: Auswertung je Feld', () => {
     });
 
     it('nennt die Auswertungsdatei nach dem Zeitpunkt', () => {
-        expect(csv.befundDateiname(new Date(2026, 8, 19, 8, 37))).to.equal('befund-2026-09-19-0837.csv');
+        expect(csv.befundDateiname(new Date(2026, 8, 19, 8, 37))).to.equal('finding-2026-09-19-0837.csv');
     });
 });

@@ -36,7 +36,8 @@ describe('Objekt-IDs', () => {
     it('nennt fuer jeden alten Datenpunkt genau einen neuen', () => {
         const u = ids.umzuege('000111111111');
         expect(u).to.have.length(
-            Object.keys(ids.ALT.sammlung).length + Object.keys(ids.ALT.history).length);
+            Object.keys(ids.ALT.sammlung).length + Object.keys(ids.ALT.history).length +
+                Object.keys(ids.ALT.eco).length);
         // Keine zwei alten Punkte duerfen auf denselben neuen zeigen - das verlöre einen Wert.
         expect(new Set(u.map(x => x.neu)).size).to.equal(u.length);
         expect(new Set(u.map(x => x.alt)).size).to.equal(u.length);
@@ -57,6 +58,10 @@ describe('Objekt-IDs', () => {
         for (const { alt, neu } of ids.umzuege('X')) {
             expect(alt, 'alt und neu duerfen nie gleich sein').to.not.equal(neu);
         }
+    });
+
+    it('zieht eco.quelle nach eco.source um (0.3.45, letzter deutscher Name im Baum)', () => {
+        expect(ids.umzuege('X')).to.deep.include({ alt: 'X.eco.quelle', neu: 'X.eco.source' });
     });
 
     it('kennt den alten Kanal, um ihn nach dem Umzug zu entfernen', () => {

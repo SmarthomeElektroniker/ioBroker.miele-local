@@ -88,7 +88,7 @@ carries the plain-text list, so in most places the text state is no longer neede
 ### `eco` — energy and water
 
 `eco.energy` (kWh), `eco.energyWh` (Wh), `eco.water` (l) where the appliance provides them, plus
-`eco.quelle` naming which source a value came from. Read over DOP2; so far washing machines
+`eco.source` naming which source a value came from. Read over DOP2; so far washing machines
 deliver it. **The value the appliance reports is its own expectation, not a measurement.** For a
 real figure, enter a metering plug's counter state on the **Polling & values** tab — the adapter
 then records what each programme actually drew.
@@ -190,10 +190,10 @@ one you are looking for.
 **CSV export.** The button on the Diagnostics tab writes two tables into the instance's file area
 and opens the first:
 
-- `sammlung-<date>.csv` — one row per programme: times, programme, the reference values, every raw
+- `collection-<date>.csv` — one row per programme: times, programme, the reference values, every raw
   field in its own column, and for each leaf field the reading at start, at end and the difference
   between them. For lifetime counters only that difference means anything.
-- `befund-<date>.csv` — one row per field: how well it matches the reference, the best divisor,
+- `finding-<date>.csv` — one row per field: how well it matches the reference, the best divisor,
   the average and the largest deviation. This is the answer the collection exists for.
 
 Semicolon separated, decimal comma, BOM — a double click opens them in a spreadsheet.
@@ -236,6 +236,12 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+- (SmarthomeElektroniker) The last German state ID is gone: `eco.quelle` is now `eco.source`, its value is always English. Existing installations are migrated on start
+- (SmarthomeElektroniker) `statusText`, `programText`, `programPhaseText`, `programTypeText` and `dryingStepText` follow the "German names" option - with the option off they are English (until now they were always German)
+- (SmarthomeElektroniker) Remaining German log and error messages translated; CSV export files are named `collection-<date>.csv` and `finding-<date>.csv`
+- (SmarthomeElektroniker) All JSDoc comments complete (no lint warnings left); `@iobroker/testing` 6.3.0
 
 ### 0.3.44
 - (SmarthomeElektroniker) History objects are only rewritten when they actually changed - this prevents an empty (null) point in the history adapter after every adapter restart
@@ -337,7 +343,7 @@ engineering work of the projects `MieleRESTServer` (akappner),
 - **Water: the appliance's own EcoFeedback comes first.** Where DOP2 2/1585 exists, its value for
   the last programme is used; only where it does not does the adapter fall back to counting flow
   meter impulses (field 21 / 200, verified against the house water meter over 24 programmes). The
-  new datapoint `eco.quelle` says which of the two a value came from.
+  new datapoint `eco.source` (called `eco.quelle` before 0.3.45) says which of the two a value came from.
 - **The collector records every leaf.** At the end of a programme the adapter reads each answering
   leaf once, gently (five seconds between requests, in the background), and appends the final state
   to the record. This is what makes the collection useful for appliances that do not answer 2/6195
