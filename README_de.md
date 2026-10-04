@@ -176,7 +176,7 @@ Alles in diesem Abschnitt ist **ab Werk aus** und wird im täglichen Betrieb nic
 dient einer einzigen Frage: Welches Rohfeld *dieses* Geräts trägt Energie und Wasser? Die
 Feldnummern sind je Baureihe verschieden, und die Vorgaben im Adapter stammen von einer WCR860.
 
-**Rohfelder.** Schreibt alle Felder des Eco-Leaf nach `eco.felderJson` statt nur der zwei
+**Rohfelder.** Schreibt alle Felder des Eco-Leaf nach `eco.fieldsJson` statt nur der zwei
 ausgewerteten.
 
 **Datensammlung.** Legt je abgeschlossenem Programm einen Datensatz an – Modell, Programm, alle
@@ -245,11 +245,14 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 	### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.3.45
 - Die letzte deutsche Datenpunkt-ID ist weg: `eco.quelle` heißt jetzt `eco.source`, der Wert ist immer englisch. Vorhandene Installationen ziehen beim Start um.
 - `statusText`, `programText`, `programPhaseText`, `programTypeText` und `dryingStepText` folgen der Option „Deutsche Namen“ - ist sie aus, sind die Texte englisch (bisher immer deutsch).
 - Restliche deutsche Log- und Fehlermeldungen übersetzt; die CSV-Dateien heißen `collection-<Datum>.csv` und `finding-<Datum>.csv`.
 - Alle JSDoc-Kommentare vollständig (keine Lint-Warnungen mehr); `@iobroker/testing` 6.3.0.
+- `eco.felderJson` heißt jetzt `eco.fieldsJson` (Umzug beim Start).
+- Einstellungen tragen englische Namen: aus `sammlerAktiv`/`sammlerCloud`/`sammlerCloudInstanz` wurden `collectorActive`/`collectorCloud`/`collectorCloudInstance`, aus `leafDatenpunkte` wurde `leafStates`, aus der Zählertabelle `zaehler` wurde `energyMeters`. Vorhandene Einstellungen werden beim Start einmalig übernommen (Review 03.10.2026).
+- Hintergrundschleifen (Eco, Betriebsstunden, Sekunden, Suche, Push-Erneuerung, Leaf-Verlauf) planen den nächsten Lauf erst nach dem Ende des vorigen – keine überlappenden Läufe mehr, wenn ein Gerät langsam antwortet.
 
 ### 0.3.38
 - **Die Objekt-IDs sind jetzt durchgängig englisch.** Der Diagnosekanal hieß `sammlung` und

@@ -102,7 +102,7 @@
   "Water field divisor": "Deelfactor waterveld",
   "Water field index": "Veldindex water",
   "Without cloud: after each programme, enter energy and water from the Miele app into \"collection.inputEnergy\" and \"collection.inputWater\" - they are attached to the most recent dataset. \"collection.progress\" shows what is still missing.": "Zonder cloud: voer na elk programma energie en water uit de Miele-app in bij \"collection.inputEnergy\" en \"collection.inputWater\" - ze horen dan bij de laatst verzamelde dataset. \"collection.progress\" toont wat nog ontbreekt.",
-  "Writes all fields of the eco leaf to eco.felderJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "Schrijft alle velden van het Eco-leaf naar eco.felderJson in plaats van alleen de twee geëvalueerde. Helpt als energie of water bij uw model verkeerd binnenkomen.",
+  "Writes all fields of the eco leaf to eco.fieldsJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "Schrijft alle velden van het Eco-leaf naar eco.fieldsJson in plaats van alleen de twee geëvalueerde. Helpt als energie of water bij uw model verkeerd binnenkomen.",
   "Writes two tables and opens the first: one row per programme with all raw fields, plus an analysis with one row per field. Take care when sharing – the table contains the programme timestamps.": "Legt twee tabellen aan en opent de eerste: één regel per programma met alle ruwe velden, plus een analyse met één regel per veld. Let op bij delen – de tabel bevat de tijdstippen van de programma's.",
   "miele:// redirect URL": "miele://-omleidings-URL"
 }

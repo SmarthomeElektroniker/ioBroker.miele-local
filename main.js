@@ -293,6 +293,19 @@ class MieleLocal extends utils.Adapter {
     }
 
     async onReady() {
+        // Deutsche Einstellungsnamen bis 0.3.44 einmalig auf die englischen umziehen. Das Schreiben
+        // des Instanzobjekts startet den Adapter neu - danach laeuft er mit den neuen Namen.
+        if (ids.konfigUmzug(this.config).geaendert) {
+            const obj = await this.getForeignObjectAsync(`system.adapter.${this.namespace}`);
+            if (obj) {
+                obj.native = ids.konfigUmzug(obj.native).native;
+                this.log.info(
+                    'Settings were renamed to English keys (e.g. "sammlerAktiv" became "collectorActive"); the adapter restarts once.',
+                );
+                await this.setForeignObjectAsync(obj._id, obj);
+                return;
+            }
+        }
         await this.aktualisiereInstanzObjekte();
         await this.setStateAsync('info.connection', { val: false, ack: true });
 
@@ -325,7 +338,7 @@ class MieleLocal extends utils.Adapter {
         // Periodisches Re-Discovery im Hintergrund (z. B. für Geräte, die aus dem Standby aufwachen)
         if (this.config.autoDiscover !== false) {
             const discInterval = MieleLocal.intervallMs(this.config.autoDiscoverInterval, 10, 1, 60000);
-            this.discoveryTimer = this.setInterval(() => this.discoverDevices(), discInterval);
+            this.schleife('discoveryTimer', () => this.discoverDevices(), discInterval);
         }
 
         await this.subscribeStatesAsync('*.control.*');
@@ -336,7 +349,7 @@ class MieleLocal extends utils.Adapter {
             if (this.push) {
                 await this.enrollAll();
                 // Subscriptions laufen ab → periodisch erneuern
-                this.enrollTimer = this.setInterval(() => this.enrollAll(), 4 * 60 * 1000);
+                this.schleife('enrollTimer', () => this.enrollAll(), 4 * 60 * 1000);
             }
         }
 
@@ -346,15 +359,12 @@ class MieleLocal extends utils.Adapter {
         // EcoFeedback (Energie/Wasser) per DOP2 – langsameres, separates Intervall
         if (this.config.ecoFeedback !== false) {
             this.pollEco();
-            this.ecoTimer = this.setInterval(
-                () => this.pollEco(),
-                MieleLocal.intervallMs(this.config.ecoInterval, 60, 10),
-            );
+            this.schleife('ecoTimer', () => this.pollEco(), MieleLocal.intervallMs(this.config.ecoInterval, 60, 10));
         }
 
         // Betriebsstunden: einmal beim Start, danach stuendlich - siehe pollHours().
         this.pollHours();
-        this.hoursTimer = this.setInterval(() => this.pollHours(), 60 * 60 * 1000);
+        this.schleife('hoursTimer', () => this.pollHours(), 60 * 60 * 1000);
 
         /*
          * Den Werteverlauf der gefundenen Leafs mitschreiben.
@@ -364,7 +374,7 @@ class MieleLocal extends utils.Adapter {
          * ablesen laesst, welches Feld welchen Verbrauch traegt; im Standby waere es dieselbe
          * Zahl in Endlosschleife.
          */
-        this.verlaufTimer = this.setInterval(() => this.leafVerlaufRunde(), 3 * 60 * 1000);
+        this.schleife('verlaufTimer', () => this.leafVerlaufRunde(), 3 * 60 * 1000);
 
         /*
          * Eine laufende Feinaufzeichnung nach einem Neustart fortsetzen.
@@ -396,7 +406,8 @@ class MieleLocal extends utils.Adapter {
         // Sekundengenaue Rest-/Laufzeit per DOP2 2/256 – schneller 10s-Poll
         if (this.config.secondsTime !== false) {
             this.pollSeconds();
-            this.secTimer = this.setInterval(
+            this.schleife(
+                'secTimer',
                 () => this.pollSeconds(),
                 MieleLocal.intervallMs(this.config.secondsInterval, 30, 5),
             );
@@ -557,7 +568,7 @@ class MieleLocal extends utils.Adapter {
              * Programm gelaufen ist - und genau davor moechte man ihn druecken, um den
              * Leerlauf-Stand aufzunehmen.
              */
-            if (this.config.sammlerAktiv) {
+            if (this.config.collectorActive) {
                 await this.ensureSammlungObjects(deviceId).catch(e =>
                     this.log.debug(`${deviceId}: collection objects - ${e.message}`),
                 );
@@ -1081,7 +1092,7 @@ class MieleLocal extends utils.Adapter {
                  * Programm kostet dann die Differenz dieses einen Laufs, was der Datensatz als
                  * unvollstaendig vermerkt - das ist mir lieber als ein weiteres Objekt im Baum.
                  */
-                if (this.config.sammlerAktiv) {
+                if (this.config.collectorActive) {
                     const meinStart = this._cycles[deviceId].start;
                     this.leafStaendeLesen(deviceId)
                         .then(l => {
@@ -1272,9 +1283,9 @@ class MieleLocal extends utils.Adapter {
      * @param deviceId Geraete-ID
      */
     zaehlerDatenpunkt(deviceId) {
-        const liste = this.config.zaehler || [];
+        const liste = this.config.energyMeters || [];
         const treffer = liste.find(z => z && String(z.serial || '').trim() === String(deviceId));
-        const dp = treffer && String(treffer.datenpunkt || '').trim();
+        const dp = treffer && String(treffer.stateId || '').trim();
         return dp || null;
     }
 
@@ -1333,7 +1344,7 @@ class MieleLocal extends utils.Adapter {
      * @param eintrag der Datensatz
      */
     async sammlungAufnehmen(deviceId, eintrag) {
-        if (!this.config.sammlerAktiv) {
+        if (!this.config.collectorActive) {
             return;
         }
         try {
@@ -1343,13 +1354,13 @@ class MieleLocal extends utils.Adapter {
             };
             let felder = {};
             try {
-                felder = JSON.parse(await lies('eco.felderJson')) || {};
+                felder = JSON.parse(await lies('eco.fieldsJson')) || {};
             } catch {
                 /* leer */
             }
 
             let cloud = null;
-            if (this.config.sammlerCloud) {
+            if (this.config.collectorCloud) {
                 cloud = await this.cloudWerteLesen(deviceId);
             }
 
@@ -1576,7 +1587,7 @@ class MieleLocal extends utils.Adapter {
      * @param deviceId Geraete-ID
      */
     async leafsAbschlussNachtragen(deviceId) {
-        if (!this.config.sammlerAktiv) {
+        if (!this.config.collectorActive) {
             return;
         }
         const leafs = await this.leafStaendeLesen(deviceId);
@@ -1597,7 +1608,7 @@ class MieleLocal extends utils.Adapter {
     }
 
     async cloudWerteLesen(deviceId) {
-        const instanz = this.config.sammlerCloudInstanz || 'mielecloudservice.0';
+        const instanz = this.config.collectorCloudInstance || 'mielecloudservice.0';
         const holen = async feld => {
             const s = await this.getForeignStateAsync(`${instanz}.${deviceId}.EcoFeedback.${feld}`).catch(() => null);
             return s && typeof s.val === 'number' && s.val > 0 ? s.val : null;
@@ -2266,6 +2277,32 @@ class MieleLocal extends utils.Adapter {
      * @param {number}  minSek    Untergrenze in Sekunden
      * @param {number}  [einheitMs]  Umrechnung der Einheit, z. B. 60000 fuer Minuten
      */
+    /**
+     * Eine wiederkehrende Aufgabe, deren naechster Lauf erst NACH dem Ende des vorigen geplant wird.
+     *
+     * Bis 0.3.44 liefen diese Nebenschleifen ueber setInterval (Review 03.10.2026): Braucht ein
+     * Durchlauf laenger als der Takt - etwa weil ein Geraet nicht antwortet und jede Anfrage bis
+     * zum Zeitlimit wartet -, startete der naechste, bevor der vorige fertig war, und die Anfragen
+     * stauten sich am Modul. Jetzt gibt es nie zwei Laeufe derselben Aufgabe gleichzeitig.
+     *
+     * @param {string} name Feld, in dem der Timer steht (fuer clearTimeout in onUnload)
+     * @param {() => any} aufgabe die Aufgabe; darf ein Promise liefern
+     * @param {number} abstandMs Pause zwischen Ende eines Laufs und Beginn des naechsten
+     */
+    schleife(name, aufgabe, abstandMs) {
+        const lauf = async () => {
+            try {
+                await aufgabe();
+            } catch (e) {
+                this.log.debug(`${name}: ${e.message}`);
+            }
+            if (!this.stopping) {
+                this[name] = this.setTimeout(lauf, abstandMs);
+            }
+        };
+        this[name] = this.setTimeout(lauf, abstandMs);
+    }
+
     static intervallMs(wert, vorgabe, minSek, einheitMs = 1000) {
         const zahl = Number(wert);
         const sek = Number.isFinite(zahl) && zahl > 0 ? zahl : vorgabe;
@@ -2553,13 +2590,13 @@ class MieleLocal extends utils.Adapter {
                  * hatte das Programmende getroffen.
                  *
                  * eco.water war dagegen geschuetzt und stand richtig. Die Sammlung liest aber
-                 * eco.felderJson, nicht eco.water - und bekam so vier Datensaetze der Form
+                 * eco.fieldsJson, nicht eco.water - und bekam so vier Datensaetze der Form
                  * "Rohwert 0 gegen 31 Liter". Das sind achtzehn Prozent der eigenen Daten, und
                  * sie sind nicht nur wertlos, sondern schaedlich: Feld 60 der WCR860 ist genau
                  * in diesen vier Zyklen ungleich null und sah dadurch wie ein perfekter
                  * Energiezaehler aus (drei Zyklen, 0,0 Prozent). Es ist keiner.
                  */
-                const vorherige = await this.getStateAsync(`${deviceId}.eco.felderJson`);
+                const vorherige = await this.getStateAsync(`${deviceId}.eco.fieldsJson`);
                 const hatteWerte = !!(
                     vorherige &&
                     typeof vorherige.val === 'string' &&
@@ -2576,7 +2613,7 @@ class MieleLocal extends utils.Adapter {
                             alleFelder[idx] = Number(v);
                         }
                     }
-                    await this.setStateAsync(`${deviceId}.eco.felderJson`, {
+                    await this.setStateAsync(`${deviceId}.eco.fieldsJson`, {
                         val: JSON.stringify(alleFelder),
                         ack: true,
                     });
@@ -2703,7 +2740,7 @@ class MieleLocal extends utils.Adapter {
      * erklaeren. Seit 0.3.37 entstehen sie nur noch, wenn sie jemand braucht.
      *
      * WARUM ZWEI SCHALTER. Die Leaf-Suche haengt an `leafScanAuto` und laesst sich unabhaengig
-     * von der Datensammlung einschalten. Stuende hier nur `sammlerAktiv`, liefe sie ins Leere:
+     * von der Datensammlung einschalten. Stuende hier nur `collectorActive`, liefe sie ins Leere:
      * Sie schreibt nach `sammlung.leafScan*`, und ein setState auf ein nicht vorhandenes Objekt
      * verpufft mit einer Warnung im Protokoll, die niemand liest.
      *
@@ -2713,7 +2750,7 @@ class MieleLocal extends utils.Adapter {
      *   (etwa beim von Hand gedrueckten Scan).
      */
     async ensureSammlungObjects(deviceId, erzwingen) {
-        if (!erzwingen && !this.config.sammlerAktiv && !this.config.leafScanAuto) {
+        if (!erzwingen && !this.config.collectorActive && !this.config.leafScanAuto) {
             return;
         }
         if (!this._sammlungCreated) {
@@ -3502,7 +3539,7 @@ class MieleLocal extends utils.Adapter {
      * @returns {number} wie viele Werte geschrieben wurden
      */
     async geraeteWerteSchreiben(deviceId, leaf, fields) {
-        if (!this.config.leafDatenpunkte) {
+        if (!this.config.leafStates) {
             return 0;
         }
         const deutsch = this.config.germanNames !== false;
@@ -4380,22 +4417,22 @@ class MieleLocal extends utils.Adapter {
                 this.clearTimeout(this.pollTimer);
             }
             if (this.discoveryTimer) {
-                this.clearInterval(this.discoveryTimer);
+                this.clearTimeout(this.discoveryTimer);
             }
             if (this.enrollTimer) {
-                this.clearInterval(this.enrollTimer);
+                this.clearTimeout(this.enrollTimer);
             }
             if (this.ecoTimer) {
-                this.clearInterval(this.ecoTimer);
+                this.clearTimeout(this.ecoTimer);
             }
             if (this.hoursTimer) {
-                this.clearInterval(this.hoursTimer);
+                this.clearTimeout(this.hoursTimer);
             }
             if (this.verlaufTimer) {
-                this.clearInterval(this.verlaufTimer);
+                this.clearTimeout(this.verlaufTimer);
             }
             if (this.secTimer) {
-                this.clearInterval(this.secTimer);
+                this.clearTimeout(this.secTimer);
             }
             if (this.push) {
                 await this.push.stop();

@@ -102,7 +102,7 @@
   "Water field divisor": "Diviseur du champ d'eau",
   "Water field index": "Index du champ eau",
   "Without cloud: after each programme, enter energy and water from the Miele app into \"collection.inputEnergy\" and \"collection.inputWater\" - they are attached to the most recent dataset. \"collection.progress\" shows what is still missing.": "Sans cloud : après chaque programme, saisissez l'énergie et l'eau de l'application Miele dans « collection.inputEnergy » et « collection.inputWater » ; elles sont rattachées au dernier jeu de données. « collection.progress » indique ce qui manque encore.",
-  "Writes all fields of the eco leaf to eco.felderJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "Écrit tous les champs du leaf Eco dans eco.felderJson au lieu des deux seuls évalués. Utile si l'énergie ou l'eau arrivent fausses sur votre modèle.",
+  "Writes all fields of the eco leaf to eco.fieldsJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "Écrit tous les champs du leaf Eco dans eco.fieldsJson au lieu des deux seuls évalués. Utile si l'énergie ou l'eau arrivent fausses sur votre modèle.",
   "Writes two tables and opens the first: one row per programme with all raw fields, plus an analysis with one row per field. Take care when sharing – the table contains the programme timestamps.": "Dépose deux tableaux et ouvre le premier : une ligne par programme avec tous les champs bruts, plus une analyse avec une ligne par champ. Attention en cas de partage – le tableau contient les horodatages des programmes.",
   "miele:// redirect URL": "URL de redirection miele://"
 }

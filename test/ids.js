@@ -68,3 +68,37 @@ describe('Objekt-IDs', () => {
         expect(ids.alterKanal('000111111111')).to.equal('000111111111.sammlung');
     });
 });
+
+describe('Einstellungen auf englische Namen umziehen (0.3.45, Review 03.10.2026)', () => {
+    it('übernimmt die alten Werte unter den neuen Namen und entfernt die alten', () => {
+        const { native, geaendert } = ids.konfigUmzug({
+            sammlerAktiv: true, sammlerCloud: true, sammlerCloudInstanz: 'mielecloudservice.1',
+            leafDatenpunkte: false, pollInterval: 15,
+            zaehler: [{ serial: '000111111111', datenpunkt: 'shelly.0.x.Energy' }],
+        });
+        expect(geaendert).to.be.true;
+        expect(native).to.deep.equal({
+            collectorActive: true, collectorCloud: true, collectorCloudInstance: 'mielecloudservice.1',
+            leafStates: false, pollInterval: 15,
+            energyMeters: [{ serial: '000111111111', stateId: 'shelly.0.x.Energy' }],
+        });
+    });
+
+    it('der alte Wert gewinnt gegen die beim Update ergänzte Vorgabe', () => {
+        // ioBroker ergänzt beim Update neue native-Schlüssel mit ihrer Vorgabe - die echte
+        // Einstellung des Nutzers steht dann noch unter dem alten Namen.
+        const { native } = ids.konfigUmzug({ sammlerAktiv: true, collectorActive: false });
+        expect(native).to.deep.equal({ collectorActive: true });
+    });
+
+    it('läuft genau einmal - danach gibt es nichts mehr umzuziehen', () => {
+        const erst = ids.konfigUmzug({ sammlerAktiv: true, zaehler: [{ serial: 'S', datenpunkt: 'D' }] }).native;
+        expect(ids.konfigUmzug(erst).geaendert).to.be.false;
+        expect(ids.konfigUmzug({ collectorActive: false, energyMeters: [] }).geaendert).to.be.false;
+        expect(ids.konfigUmzug(undefined).geaendert).to.be.false;
+    });
+
+    it('zieht eco.felderJson nach eco.fieldsJson um', () => {
+        expect(ids.umzuege('X')).to.deep.include({ alt: 'X.eco.felderJson', neu: 'X.eco.fieldsJson' });
+    });
+});

@@ -131,7 +131,7 @@ describe('EcoFeedback-Objekte', () => {
         // am Datenpunkt nicht zu sehen, welcher Fall vorliegt.
         expect(objdef.ecoStates(true, false).map(d => d.sub))
             .to.deep.equal(['energy', 'energyWh', 'water', 'source']);
-        expect(objdef.ecoStates(true, true).some(d => d.sub === 'felderJson')).to.be.true;
+        expect(objdef.ecoStates(true, true).some(d => d.sub === 'fieldsJson')).to.be.true;
     });
 
     it('gibt jedem angelegten Punkt Typ und Vorgabewert', () => {

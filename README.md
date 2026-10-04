@@ -171,7 +171,7 @@ Everything in this section is **off by default** and is not needed for day-to-da
 exists for one question: which raw field of *your* appliance holds energy and water. The field
 numbers differ per series, and the defaults in the adapter come from a WCR860.
 
-**Raw fields.** Writes all fields of the eco leaf to `eco.felderJson` instead of only the two
+**Raw fields.** Writes all fields of the eco leaf to `eco.fieldsJson` instead of only the two
 evaluated ones.
 
 **Data collection.** Records one dataset per completed programme — model, programme, all raw
@@ -237,11 +237,14 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.3.45
 - (SmarthomeElektroniker) The last German state ID is gone: `eco.quelle` is now `eco.source`, its value is always English. Existing installations are migrated on start
 - (SmarthomeElektroniker) `statusText`, `programText`, `programPhaseText`, `programTypeText` and `dryingStepText` follow the "German names" option - with the option off they are English (until now they were always German)
 - (SmarthomeElektroniker) Remaining German log and error messages translated; CSV export files are named `collection-<date>.csv` and `finding-<date>.csv`
 - (SmarthomeElektroniker) All JSDoc comments complete (no lint warnings left); `@iobroker/testing` 6.3.0
+- (SmarthomeElektroniker) `eco.felderJson` is now `eco.fieldsJson` (migrated on start)
+- (SmarthomeElektroniker) Settings use English keys: `sammlerAktiv`/`sammlerCloud`/`sammlerCloudInstanz` became `collectorActive`/`collectorCloud`/`collectorCloudInstance`, `leafDatenpunkte` became `leafStates`, the energy meter table `zaehler` became `energyMeters`. Existing settings are carried over once on start (review 2026-10-03)
+- (SmarthomeElektroniker) Background loops (eco, operating hours, seconds, discovery, push renewal, leaf trend) schedule their next run only after the previous one finished - no overlapping runs when an appliance answers slowly
 
 ### 0.3.44
 - (SmarthomeElektroniker) History objects are only rewritten when they actually changed - this prevents an empty (null) point in the history adapter after every adapter restart

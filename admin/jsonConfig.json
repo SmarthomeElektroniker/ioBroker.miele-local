@@ -385,7 +385,7 @@
                     "lg": 4,
                     "xl": 4
                 },
-                "zaehler": {
+                "energyMeters": {
                     "type": "table",
                     "label": "Energy meter per appliance (optional)",
                     "newLine": true,
@@ -398,7 +398,7 @@
                         },
                         {
                             "type": "objectId",
-                            "attr": "datenpunkt",
+                            "attr": "stateId",
                             "title": "Meter datapoint (Wh, monotonically increasing)",
                             "width": "60%"
                         }
@@ -410,7 +410,7 @@
                     "xl": 12,
                     "help": "The consumption reported by the appliance is an estimate, not a measurement. If you have a metering plug in front of it, enter its meter state here."
                 },
-                "leafDatenpunkte": {
+                "leafStates": {
                     "type": "checkbox",
                     "newLine": true,
                     "label": "Create what the device delivers",
@@ -540,11 +540,11 @@
                 }
             }
         },
-        "tabDiagnose": {
+        "tabDiagnostics": {
             "type": "panel",
             "label": "Diagnostics",
             "items": {
-                "_diagIntro": {
+                "_diagnosticsIntro": {
                     "type": "staticText",
                     "newLine": true,
                     "text": "These settings serve troubleshooting and field mapping. They are not needed for daily operation and are off by default. Collected data stays in this instance.",
@@ -564,9 +564,9 @@
                     "md": 4,
                     "lg": 4,
                     "xl": 4,
-                    "help": "Writes all fields of the eco leaf to eco.felderJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model."
+                    "help": "Writes all fields of the eco leaf to eco.fieldsJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model."
                 },
-                "_sammlerKopf": {
+                "_collectorHeader": {
                     "xs": 12,
                     "sm": 12,
                     "md": 12,
@@ -577,7 +577,7 @@
                     "newLine": true,
                     "text": "Data collection for other models"
                 },
-                "sammlerAktiv": {
+                "collectorActive": {
                     "xs": 12,
                     "sm": 6,
                     "md": 4,
@@ -599,7 +599,7 @@
                     "label": "Start the leaf search when a device is switched on",
                     "help": "Only for devices whose search has never run. A device that is off most of the time would otherwise never be searched. The search only reads, and stops as soon as the device is off again."
                 },
-                "sammlerCloud": {
+                "collectorCloud": {
                     "xs": 12,
                     "sm": 6,
                     "md": 4,
@@ -607,11 +607,11 @@
                     "xl": 4,
                     "type": "checkbox",
                     "newLine": true,
-                    "hidden": "!data.sammlerAktiv",
+                    "hidden": "!data.collectorActive",
                     "label": "Include cloud values for comparison",
                     "help": "Requires a running instance of the mielecloudservice adapter."
                 },
-                "sammlerCloudInstanz": {
+                "collectorCloudInstance": {
                     "xs": 12,
                     "sm": 12,
                     "md": 6,
@@ -619,12 +619,12 @@
                     "xl": 6,
                     "type": "text",
                     "newLine": true,
-                    "hidden": "!data.sammlerCloud",
+                    "hidden": "!data.collectorCloud",
                     "label": "Cloud adapter instance",
                     "default": "mielecloudservice.0",
                     "help": "Instance of the cloud adapter the reference values come from, for example mielecloudservice.0."
                 },
-                "_sammlerHand": {
+                "_collectorManual": {
                     "xs": 12,
                     "sm": 12,
                     "md": 12,
@@ -632,10 +632,10 @@
                     "xl": 12,
                     "type": "staticText",
                     "newLine": true,
-                    "hidden": "!data.sammlerAktiv",
+                    "hidden": "!data.collectorActive",
                     "text": "Without cloud: after each programme, enter energy and water from the Miele app into \"collection.inputEnergy\" and \"collection.inputWater\" - they are attached to the most recent dataset. \"collection.progress\" shows what is still missing."
                 },
-                "_csvKopf": {
+                "_csvHeader": {
                     "type": "header",
                     "size": 4,
                     "newLine": true,

@@ -102,7 +102,7 @@
   "Water field divisor": "水量字段除数",
   "Water field index": "用水字段索引",
   "Without cloud: after each programme, enter energy and water from the Miele app into \"collection.inputEnergy\" and \"collection.inputWater\" - they are attached to the most recent dataset. \"collection.progress\" shows what is still missing.": "不使用云端时：每次程序结束后，将 Miele 应用中的能耗和用水量填入 \"collection.inputEnergy\" 和 \"collection.inputWater\"，它们会归入最近一次收集的数据集。\"collection.progress\" 显示还缺少什么。",
-  "Writes all fields of the eco leaf to eco.felderJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "将 Eco leaf 的全部字段写入 eco.felderJson，而不仅是已解析的两个。当您的机型能耗或水量数值有误时有帮助。",
+  "Writes all fields of the eco leaf to eco.fieldsJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "将 Eco leaf 的全部字段写入 eco.fieldsJson，而不仅是已解析的两个。当您的机型能耗或水量数值有误时有帮助。",
   "Writes two tables and opens the first: one row per programme with all raw fields, plus an analysis with one row per field. Take care when sharing – the table contains the programme timestamps.": "生成两张表并打开第一张：每个程序一行、含全部原始字段，另有一张每个字段一行的分析表。分享时请注意——表中含程序的时间点。",
   "miele:// redirect URL": "miele:// 重定向 URL"
 }

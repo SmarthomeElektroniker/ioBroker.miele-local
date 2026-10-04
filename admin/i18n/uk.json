@@ -102,7 +102,7 @@
   "Water field divisor": "Дільник поля води",
   "Water field index": "Індекс поля води",
   "Without cloud: after each programme, enter energy and water from the Miele app into \"collection.inputEnergy\" and \"collection.inputWater\" - they are attached to the most recent dataset. \"collection.progress\" shows what is still missing.": "Без хмари: після кожної програми вводьте енергію та воду з застосунку Miele у «collection.inputEnergy» і «collection.inputWater» — вони належать до останнього набору даних. «collection.progress» показує, чого ще бракує.",
-  "Writes all fields of the eco leaf to eco.felderJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "Записує всі поля Eco-leaf у eco.felderJson, а не лише два оброблювані. Допомагає, якщо енергія чи вода на вашій моделі надходять хибними.",
+  "Writes all fields of the eco leaf to eco.fieldsJson instead of only the two evaluated ones. Helps when energy or water arrive wrong on your model.": "Записує всі поля Eco-leaf у eco.fieldsJson, а не лише два оброблювані. Допомагає, якщо енергія чи вода на вашій моделі надходять хибними.",
   "Writes two tables and opens the first: one row per programme with all raw fields, plus an analysis with one row per field. Take care when sharing – the table contains the programme timestamps.": "Створює дві таблиці й відкриває першу: по рядку на програму з усіма сирими полями, а також розбір по рядку на поле. Обережно з передаванням — таблиця містить час виконання програм.",
   "miele:// redirect URL": "URL перенаправлення miele://"
 }
