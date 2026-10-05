@@ -12,6 +12,7 @@ const paket = require('./package.json');
 const { MieleCrypto } = require('./lib/crypto');
 const { MieleDeviceApi } = require('./lib/api');
 const { discover, scanSubnet, istMiele } = require('./lib/discovery');
+const takt = require('./lib/takt');
 const cloud = require('./lib/cloud');
 const objdef = require('./lib/objects');
 const namen = require('./lib/names');
@@ -2164,19 +2165,41 @@ class MieleLocal extends utils.Adapter {
         this._histCreated[deviceId] = true;
     }
 
+    /**
+     * Abstand bis zur naechsten Abfrage EINES Geraets: kurz, solange es laeuft, sonst der Ruhetakt.
+     *
+     * Bis 0.3.45 galt der kurze Takt fuer ALLE Geraete, sobald eines lief - backte der Ofen,
+     * wurden Wasch- und Spuelmaschine im Minutentakt mitgefragt, obwohl sie aus waren. Ein
+     * XKM-Modul bedient nur eine Verbindung; jede ueberfluessige Frage nimmt der Miele-App
+     * einen Zeitschlitz weg.
+     *
+     * @param dev Geraeteeintrag aus this.devices
+     */
+    abstandFuer(dev) {
+        return takt.abstand(
+            dev,
+            MieleLocal.intervallMs(this.config.activePollInterval, 5, 1),
+            MieleLocal.intervallMs(this.config.pollInterval, 15, 1),
+        );
+    }
+
     schedulePoll(immediate = false) {
         if (this.pollTimer) {
             this.clearTimeout(this.pollTimer);
         }
-        const anyActive = Object.values(this.devices).some(d => d.active);
-        const interval = anyActive
-            ? MieleLocal.intervallMs(this.config.activePollInterval, 5, 1)
-            : MieleLocal.intervallMs(this.config.pollInterval, 15, 1);
+        // Geweckt wird zur naechsten faelligen Abfrage irgendeines Geraets; pollAll(true) fragt
+        // dann nur die faelligen. Ein Geraet ohne Termin (neu gefunden) ist sofort faellig.
+        const interval = takt.weckAbstand(
+            Object.values(this.devices),
+            Date.now(),
+            MieleLocal.intervallMs(this.config.pollInterval, 15, 1),
+        );
         const run = async () => {
             if (this.stopping) {
                 return;
             }
-            await this.pollAll();
+            // Ein sofortiger Durchgang (nach einem Schreibbefehl) fragt alle, sonst nur die faelligen.
+            await this.pollAll(!immediate);
             this.schedulePoll(false);
         };
         const nextDelayMs = immediate ? 100 : interval;
@@ -2286,7 +2309,7 @@ class MieleLocal extends utils.Adapter {
      * stauten sich am Modul. Jetzt gibt es nie zwei Laeufe derselben Aufgabe gleichzeitig.
      *
      * @param {string} name Feld, in dem der Timer steht (fuer clearTimeout in onUnload)
-     * @param {() => any} aufgabe die Aufgabe; darf ein Promise liefern
+     * @param {() => (void | Promise<void>)} aufgabe die Aufgabe; darf ein Promise liefern
      * @param {number} abstandMs Pause zwischen Ende eines Laufs und Beginn des naechsten
      */
     schleife(name, aufgabe, abstandMs) {
@@ -3180,9 +3203,20 @@ class MieleLocal extends utils.Adapter {
         return 1500;
     }
 
-    async pollAll() {
+    /**
+     * Alle Geraete abfragen - oder nur die, deren Termin gekommen ist (siehe abstandFuer()).
+     *
+     * @param nurFaellige true: Geraete mit spaeterem Termin auslassen
+     */
+    async pollAll(nurFaellige = false) {
         let ok = false;
+        const jetzt = Date.now();
         for (const [deviceId, dev] of Object.entries(this.devices)) {
+            if (nurFaellige && !takt.istFaellig(dev, jetzt)) {
+                // Nicht dran - fuer info.connection zaehlt sein letzter Stand.
+                ok = ok || dev.erreichbar === true;
+                continue;
+            }
             // Zweiter Anlauf, bevor ein Abruf als Fehler gilt. Das XKM-Modul der Geraete legt im
             // laufenden Betrieb sporadisch auf ("read ECONNRESET") oder antwortet kurz mit 404 -
             // am 23.08.2026 an der laufenden Waschmaschine mit 21 % der Abrufe gemessen, waehrend
@@ -3215,6 +3249,9 @@ class MieleLocal extends utils.Adapter {
             if (fehler) {
                 await this.setStateAsync(`${deviceId}.info.connected`, { val: false, ack: true });
             }
+            dev.erreichbar = !fehler;
+            // Erst nach applyState: dev.active ist dann auf dem Stand dieser Abfrage.
+            dev.naechsteAbfrage = Date.now() + this.abstandFuer(dev);
             await this.verbucheAbfrage(deviceId, fehler, wiederholt && !fehler);
         }
         await this.setStateAsync('info.connection', { val: ok, ack: true });
