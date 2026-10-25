@@ -208,7 +208,10 @@
     "historyDays": 730,
     "historyWrite": true,
     "historyInstance": "history.0",
-    "leafScanAuto": false
+    "leafScanAuto": false,
+    "timeServer": false,
+    "timeServerPort": 8780,
+    "timeServerBind": ""
   },
   "objects": [],
   "instanceObjects": [
