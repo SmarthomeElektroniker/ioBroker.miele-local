@@ -28,6 +28,7 @@ const felder = require('./lib/felder');
 const csvBauer = require('./lib/csv');
 const datenpunkte = require('./lib/datenpunkte');
 const { MieleZeitdienst } = require('./lib/zeitdienst');
+const uhrzeit = require('./lib/uhrzeit');
 
 /**
  * Verschnaufpause zwischen zwei Scan-Durchgaengen.
@@ -382,6 +383,12 @@ class MieleLocal extends utils.Adapter {
         // Betriebsstunden: einmal beim Start, danach stuendlich - siehe pollHours().
         this.pollHours();
         this.schleife('hoursTimer', () => this.pollHours(), 60 * 60 * 1000);
+
+        // Geraeteuhr auf Ortszeit halten (Standard aus): beim Start und danach stuendlich.
+        if (this.config.keepDeviceClock) {
+            this.geraeteuhrenPruefen().catch(e => this.log.debug(`Device clock: ${e.message}`));
+            this.schleife('uhrTimer', () => this.geraeteuhrenPruefen(), 60 * 60 * 1000);
+        }
 
         /*
          * Den Werteverlauf der gefundenen Leafs mitschreiben.
@@ -4505,6 +4512,117 @@ class MieleLocal extends utils.Adapter {
     }
 
     /**
+     * Die Uhr der Geraete auf Ortszeit halten (Einstellung keepDeviceClock, Standard aus).
+     *
+     * Liest je Geraet Settings/TimeSync. Nur Geraete, die dort mit 200 antworten, werden
+     * beachtet (G5840/WCR860 liefern 503 und bleiben unberuehrt). Weicht DateTime mehr als
+     * 2 Minuten von der Ortszeit des ioBroker-Prozesses ab, stellt ein PUT mit nur
+     * {"DateTime":[...]} die Uhr; NTPEnabled, UTCOffset und TimeMaster bleiben, wie sie sind.
+     * Anlass: Ein Backofen H2469BP blieb am 25.10.2026 nach der Rueckstellung auf Winterzeit
+     * eine Stunde vor - siehe lib/uhrzeit.js.
+     */
+    async geraeteuhrenPruefen() {
+        const zone = uhrzeit.zeitzone();
+        for (const [deviceId, dev] of Object.entries(this.devices || {})) {
+            if (this.stopping) {
+                return;
+            }
+            const res = `Devices/${dev.route}/Settings/TimeSync/`;
+            let ts;
+            try {
+                ts = await dev.api.get(res);
+            } catch (e) {
+                this.log.debug(`Device clock ${deviceId}: TimeSync not readable (${e.message})`);
+                continue;
+            }
+            const { abweichungS, setzen } = uhrzeit.pruefen(ts, Date.now(), zone);
+            if (abweichungS === null) {
+                this.log.debug(`Device clock ${deviceId}: TimeSync without usable DateTime`);
+                continue;
+            }
+            await this.uhrObjekteAnlegen(deviceId);
+            await this.setStateAsync(`${deviceId}.info.timeSync.lastDeviation`, { val: abweichungS, ack: true });
+            if (!setzen) {
+                this.log.debug(`Device clock ${deviceId}: deviation ${abweichungS} s, within limit`);
+                continue;
+            }
+            const rumpf = uhrzeit.stellRumpf(Date.now(), zone);
+            let status;
+            try {
+                status = await dev.api.put(res, rumpf);
+            } catch (e) {
+                this.log.warn(`Device clock ${deviceId}: setting the time failed (${e.message})`);
+                continue;
+            }
+            if (status < 200 || status >= 300) {
+                this.log.warn(`Device clock ${deviceId}: setting the time failed (HTTP ${status})`);
+                continue;
+            }
+            let danach = null;
+            try {
+                danach = uhrzeit.abweichung(await dev.api.get(res), Date.now(), zone);
+            } catch {
+                /* Zuruecklesen ist nur Kontrolle */
+            }
+            const alt = ts.DateTime;
+            const zwei = n => String(n).padStart(2, '0');
+            const vorher = `${zwei(alt[3])}:${zwei(alt[4])}:${zwei(alt[5])}`;
+            const vz = abweichungS > 0 ? '+' : '';
+            const nachher = danach === null ? '' : ` - deviation now ${danach} s`;
+            this.log.info(
+                `Device clock ${deviceId}: was ${vorher} (${vz}${abweichungS} s against local time ${zone}), set to local time${nachher}`,
+            );
+            await this.setStateAsync(`${deviceId}.info.timeSync.lastSet`, { val: Date.now(), ack: true });
+        }
+    }
+
+    /**
+     * Die Datenpunkte fuer die Geraeteuhr anlegen (nur bei Geraeten mit lesbarem TimeSync).
+     *
+     * @param {string} deviceId Geraet
+     */
+    async uhrObjekteAnlegen(deviceId) {
+        if (!this._uhrObjekte) {
+            this._uhrObjekte = {};
+        }
+        if (this._uhrObjekte[deviceId]) {
+            return;
+        }
+        const de = this.config.germanNames !== false;
+        await this.objektNachziehen(`${deviceId}.info.timeSync`, {
+            type: 'folder',
+            common: { name: namen.text('Geräteuhr', 'Appliance clock', de) },
+            native: {},
+        });
+        await this.objektNachziehen(`${deviceId}.info.timeSync.lastSet`, {
+            type: 'state',
+            common: {
+                name: namen.text('Uhr zuletzt gestellt', 'Clock last set', de),
+                type: 'number',
+                role: 'date',
+                read: true,
+                write: false,
+                def: 0,
+            },
+            native: {},
+        });
+        await this.objektNachziehen(`${deviceId}.info.timeSync.lastDeviation`, {
+            type: 'state',
+            common: {
+                name: namen.text('Abweichung von der Ortszeit', 'Deviation from local time', de),
+                type: 'number',
+                role: 'value',
+                unit: 's',
+                read: true,
+                write: false,
+                def: 0,
+            },
+            native: {},
+        });
+        this._uhrObjekte[deviceId] = true;
+    }
+
+    /**
      * Den eingebauten Miele-Zeitdienst starten (Einstellung timeServer).
      *
      * Die Kommunikationsmodule holen ihre Uhrzeit per HTTP von ntp.mcs2.miele.com:80 - siehe
@@ -4656,6 +4774,9 @@ class MieleLocal extends utils.Adapter {
             }
             if (this.secTimer) {
                 this.clearTimeout(this.secTimer);
+            }
+            if (this.uhrTimer) {
+                this.clearTimeout(this.uhrTimer);
             }
             if (this.push) {
                 await this.push.stop();

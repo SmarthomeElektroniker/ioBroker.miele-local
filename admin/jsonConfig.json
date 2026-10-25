@@ -507,6 +507,28 @@
                     "md": 12,
                     "lg": 12,
                     "xl": 12
+                },
+                "_clockHeader": {
+                    "type": "header",
+                    "size": 4,
+                    "newLine": true,
+                    "text": "Appliance clock",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "keepDeviceClock": {
+                    "type": "checkbox",
+                    "label": "Keep the appliance clock on local time",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6,
+                    "help": "Off by default. Checks the clock of each appliance at start and every hour and sets it to the local time of ioBroker if it differs by more than 2 minutes. Only appliances that report their clock (Settings/TimeSync) are affected; others are left alone. Each correction is logged. Some appliances miss the change to or from daylight saving time."
                 }
             }
         },

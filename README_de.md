@@ -204,6 +204,19 @@ Kommt nichts an, liegt es an der Umleitung oder der Firewall, nicht am Adapter.
 (eingestellt am Gerät oder in der Miele-App). Alles außer `GET /V2/NTP/` wird mit 404
 beantwortet. Abfragen erscheinen nur im Debug-Log.
 
+### Geräteuhr auf Ortszeit halten (optional)
+
+Manche Geräte führen die UTC-Zeit richtig, stellen die Sommerzeit aber nach eigenem Plan um –
+ein Backofen H2469BP stand nach der Umstellung am 25.10.2026 noch stundenlang auf Sommerzeit.
+**Push & Ports → Geräteuhr auf Ortszeit halten** (Standard aus) prüft jedes Gerät beim Start und
+stündlich über `Settings/TimeSync` und stellt die Uhr, wenn sie mehr als 2 Minuten von der
+Ortszeit des ioBroker (Zeitzone des Hosts/Containers) abweicht – mit einer signierten Anfrage, die
+nur `DateTime` enthält (`NTPEnabled`, `UTCOffset` und `TimeMaster` bleiben unberührt). Jede
+Korrektur steht im Log (info); `<Gerät>.info.timeSync.lastDeviation` (Sekunden, positiv = Gerät
+geht vor) und `lastSet` zeigen das Ergebnis. Geräte ohne `TimeSync` (z. B. G5840, WCR860
+antworten mit 503) bleiben unberührt. Funktioniert ohne den Zeitdienst oben und ohne
+„Steuerung erlauben“.
+
 ## Datenschutz
 
 Der Adapter speichert **keine personenbezogenen Daten**. GroupID, GroupKey und Refresh-Token
@@ -299,6 +312,9 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+
+### 0.4.1
+- (SmarthomeElektroniker) Neue Option **Geräteuhr auf Ortszeit halten** (Push & Ports, Standard aus): prüft `Settings/TimeSync` beim Start und stündlich und stellt die Geräteuhr auf die Ortszeit des ioBroker, wenn sie mehr als 2 Minuten abweicht. Geschrieben wird nur das Feld `DateTime`. Datenpunkte `info.timeSync.lastSet` und `info.timeSync.lastDeviation` je Gerät
 
 ### 0.4.0
 - (SmarthomeElektroniker) Neuer optionaler **Miele-Zeitdienst** (Push & Ports, Standard aus): beantwortet die HTTP-Zeitabfrage der Geräte `GET http://ntp.mcs2.miele.com/V2/NTP/` mit `{"time":<Unix-Sekunden>}`, damit Geräte ohne Internet die richtige Uhrzeit behalten. Die Geräte müssen zu ihm umgeleitet werden (Ziel-NAT am Router oder DNS-Umschreibung) – siehe „Zeitdienst für die Geräte". Beantwortete Abfragen zählt `info.timeServer.*`, je Absender `info.timeServer.clients.*`

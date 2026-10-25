@@ -171,7 +171,6 @@ one of:
    `ntp.mcs2.miele.com` (currently `52.136.223.17`; check with `nslookup`) TCP 80, translated to
    the ioBroker IP and the port set here. On UniFi: *Settings → Routing → NAT → Destination NAT*.
    The service can stay on a high port; the router does the 80 → port translation.
-   The service can stay on a high port; the router does the 80 → port translation.
    **If ioBroker is in the same subnet as the appliances**, add a source NAT (masquerade, e.g. to
    the router's own address) for this flow too — otherwise ioBroker answers the appliance
    directly, the answer does not come from the address the appliance asked, and it is dropped.
@@ -195,6 +194,19 @@ the router instead of the appliance. If nothing arrives, the redirect or the fir
 **Limits:** the service delivers **UTC only**. The time zone and daylight saving time are
 applied by the appliance itself (set on the appliance or in the Miele app). Everything except
 `GET /V2/NTP/` gets a 404. Requests are logged at debug level only.
+
+### Keeping the appliance clock on local time (optional)
+
+Some appliances get UTC right but apply daylight saving time on their own schedule - an oven
+H2469BP was still on summer time hours after the change on 25.10.2026. **Push & ports → Keep the
+appliance clock on local time** (off by default) checks every appliance at start and every hour
+via `Settings/TimeSync` and, if its clock differs from the local time of ioBroker (time zone of
+the ioBroker host/container) by more than 2 minutes, sets it with a signed request that contains
+only `DateTime` (`NTPEnabled`, `UTCOffset` and `TimeMaster` stay untouched). Each correction is
+logged at info level; `<appliance>.info.timeSync.lastDeviation` (seconds, positive = appliance
+ahead) and `lastSet` show the result. Appliances that do not report `TimeSync` (e.g. G5840,
+WCR860 answer 503) are left alone. Works without the time server above and without
+"Allow control".
 
 ## Privacy
 
@@ -287,6 +299,9 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+
+### 0.4.1
+- (SmarthomeElektroniker) New option **Keep the appliance clock on local time** (Push & ports, off by default): checks `Settings/TimeSync` at start and every hour and sets the appliance clock to the local time of ioBroker if it differs by more than 2 minutes. Only the `DateTime` field is written. States `info.timeSync.lastSet` and `info.timeSync.lastDeviation` per appliance
 
 ### 0.4.0
 - (SmarthomeElektroniker) New optional **Miele time server** (Push & ports, off by default): answers the appliances' HTTP time request `GET http://ntp.mcs2.miele.com/V2/NTP/` with `{"time":<Unix seconds>}`, so appliances without internet keep the right time. The appliances must be redirected to it (destination NAT on the router or a DNS rewrite) - see "Time server for the appliances". Answered requests are counted under `info.timeServer.*`, per sender under `info.timeServer.clients.*`
