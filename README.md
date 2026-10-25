@@ -113,7 +113,7 @@ is enabled on the appliance, and some firmwares reject DOP2 writes outright.
 | **Login** | country, the guided login, the captured address |
 | **Appliances** | mDNS discovery, the fallback IP scan, manual IP addresses |
 | **Polling & values** | poll intervals, German state names, second-precise times, EcoFeedback, energy meter, device internals |
-| **Push & ports** | the optional real-time channel and its inbound port |
+| **Push & ports** | the optional real-time channel and its inbound port, the optional time server |
 | **Control** | the switch that creates the writable states |
 | **History** | recording of completed programmes, ring buffer, retention, History adapter |
 | **Diagnostics** | everything for fault finding and field mapping — off by default |
@@ -129,6 +129,7 @@ Every field carries its explanation underneath it in the admin; this page does n
 | in/out | UDP 5353 (mDNS) | discovery and push registration | for discovery |
 | outbound | TCP 80 → appliances | read states, send commands | yes |
 | outbound | TCP 443 → miele-iot.com | fetch the GroupKey | login only |
+| inbound | TCP *time server port* (default 8780) | appliances fetch their clock time | only with the time server |
 
 Without push **no inbound port** is needed. For mDNS, ioBroker and the appliances must sit in the
 same broadcast segment. Separate IoT WLANs or VLANs, firewalls (including the Windows firewall on
@@ -144,6 +145,51 @@ Reliable push needs `network_mode: host`.
 (`PUT /Devices/<series>/SuperVision/<own-fab>`) and subscribes with a callback URL. The appliance
 then sends changes unsolicited, within a second. Not every module can do this: the older XKM
 EK037 and EK057 accept the subscription and send nothing. Polling remains the reliable path.
+
+## Time server for the appliances (optional)
+
+Miele appliances keep their clock with **their own HTTP request, not NTP**. The communication
+module resolves `ntp.mcs2.miele.com` and asks, every 30 seconds until it gets an answer:
+
+```
+GET http://ntp.mcs2.miele.com/V2/NTP/ HTTP/1.1
+Host: ntp.mcs2.miele.com
+Accept: application/vnd.miele.v1+json
+```
+
+Miele answers `{"time":<Unix seconds>}`. An appliance **without internet access** (IoT network
+without an exit) never gets this answer: its clock drifts, and it may stay on summer time after
+the change. A DHCP NTP option or an NTP server in your network does not help — the appliance
+does not use NTP.
+
+The adapter can give the same answer from your network. Turn on **Push & ports → Answer the
+appliances' time request** (off by default) and pick a port (default 8780). **On its own this
+does nothing**: the destination is fixed in the module, so you must redirect the appliances —
+one of:
+
+1. **Router: destination NAT / port forwarding.** Source = the Miele appliances, destination
+   `ntp.mcs2.miele.com` (currently `52.136.223.17`; check with `nslookup`) TCP 80, translated to
+   the ioBroker IP and the port set here. On UniFi: *Settings → Routing → NAT → Destination NAT*.
+   The service can stay on a high port; the router does the 80 → port translation.
+2. **DNS rewrite** (AdGuard Home, Pi-hole, dnsmasq): `ntp.mcs2.miele.com` → ioBroker IP. The
+   appliance then connects to **port 80** of that IP, so the service must be reachable there:
+   in Docker map host port 80 to the configured port (`-p 80:8780`); without Docker either set
+   port 80 (needs root or `CAP_NET_BIND_SERVICE`) or forward 80 with the host firewall. Port 80
+   must not be taken by another web server on that host.
+
+**Docker:** with bridge networking the port must be in the container's port mapping — adding
+one means re-creating the container. If one of the mapped ports is unused, use that one.
+**Firewall:** a firewall on the host (e.g. Synology DSM) must allow TCP to that port from the
+appliances.
+
+**Check:** `info.timeServer.running` is `true`; `info.timeServer.requests`, `lastRequest`,
+`lastClient` and `info.timeServer.clients.<ip>.*` count every answered request. Depending on the
+Docker setup the sender may appear as the Docker gateway (e.g. `172.17.0.1`) instead of the
+appliance. If nothing arrives, the redirect or the firewall is the problem, not the adapter.
+
+**Limits:** the service delivers **UTC only**. The time zone and daylight saving time are
+applied by the appliance itself (set on the appliance or in the Miele app). Everything except
+`GET /V2/NTP/` gets a 404. Requests are logged at debug level only.
 
 ## Privacy
 
@@ -236,6 +282,10 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+
+### 0.4.0
+- (SmarthomeElektroniker) New optional **Miele time server** (Push & ports, off by default): answers the appliances' HTTP time request `GET http://ntp.mcs2.miele.com/V2/NTP/` with `{"time":<Unix seconds>}`, so appliances without internet keep the right time. The appliances must be redirected to it (destination NAT on the router or a DNS rewrite) - see "Time server for the appliances". Answered requests are counted under `info.timeServer.*`, per sender under `info.timeServer.clients.*`
+- (SmarthomeElektroniker) Leaf table: `DateTimeInfo` is attribute 122 in unit 14 (`14/122`), not `2/122`
 
 ### 0.3.47
 - (SmarthomeElektroniker) A command under `control.*` that cannot be executed (control disabled, appliance not connected, HTTP error, connection error) is now acknowledged (`val=false`, `ack=true`) with the reason in the state comment `c` and a matching quality `q`. Until now it stayed unacknowledged - one `control.powerOn` stood there for 52 days
