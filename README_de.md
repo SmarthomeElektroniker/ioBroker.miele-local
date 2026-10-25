@@ -177,6 +177,11 @@ umgeleitet werden – eine der beiden Möglichkeiten:
    die ioBroker-IP und den hier eingestellten Port. Bei UniFi: *Einstellungen → Routing → NAT →
    Destination NAT*. Der Dienst kann auf einem hohen Port bleiben, die Umsetzung 80 → Port
    übernimmt der Router.
+   **Liegt ioBroker im selben Subnetz wie die Geräte**, zusätzlich eine Quell-NAT-Regel
+   (Masquerade, z. B. auf die Adresse des Routers) für diesen Weg anlegen – sonst antwortet
+   ioBroker dem Gerät direkt, die Antwort kommt nicht von der Adresse, die das Gerät gefragt hat,
+   und wird verworfen. Filtert die Router-Firewall Verkehr innerhalb dieses Netzes oder dieser
+   Zone, den Weg dort ebenfalls freigeben.
 2. **DNS-Umschreibung** (AdGuard Home, Pi-hole, dnsmasq): `ntp.mcs2.miele.com` → ioBroker-IP.
    Das Gerät verbindet sich dann mit **Port 80** dieser IP, dort muss der Dienst also erreichbar
    sein: unter Docker Host-Port 80 auf den eingestellten Port mappen (`-p 80:8780`); ohne Docker
@@ -191,7 +196,8 @@ von den Geräten zulassen.
 
 **Kontrolle:** `info.timeServer.running` ist `true`; `info.timeServer.requests`, `lastRequest`,
 `lastClient` und `info.timeServer.clients.<ip>.*` zählen jede beantwortete Abfrage. Je nach
-Docker-Aufbau erscheint als Absender das Docker-Gateway (z. B. `172.17.0.1`) statt des Geräts.
+Docker-Aufbau und Quell-NAT erscheint als Absender das Docker-Gateway (z. B. `172.17.0.1`) oder
+der Router statt des Geräts.
 Kommt nichts an, liegt es an der Umleitung oder der Firewall, nicht am Adapter.
 
 **Grenzen:** Der Dienst liefert **nur UTC**. Zeitzone und Sommerzeit rechnet das Gerät selbst

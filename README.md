@@ -171,6 +171,11 @@ one of:
    `ntp.mcs2.miele.com` (currently `52.136.223.17`; check with `nslookup`) TCP 80, translated to
    the ioBroker IP and the port set here. On UniFi: *Settings → Routing → NAT → Destination NAT*.
    The service can stay on a high port; the router does the 80 → port translation.
+   The service can stay on a high port; the router does the 80 → port translation.
+   **If ioBroker is in the same subnet as the appliances**, add a source NAT (masquerade, e.g. to
+   the router's own address) for this flow too — otherwise ioBroker answers the appliance
+   directly, the answer does not come from the address the appliance asked, and it is dropped.
+   Also allow the flow in the router's firewall if it filters traffic inside that network or zone.
 2. **DNS rewrite** (AdGuard Home, Pi-hole, dnsmasq): `ntp.mcs2.miele.com` → ioBroker IP. The
    appliance then connects to **port 80** of that IP, so the service must be reachable there:
    in Docker map host port 80 to the configured port (`-p 80:8780`); without Docker either set
@@ -184,8 +189,8 @@ appliances.
 
 **Check:** `info.timeServer.running` is `true`; `info.timeServer.requests`, `lastRequest`,
 `lastClient` and `info.timeServer.clients.<ip>.*` count every answered request. Depending on the
-Docker setup the sender may appear as the Docker gateway (e.g. `172.17.0.1`) instead of the
-appliance. If nothing arrives, the redirect or the firewall is the problem, not the adapter.
+Docker setup and source NAT the sender may appear as the Docker gateway (e.g. `172.17.0.1`) or
+the router instead of the appliance. If nothing arrives, the redirect or the firewall is the problem, not the adapter.
 
 **Limits:** the service delivers **UTC only**. The time zone and daylight saving time are
 applied by the appliance itself (set on the appliance or in the Miele app). Everything except
