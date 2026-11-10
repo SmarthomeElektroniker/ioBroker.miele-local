@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
