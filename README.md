@@ -106,6 +106,16 @@ filled retroactively. `history.cyclesJson` holds the last programmes, `stats.wee
 the command; the state resets itself. Commands only work while **MobileStart / remote control**
 is enabled on the appliance, and some firmwares reject DOP2 writes outright.
 
+`powerOn` and `powerOff` switch like the Miele app (since 0.4.3): they write the appliance state
+into the DOP2 leaf `2/1586` (4 = on, 1 = off). If the appliance is asleep and answers HTTP 500, it is
+woken with `{"DeviceAction":2}` and the write is repeated, at most twice. Only then the older
+UserRequest `2/1583` is tried. Coffee machines with protocol version 2 are switched via Dop1. Afterwards
+the status is read again; the comment `c` of the state says which way worked and whether the status
+changed. If it fails, `c` explains the HTTP status: **404** = the communication module offers no DOP2
+control (e.g. XKM EK057), **403** = remote control is switched off on the appliance, **500** = the
+appliance does not accept the command in its current state. With the instance log level **debug**,
+every step is logged with resource, HTTP status and the answer as hex (no keys).
+
 ## Settings
 
 | Tab | What it holds |
@@ -299,6 +309,9 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+- (SmarthomeElektroniker) `control.powerOn`/`powerOff` now switch like the Miele app: DOP2 leaf `2/1586` (appliance state 4 = on, 1 = off), on HTTP 500 wake-up with `{"DeviceAction":2}` and retry (at most two rounds), the previous UserRequest `2/1583` only as fallback; coffee machines with protocol version 2 via Dop1 object 1101. The effect is checked by reading the status again, failures are explained by HTTP status (403/404/500), RemoteEnable is only logged, every step is in the debug log
 
 ### 0.4.2
 - (SmarthomeElektroniker) Maintenance: trimmed the version news in `io-package.json` (repository checker W1032/W2004), no functional change
