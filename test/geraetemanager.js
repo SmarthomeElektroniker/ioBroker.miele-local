@@ -87,8 +87,12 @@ describe('Geräte-Manager', () => {
         expect(k.status.connection.mapping).to.deep.equal({ true: 'connected', false: 'disconnected' });
         expect(k.status.warning.stateId).to.equal(`${NS}.${OFEN}.state.signalFailure`);
         expect(k.indicators.map(i => i.id)).to.deep.equal(['signalInfo']);
-        expect(k.controls.map(c => c.id)).to.deep.equal(gm.KARTE);
-        expect(k.controls.every(c => c.type === 'info' && c.stateId.startsWith(`${NS}.${OFEN}.`))).to.equal(true);
+        // laufender Betrieb als Datenpunkt-Zeilen auf der Karte (customInfo), keine info-Controls
+        expect(k.controls).to.equal(undefined);
+        const zeilen = Object.values(k.customInfo.schema.items);
+        expect(zeilen.map(z => z.oid)).to.deep.equal(gm.KARTE.map(s => `${NS}.${OFEN}.${s}`));
+        expect(zeilen.every(z => z.type === 'state' && z.readOnly === true && z.foreign === true)).to.equal(true);
+        expect(k.icon).to.match(/^data:image\/svg\+xml;base64,/);
         expect(k.hasDetails).to.equal(true);
         expect(k.group.key).to.equal('type12');
         expect(k.group.name.de).to.equal('Backofen');
@@ -101,7 +105,10 @@ describe('Geräte-Manager', () => {
         expect(ids).to.deep.equal(['powerOn', 'powerOff', 'start', 'pause', 'stop', 'lightOn', 'lightOff']);
         for (const a of karte(OFEN).actions) {
             expect(gm.BEFEHLE).to.include(a.id);
-            expect(a.title.de).to.be.a('string');
+            // Symbolknoepfe mit Befehlsnamen als Tooltip - sieben Textknoepfe passen nicht auf die Karte
+            expect(a.description.de).to.be.a('string');
+            expect(a.icon).to.equal(gm.KNOPFSYMBOL[a.id]);
+            expect(a.title).to.equal(undefined);
             // Eingriffe in den Betrieb werden bestaetigt, das Licht nicht.
             expect(!!a.confirmation, a.id).to.equal(!a.id.startsWith('light'));
         }
