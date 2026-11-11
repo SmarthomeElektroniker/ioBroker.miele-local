@@ -54,6 +54,7 @@ const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
 const stats = require('./lib/stats');
 const { mussNachziehen } = require('./lib/objektabgleich');
+const { MieleGeraeteManager } = require('./lib/geraetemanager');
 
 /*
  * EcoFeedback: DOP2-Leaf 2/6195 (bislang nur Waschmaschinen liefern ihn).
@@ -235,6 +236,9 @@ class MieleLocal extends utils.Adapter {
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('message', this.onMessage.bind(this));
         this.on('unload', this.onUnload.bind(this));
+        // Geraetekarten im Device-Manager (Issue #22): nur Betrieb und Alltagsbefehle, siehe
+        // lib/geraetemanager.js. Haengt sich selbst an 'message' und beantwortet die dm:-Befehle.
+        this.geraeteManager = new MieleGeraeteManager(this);
     }
 
     /**
@@ -4429,6 +4433,10 @@ class MieleLocal extends utils.Adapter {
     // --- Admin-Nachrichten (OAuth-Login) ---
     async onMessage(obj) {
         if (!obj || !obj.command) {
+            return;
+        }
+        if (obj.command.startsWith('dm:')) {
+            // Beantwortet der Device-Manager selbst (lib/geraetemanager.js).
             return;
         }
         try {
