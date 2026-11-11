@@ -309,6 +309,9 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- (SmarthomeElektroniker) Device manager support (`@iobroker/dm-utils`, issue #22, suggested by mcm1957): one card per appliance showing the running operation – name/model, reachability, fault and notice signals, status, programme, phase, remaining time and estimated end; expanding the card shows further operating values (temperatures, elapsed time, start delay, spin speed, door, light, MobileStart, EcoFeedback, operating hours). With device control enabled the card offers the everyday commands On/Off, Start/Pause/Stop and Light on/off (light only where the appliance has one); they write the existing `control.*` states, so the same checks and acknowledgements apply, and every command except the light asks for confirmation. Deliberately no configuration actions on the cards – discovery, pairing and diagnostics stay in the instance settings. States and configuration are unchanged
+
 ### 0.4.3 (2026-11-10)
 - (SmarthomeElektroniker) `control.powerOn`/`powerOff` now switch like the Miele app: DOP2 leaf `2/1586` (appliance state 4 = on, 1 = off), on HTTP 500 wake-up with `{"DeviceAction":2}` and retry (at most two rounds), the previous UserRequest `2/1583` only as fallback; coffee machines with protocol version 2 via Dop1 object 1101. The effect is checked by reading the status again, failures are explained by HTTP status (403/404/500), RemoteEnable is only logged, every step is in the debug log
 
