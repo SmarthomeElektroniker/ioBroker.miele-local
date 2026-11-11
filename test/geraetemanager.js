@@ -114,10 +114,13 @@ describe('Geräte-Manager', () => {
         }
     });
 
-    it('Licht nur bei Geräten, die eines haben', () => {
-        const hatLicht = objekte().has(`${WASCHMASCHINE}.state.light`);
+    it('Licht nur bei Geräten, die eines haben, und in der Statuszeile', () => {
+        // Waschmaschine: Datenpunkt state.light gibt es, ein Licht nicht
         const ids = karte(WASCHMASCHINE, true, 1).actions.map(a => a.id);
-        expect(ids.includes('lightOn')).to.equal(hatLicht);
+        expect(ids.includes('lightOn')).to.equal(false);
+        const ofen = karte(OFEN).actions;
+        expect(ofen.filter(a => a.placement === 'status').map(a => a.id)).to.deep.equal(['lightOn', 'lightOff']);
+        expect(ofen.filter(a => a.placement !== 'status').length).to.equal(5);
     });
 
     it('keine Konfigurationsaktionen: keine Instanz-Aktionen, keine Such-/Koppel-/Löschknöpfe', () => {
