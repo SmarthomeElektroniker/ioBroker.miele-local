@@ -163,6 +163,10 @@
       }
     ],
     "messagebox": true,
+    "supportedMessages": {
+      "custom": true,
+      "deviceManager": true
+    },
     "supportCustoms": false
   },
   "encryptedNative": [
