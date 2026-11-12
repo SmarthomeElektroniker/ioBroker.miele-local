@@ -4288,7 +4288,9 @@ class MieleLocal extends utils.Adapter {
          * Scan liest ausschliesslich. Ausgeloest wird er von Hand, nicht von selbst: Er
          * belegt das Geraet ueber Minuten, und wann das passt, weiss nur der Mensch davor.
          */
-        const scanIdx = parts.indexOf('sammlung');
+        // Der Kanal heisst seit 0.3.38 "collection" (lib/ids.js). Bis 0.5.0 stand hier noch
+        // 'sammlung' - Handeingaben, Scan-Schalter und Feinaufzeichnung kamen nie an.
+        const scanIdx = parts.indexOf(ids.KANAL.collection);
 
         /*
          * Die Feinaufzeichnung ein- und ausschalten.
@@ -4351,7 +4353,7 @@ class MieleLocal extends utils.Adapter {
             return;
         }
 
-        const sIdx = parts.indexOf('sammlung');
+        const sIdx = parts.indexOf(ids.KANAL.collection);
         if (sIdx > 0 && typeof state.val === 'number' && state.val > 0) {
             const feld = parts[sIdx + 1];
             if (feld === ids.SAMMLUNG.inputEnergy || feld === ids.SAMMLUNG.inputWater) {
