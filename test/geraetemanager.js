@@ -18,18 +18,44 @@ const BAUM = require(path.join(__dirname, '..', 'miele-local.0.json'));
 const OFEN = '000133333333';
 const WASCHMASCHINE = '000111111111';
 
-function objekte() {
+/** Datenpunkte, die erst seit 0.5.0 angelegt werden - im Objektabzug fehlen sie noch. */
+const NEU = ['control.canPowerOn', 'control.canPowerOff', 'control.canStart', 'control.canPause', 'control.canStop'];
+
+function objekte({ neu = true } = {}) {
     const m = new Map();
     for (const [id, o] of Object.entries(BAUM)) {
         if (o.type === 'state' && id.startsWith(`${NS}.`)) {
             m.set(id.slice(NS.length + 1), o);
         }
     }
+    if (neu) {
+        for (const geraet of [OFEN, WASCHMASCHINE]) {
+            for (const sub of NEU) {
+                m.set(`${geraet}.${sub}`, { type: 'state', common: { name: sub, type: 'boolean' } });
+            }
+            m.set(`${geraet}.state.progress`, { type: 'state', common: { name: 'Progress', type: 'number', unit: '%' } });
+        }
+    }
     return m;
 }
 
-function karte(id, steuerung = true, deviceType = 12) {
-    return gm.karte({ ns: NS, id, obj: BAUM[`${NS}.${id}`], objekte: objekte(), deviceType, steuerung });
+function karte(id, steuerung = true, deviceType = 12, neu = true) {
+    return gm.karte({ ns: NS, id, obj: BAUM[`${NS}.${id}`], objekte: objekte({ neu }), deviceType, steuerung });
+}
+
+/** Die Zeilen einer Karte, Schluessel = Datenpunkt ohne Namensraum und Geraet. */
+function zeilen(k, id) {
+    const aus = {};
+    for (const z of Object.values(k.customInfo.schema.items)) {
+        aus[z.oid ? z.oid.replace(`${NS}.${id}.`, '') : z.type] = z;
+    }
+    return aus;
+}
+
+/** Den hidden-Ausdruck einer Zeile so auswerten, wie es der Admin tut. */
+function versteckt(z, states) {
+    // eslint-disable-next-line no-new-func
+    return !!new Function('_states', `return ${z.hidden}`)(states);
 }
 
 /** Adapter-Attrappe: Objekte aus dem Baum, Zustaende im Speicher, Befehle werden mitgeschrieben. */
@@ -77,21 +103,50 @@ describe('Geräte-Manager', () => {
         expect(gm.text('failed', { grund: 'HTTP 403' }).en).to.equal('The command was not executed: HTTP 403');
     });
 
-    it('Karte zeigt den Betrieb: Name, Modell, Erreichbarkeit, Störung, Status bis Programmende', () => {
+    it('Kopf ohne Doppeltes: Titel = Name + Modell, Seriennummer nur im Text, kein Hersteller', () => {
         const k = karte(OFEN);
-        expect(k.id).to.equal(OFEN);
-        expect(k.name).to.deep.equal(BAUM[`${NS}.${OFEN}`].common.name);
-        expect(k.manufacturer).to.equal('Miele');
-        expect(k.model).to.deep.equal({ stateId: `${NS}.${OFEN}.info.techType` });
+        const roh = BAUM[`${NS}.${OFEN}`].common.name;
+        expect(JSON.stringify(roh)).to.contain(`(${OFEN})`);
+        expect(JSON.stringify(k.name)).to.not.contain(OFEN);
+        expect(k.identifier).to.equal(OFEN);
+        expect(k.manufacturer).to.equal(undefined);
+        expect(k.model).to.equal(undefined);
+        expect(gm.titel({ common: { name: 'Waschmaschine - WCR860 (000111111111)' } }, '000111111111')).to.equal(
+            'Waschmaschine - WCR860',
+        );
+        expect(gm.titel({ common: { name: { de: 'Ofen (x1)', en: 'Oven (x1)' } } }, 'x1')).to.deep.equal({
+            de: 'Ofen',
+            en: 'Oven',
+        });
+        expect(gm.titel(undefined, 'x1')).to.equal('x1');
+    });
+
+    it('Karte zeigt den Betrieb: Erreichbarkeit, Status bis Programmende, Fortschrittsbalken', () => {
+        const k = karte(OFEN);
         expect(k.status.connection.stateId).to.equal(`${NS}.${OFEN}.info.connected`);
         expect(k.status.connection.mapping).to.deep.equal({ true: 'connected', false: 'disconnected' });
-        expect(k.status.warning.stateId).to.equal(`${NS}.${OFEN}.state.signalFailure`);
-        expect(k.indicators.map(i => i.id)).to.deep.equal(['signalInfo']);
         // laufender Betrieb als Datenpunkt-Zeilen auf der Karte (customInfo), keine info-Controls
         expect(k.controls).to.equal(undefined);
-        const zeilen = Object.values(k.customInfo.schema.items);
-        expect(zeilen.map(z => z.oid)).to.deep.equal(gm.KARTE.map(s => `${NS}.${OFEN}.${s}`));
-        expect(zeilen.every(z => z.type === 'state' && z.readOnly === true && z.foreign === true)).to.equal(true);
+        const z = zeilen(k, OFEN);
+        expect(Object.keys(z)).to.include.members([
+            'state.statusText',
+            'state.programText',
+            'state.programPhaseText',
+            'state.remainingHHMM',
+            'state.estimatedEndTimeText',
+            'state.progress',
+        ]);
+        for (const zeile of Object.values(z).filter(x => x.type === 'state')) {
+            expect(zeile.readOnly).to.equal(true);
+            expect(zeile.foreign).to.equal(true);
+        }
+        // Restzeit und Ende gross
+        expect(z['state.remainingHHMM'].size).to.equal('large');
+        expect(z['state.estimatedEndTimeText'].size).to.equal('large');
+        expect(z['state.remainingHHMM'].label.de).to.equal('Restzeit');
+        expect(z['state.estimatedEndTimeText'].label.de).to.equal('Ende um');
+        // der Balken: Zahl mit Einheit %, ohne eigene Einheit in der Zeile
+        expect(z['state.progress'].unit).to.equal(undefined);
         expect(k.icon).to.match(/^data:image\/svg\+xml;base64,/);
         expect(k.hasDetails).to.equal(true);
         expect(k.group.key).to.equal('type12');
@@ -99,28 +154,137 @@ describe('Geräte-Manager', () => {
         expect(k.group.name.en).to.equal('Oven');
     });
 
-    it('Bedienung nur mit freigegebener Steuerung - und nur Alltagsbefehle', () => {
-        expect(karte(OFEN, false).actions).to.equal(undefined);
-        const ids = karte(OFEN).actions.map(a => a.id);
-        expect(ids).to.deep.equal(['powerOn', 'powerOff', 'start', 'pause', 'stop', 'lightOn', 'lightOff']);
-        for (const a of karte(OFEN).actions) {
-            expect(gm.BEFEHLE).to.include(a.id);
-            // Symbolknoepfe mit Befehlsnamen als Tooltip - sieben Textknoepfe passen nicht auf die Karte
-            expect(a.description.de).to.be.a('string');
-            expect(a.icon).to.equal(gm.KNOPFSYMBOL[a.id]);
-            expect(a.title).to.equal(undefined);
-            // Eingriffe in den Betrieb werden bestaetigt, das Licht nicht.
-            expect(!!a.confirmation, a.id).to.equal(!a.id.startsWith('light'));
+    it('leere Werte erscheinen nicht als leere Zeile', () => {
+        const z = zeilen(karte(OFEN), OFEN);
+        const mit = v => ({ v: { val: v } });
+        expect(versteckt(z['state.programText'], mit(''))).to.equal(true);
+        expect(versteckt(z['state.programText'], mit('Heißluft plus'))).to.equal(false);
+        expect(versteckt(z['state.programPhaseText'], { v: null })).to.equal(true);
+        expect(versteckt(z['state.remainingHHMM'], mit('0:00'))).to.equal(true);
+        expect(versteckt(z['state.remainingHHMM'], mit('1:25'))).to.equal(false);
+        expect(versteckt(z['state.estimatedEndTimeText'], mit(''))).to.equal(true);
+        expect(versteckt(z['state.estimatedEndTimeText'], mit('23:05'))).to.equal(false);
+        expect(versteckt(z['state.progress'], mit(0))).to.equal(true);
+        expect(versteckt(z['state.progress'], mit(37))).to.equal(false);
+        // der Status steht immer da
+        expect(z['state.statusText'].hidden).to.equal(undefined);
+        // jede Bedingung haengt an ihrem eigenen Datenpunkt
+        expect(z['state.progress'].dependsOnStates).to.deep.equal({ v: `${NS}.${OFEN}.state.progress` });
+    });
+
+    it('Hinweise: Störung, Tür offen, Gerätehinweis - farbig, nur solange sie anstehen', () => {
+        const z = zeilen(karte(OFEN), OFEN);
+        for (const [sub, de] of [
+            ['state.signalFailure', 'Störung – bitte am Gerät nachsehen'],
+            ['state.signalDoor', 'Tür offen'],
+        ]) {
+            expect(z[sub].trueText.de).to.equal(de);
+            expect(z[sub].trueTextStyle.color).to.match(/^#/);
+            expect(versteckt(z[sub], { v: { val: true } })).to.equal(false);
+            expect(versteckt(z[sub], { v: { val: false } })).to.equal(true);
+        }
+        expect(z['state.signalInfo'].trueText.de).to.contain('Hinweis');
+        // Fernstart gesperrt: nur bereit/programmiert und ohne MobileStart
+        const m = z.staticText;
+        expect(m.text.de).to.contain('MobileStart');
+        expect(versteckt(m, { s: { val: 3 }, m: { val: false } })).to.equal(false);
+        expect(versteckt(m, { s: { val: 3 }, m: { val: true } })).to.equal(true);
+        expect(versteckt(m, { s: { val: 5 }, m: { val: false } })).to.equal(true);
+        expect(versteckt(m, { s: { val: 1 }, m: { val: false } })).to.equal(true);
+    });
+
+    it('Knöpfe nach Zustand: Aus → Ein; bereit → Start, Aus; läuft → Pause, Stopp; pausiert → Start, Stopp', () => {
+        const wm = (status, mobileStart = true) => gm.angebot({ deviceType: 1, status, mobileStart, verbunden: true });
+        expect(wm(1)).to.deep.equal(['powerOn']);
+        expect(wm(2)).to.deep.equal(['powerOff', 'start']);
+        expect(wm(3)).to.deep.equal(['powerOff', 'start']);
+        expect(wm(4)).to.deep.equal(['powerOff', 'start', 'stop']);
+        expect(wm(5)).to.deep.equal(['pause', 'stop']);
+        expect(wm(6)).to.deep.equal(['start', 'stop']);
+        expect(wm(7)).to.deep.equal(['powerOff']);
+        expect(wm(8)).to.deep.equal(['powerOff']);
+        expect(wm(9)).to.deep.equal(['powerOff', 'stop']);
+        expect(wm(10)).to.deep.equal(['powerOff']);
+        expect(wm(11)).to.deep.equal(['start', 'stop']);
+        for (const unklar of [0, 12, 13, 145, 147, 255, null, undefined]) {
+            expect(wm(unklar), String(unklar)).to.deep.equal([]);
         }
     });
 
-    it('Licht nur bei Geräten, die eines haben, und in der Statuszeile', () => {
+    it('Knöpfe nur, wenn das Gerät sie kann', () => {
+        const a = (deviceType, status, mobileStart = true) =>
+            gm.angebot({ deviceType, status, mobileStart, verbunden: true });
+        // ohne MobileStart kein Start - das Geraet lehnte ihn ab
+        expect(a(1, 3, false)).to.deep.equal(['powerOff']);
+        expect(a(1, 6, false)).to.deep.equal(['stop']);
+        // Spuelmaschine und Backofen pausieren nicht
+        expect(a(7, 5)).to.deep.equal(['stop']);
+        expect(a(12, 5)).to.deep.equal(['stop']);
+        // Kuehlschrank und Kochfeld werden nicht geschaltet und haben keine Programme
+        expect(a(19, 1)).to.deep.equal([]);
+        expect(a(25, 1)).to.deep.equal([]);
+        // Kaffeevollautomat: nur Ein/Aus
+        expect(a(17, 1)).to.deep.equal(['powerOn']);
+        expect(a(17, 3)).to.deep.equal(['powerOff']);
+        // unbekannte Art: nichts
+        expect(a(null, 1)).to.deep.equal([]);
+        // nicht erreichbar: nichts
+        expect(gm.angebot({ deviceType: 1, status: 5, mobileStart: true, verbunden: false })).to.deep.equal([]);
+    });
+
+    it('Knöpfe stehen in der Statuszeile und folgen live control.can<Befehl>', () => {
+        expect(karte(OFEN, false).actions).to.equal(undefined);
+        expect(karte(OFEN, false).indicators).to.equal(undefined);
+        const k = karte(OFEN);
+        // Backofen: kein Pause-Knopf
+        expect(k.actions.map(a => a.id)).to.deep.equal(['powerOn', 'powerOff', 'start', 'stop', 'lightOn', 'lightOff']);
+        for (const a of k.actions) {
+            expect(gm.BEFEHLE).to.include(a.id);
+            expect(a.icon).to.equal(gm.KNOPFSYMBOL[a.id]);
+            expect(a.description.de).to.be.a('string').and.not.equal('');
+            // Eingriffe in den Betrieb werden bestaetigt, das Licht nicht.
+            expect(!!a.confirmation, a.id).to.equal(!a.id.startsWith('light'));
+        }
+        expect(k.actions.find(a => a.id === 'start').confirmation.de).to.equal('„Programm starten“ jetzt an das Gerät senden?');
+        // jeder Knopf ist eine Statusanzeige mit Beschriftung; die Aktion steht damit nicht noch im Fuss
+        expect(k.indicators.map(i => i.actionId)).to.deep.equal(k.actions.map(a => a.id));
+        for (const i of k.indicators.filter(x => !x.actionId.startsWith('light'))) {
+            expect(i.value).to.deep.equal({ stateId: `${NS}.${OFEN}.control.${gm.KANN_ID[i.actionId]}` });
+            expect(i.text.de).to.be.a('string');
+            expect(i.hideIfEmpty).to.not.equal(false);
+        }
+        // Licht immer sichtbar, mit verstaendlichem Tooltip
+        const licht = k.indicators.filter(x => x.actionId.startsWith('light'));
+        expect(licht.map(i => i.value)).to.deep.equal([undefined, undefined]);
+        expect(licht[0].tooltip.de).to.equal('Garraumbeleuchtung einschalten');
+        expect(licht[1].tooltip.de).to.equal('Garraumbeleuchtung ausschalten');
+        expect(karte(OFEN, true, 23).indicators.find(i => i.actionId === 'lightOn').tooltip.de).to.contain(
+            'Kochfeldbeleuchtung',
+        );
+    });
+
+    it('ältere Objekte ohne control.can*: Knöpfe bleiben als Fussknöpfe', () => {
+        const k = karte(OFEN, true, 12, false);
+        expect(k.actions.map(a => a.id)).to.include('start');
+        expect(k.indicators.map(i => i.actionId)).to.deep.equal(['lightOn', 'lightOff']);
+    });
+
+    it('Licht nur bei Geräten, die eines haben', () => {
         // Waschmaschine: Datenpunkt state.light gibt es, ein Licht nicht
         const ids = karte(WASCHMASCHINE, true, 1).actions.map(a => a.id);
-        expect(ids.includes('lightOn')).to.equal(false);
-        const ofen = karte(OFEN).actions;
-        expect(ofen.filter(a => a.placement === 'status').map(a => a.id)).to.deep.equal(['lightOn', 'lightOff']);
-        expect(ofen.filter(a => a.placement !== 'status').length).to.equal(5);
+        expect(ids).to.deep.equal(['powerOn', 'powerOff', 'start', 'pause', 'stop']);
+    });
+
+    it('Fortschritt: verstrichen / (verstrichen + Rest), nur im Lauf', () => {
+        expect(gm.fortschritt(5, 30, 90)).to.equal(25);
+        expect(gm.fortschritt(6, 60, 60)).to.equal(50);
+        expect(gm.fortschritt(5, 1, 500)).to.equal(1);
+        expect(gm.fortschritt(5, 500, 1)).to.equal(99);
+        expect(gm.fortschritt(5, 0, 90)).to.equal(0);
+        expect(gm.fortschritt(5, 30, 0)).to.equal(0);
+        expect(gm.fortschritt(1, 78, 0)).to.equal(0);
+        expect(gm.fortschritt(7, 30, 5)).to.equal(0);
+        expect(gm.fortschritt(null, 30, 5)).to.equal(0);
     });
 
     it('keine Konfigurationsaktionen: keine Instanz-Aktionen, keine Such-/Koppel-/Löschknöpfe', () => {

@@ -73,6 +73,7 @@ Jedes Gerät wird ein Objekt mit seiner Seriennummer als Kennung. Darunter:
 | `remainingMinutes`, `elapsedMinutes`, `startInMinutes` | Zeiten in Minuten |
 | `remainingSeconds`, `elapsedSeconds` | sekundengenau, wenn eingeschaltet |
 | `estimatedEndTime` / `estimatedEndTimeText` | voraussichtliches Ende (Zeitstempel in ms / `HH:MM`) |
+| `progress` | Programmfortschritt in % (verstrichen / (verstrichen + Rest)), 0, solange nichts läuft |
 | `temperature`, `targetTemperature` (dazu Zone 2 und 3) | Temperaturen |
 | `signalDoor`, `signalInfo`, `signalFailure` | Tür- und Signalmerker |
 | `mobileStart` | ob das Gerät gerade Fernsteuerung annimmt |
@@ -81,6 +82,14 @@ Jedes Gerät wird ein Objekt mit seiner Seriennummer als Kennung. Darunter:
 Rohwert und `…Text` stehen mit Absicht nebeneinander: Mit der Zahl rechnet und zeichnet man, den
 Text zeigt man an. Seit 0.3.37 trägt der Rohwert die Klartextliste selbst, der Textdatenpunkt
 wird damit an den meisten Stellen entbehrlich.
+
+### `control` – Befehle (nur mit freigegebener Gerätesteuerung)
+
+`start`, `stop`, `pause`, `powerOn`, `powerOff`, `lightOn`, `lightOff`: `true` schreiben sendet
+den Befehl; der Adapter bestätigt jeden Befehl, den Grund eines Fehlschlags nennt der Kommentar
+des Datenpunkts. `canStart`, `canStop`, `canPause`, `canPowerOn`, `canPowerOff` (nur lesen) sagen,
+ob der Befehl im jetzigen Zustand sinnvoll ist und das Gerät ihn kann – die Gerätekarten blenden
+ihre Knöpfe damit ein und aus, VIS kann das genauso.
 
 ### `info` – was das Gerät ist
 

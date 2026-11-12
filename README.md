@@ -70,6 +70,7 @@ Every appliance becomes one device with its serial number as the ID. Below it:
 | `remainingMinutes`, `elapsedMinutes`, `startInMinutes` | times in minutes |
 | `remainingSeconds`, `elapsedSeconds` | to the second, if enabled |
 | `estimatedEndTime` / `estimatedEndTimeText` | projected finish (timestamp in ms / `HH:MM`) |
+| `progress` | programme progress in % (elapsed / (elapsed + remaining)), 0 while nothing runs |
 | `temperature`, `targetTemperature` (plus zones 2 and 3) | temperatures |
 | `signalDoor`, `signalInfo`, `signalFailure` | door and signal flags |
 | `mobileStart` | whether the appliance currently accepts remote control |
@@ -78,6 +79,14 @@ Every appliance becomes one device with its serial number as the ID. Below it:
 The raw numbers and their `…Text` counterparts exist side by side on purpose: the raw value is
 what you compare and chart, the text is what you display. Since 0.3.37 the raw value itself
 carries the plain-text list, so in most places the text state is no longer needed.
+
+### `control` — commands (only with device control enabled)
+
+`start`, `stop`, `pause`, `powerOn`, `powerOff`, `lightOn`, `lightOff`: write `true` to send the
+command; the adapter acknowledges every command, the reason for a failure is in the state comment.
+`canStart`, `canStop`, `canPause`, `canPowerOn`, `canPowerOff` (read only) tell whether the
+command makes sense in the current state and is supported by the appliance - the device cards show
+their buttons with them, VIS can do the same.
 
 ### `info` — what the appliance is
 
