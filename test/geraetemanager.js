@@ -145,6 +145,10 @@ describe('Geräte-Manager', () => {
         expect(z['state.estimatedEndTimeText'].size).to.equal('large');
         expect(z['state.remainingHHMM'].label.de).to.equal('Restzeit');
         expect(z['state.estimatedEndTimeText'].label.de).to.equal('Ende um');
+        expect(z['state.programText'].label.de).to.equal('Programm');
+        expect(z['state.programPhaseText'].label.de).to.equal('Phase');
+        // Balken ohne Beschriftung daneben (verrutscht sonst), die Prozentzahl steht darunter
+        expect(z['state.progress'].label).to.equal('');
         // der Balken: Zahl mit Einheit %, ohne eigene Einheit in der Zeile
         expect(z['state.progress'].unit).to.equal(undefined);
         expect(k.icon).to.match(/^data:image\/svg\+xml;base64,/);
