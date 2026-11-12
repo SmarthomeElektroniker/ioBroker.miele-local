@@ -346,6 +346,12 @@ Reverse-Engineering-Arbeit der Projekte `MieleRESTServer` (akappner),
 	### **WORK IN PROGRESS**
 -->
 
+### 0.5.2 (2026-11-12)
+- (SmarthomeElektroniker) Fehlerbehebung: Eine Karte konnte „nicht verbunden“ zeigen und trotzdem den Ein-Knopf (oder das Licht) anbieten. Nach Stopp oder Neustart des Adapters behielten die `control.can*`-Datenpunkte ihren letzten Wert, ebenso bei Geräten, die beim Start nicht gefunden wurden. Jetzt setzt der Adapter sie beim Beenden und für jedes beim Start nicht gefundene Gerät zurück; ein nicht erreichbares Gerät oder eines mit Status 255 („nicht verbunden“) bekommt gar keinen Knopf
+- (SmarthomeElektroniker) Der Lichtknopf hängt jetzt ebenfalls an zwei Nur-Lese-Datenpunkten, `control.canLightOn` und `control.canLightOff` (genau einer ist true, solange das Gerät erreichbar ist). Die Karte sieht aus wie bisher
+- (SmarthomeElektroniker) Deutsche Texte: `fan_plus` heißt jetzt „Heißluft plus“ (bisher „Umluft“, auch in den Kombinationen mit Feuchtigkeit plus und Mikrowelle), `eco_fan_heat` „Eco-Heißluft“, Programm `automatic` „Automatik“ (bisher „Automatic“), Trockenstufen 4–7 berichtigt (standen falsch) zu „Handbügelfeucht 1/2“, „Maschinenbügelfeucht“, „Glätten“. **Sichtbare Änderung:** die deutschen `state.programText` und `state.dryingStepText` ändern sich entsprechend – Skripte, die auf den alten deutschen Text vergleichen, müssen angepasst werden
+- (SmarthomeElektroniker) Französisch: der Aus-Knopf heißt „Éteindre“ (bisher „Arrêt“) und Ein „Allumer“, damit Aus und Stopp („Arrêter“) klar unterscheidbar sind
+
 ### 0.5.1 (2026-11-12)
 - (SmarthomeElektroniker) Gerätekarten im Device-Manager zeigen Status, Programm, Phase, Programmart und Trockenstufe in der Systemsprache des ioBroker, in allen elf Admin-Sprachen. Bisher standen auf der Karte die `…Text`-Datenpunkte, die der Adapter nur auf Deutsch oder Englisch schreibt. Jetzt nutzt die Karte die Rohwerte (`state.status`, `programId`, `programPhase`, `programType`, `dryingStep`) mit einer Wertetabelle in der Systemsprache; die `…Text`-Datenpunkte bleiben unverändert, Skripte, die damit vergleichen, laufen weiter
 - (SmarthomeElektroniker) Übersetzungen: die Community-Übersetzungen der Miele-Integration von Home Assistant, eigene Übersetzungen, wo dort eine Sprache fehlt (Ukrainisch, Polnisch, große Teile von Russisch und Niederländisch, Status 144/145), und einige Berichtigungen. Programmnamen nur aus Home Assistant, sonst Englisch – nichts geraten

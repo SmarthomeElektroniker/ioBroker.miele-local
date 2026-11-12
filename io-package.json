@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.5.2": {
+        "en": "Cards show no command buttons (not even On or the light) while the appliance is not reachable or the adapter is stopped; new states control.canLightOn/canLightOff. German texts: fan_plus is now „Heißluft plus“, programme automatic „Automatik“, drying steps 4–7 corrected – scripts comparing the German …Text states must be adjusted. French: Off „Éteindre“, Stop „Arrêter“",
+        "de": "Karten zeigen keine Befehlsknöpfe (auch kein Ein und kein Licht), solange das Gerät nicht erreichbar oder der Adapter gestoppt ist; neue Datenpunkte control.canLightOn/canLightOff. Deutsche Texte: fan_plus heißt jetzt „Heißluft plus“, Programm automatic „Automatik“, Trockenstufen 4–7 berichtigt – Skripte, die die deutschen …Text-Datenpunkte vergleichen, anpassen. Französisch: Aus „Éteindre“, Stopp „Arrêter“",
+        "ru": "Карточки не показывают кнопки команд (даже «Вкл.» и свет), пока прибор недоступен или адаптер остановлен; новые точки данных control.canLightOn/canLightOff. Немецкие тексты: fan_plus теперь «Heißluft plus», программа automatic «Automatik», ступени сушки 4–7 исправлены – скрипты, сравнивающие немецкие состояния …Text, нужно изменить. Французский: «Выкл.» = «Éteindre», «Стоп» = «Arrêter»",
+        "pt": "Os cartões não mostram botões de comando (nem Ligar nem a luz) enquanto o aparelho não estiver acessível ou o adaptador estiver parado; novos estados control.canLightOn/canLightOff. Textos alemães: fan_plus passa a «Heißluft plus», programa automatic «Automatik», níveis de secagem 4–7 corrigidos – scripts que comparam os estados …Text em alemão devem ser ajustados. Francês: Desligar «Éteindre», Parar «Arrêter»",
+        "nl": "Kaarten tonen geen opdrachtknoppen (ook geen Aan en geen licht) zolang het apparaat niet bereikbaar is of de adapter gestopt is; nieuwe datapunten control.canLightOn/canLightOff. Duitse teksten: fan_plus heet nu „Heißluft plus“, programma automatic „Automatik“, droogstanden 4–7 gecorrigeerd – scripts die de Duitse …Text-datapunten vergelijken, aanpassen. Frans: Uit „Éteindre“, Stop „Arrêter“",
+        "fr": "Les cartes n'affichent aucun bouton de commande (ni Allumer ni la lumière) tant que l'appareil n'est pas joignable ou que l'adaptateur est arrêté ; nouveaux états control.canLightOn/canLightOff. Textes allemands : fan_plus devient « Heißluft plus », le programme automatic « Automatik », niveaux de séchage 4–7 corrigés – adapter les scripts qui comparent les états …Text allemands. Français : Éteindre et Arrêter désormais distincts",
+        "it": "Le schede non mostrano pulsanti di comando (nemmeno Accendi o la luce) finché l'apparecchio non è raggiungibile o l'adattatore è fermo; nuovi stati control.canLightOn/canLightOff. Testi tedeschi: fan_plus ora «Heißluft plus», programma automatic «Automatik», gradi di asciugatura 4–7 corretti – adattare gli script che confrontano gli stati …Text tedeschi. Francese: Spegni «Éteindre», Ferma «Arrêter»",
+        "es": "Las tarjetas no muestran botones de comando (ni Encender ni la luz) mientras el aparato no está accesible o el adaptador está detenido; nuevos estados control.canLightOn/canLightOff. Textos alemanes: fan_plus pasa a «Heißluft plus», el programa automatic «Automatik», niveles de secado 4–7 corregidos – hay que ajustar los scripts que comparan los estados …Text en alemán. Francés: Apagar «Éteindre», Detener «Arrêter»",
+        "pl": "Karty nie pokazują przycisków poleceń (nawet Włącz ani światła), dopóki urządzenie jest nieosiągalne lub adapter zatrzymany; nowe punkty danych control.canLightOn/canLightOff. Teksty niemieckie: fan_plus to teraz „Heißluft plus”, program automatic „Automatik”, stopnie suszenia 4–7 poprawione – skrypty porównujące niemieckie stany …Text trzeba dostosować. Francuski: Wyłącz „Éteindre”, Stop „Arrêter”",
+        "uk": "Картки не показують кнопок команд (навіть «Увімк.» і світла), поки прилад недоступний або адаптер зупинено; нові точки даних control.canLightOn/canLightOff. Німецькі тексти: fan_plus тепер «Heißluft plus», програма automatic «Automatik», ступені сушіння 4–7 виправлено – скрипти, що порівнюють німецькі стани …Text, слід змінити. Французька: «Вимк.» = «Éteindre», «Стоп» = «Arrêter»",
+        "zh-cn": "设备不可达或适配器停止时，卡片不再显示任何命令按钮（包括开机和灯光）；新增数据点 control.canLightOn/canLightOff。德语文本：fan_plus 改为「Heißluft plus」，程序 automatic 改为「Automatik」，烘干程度 4–7 已更正——比较德语 …Text 数据点的脚本需要调整。法语：关机为「Éteindre」，停止为「Arrêter」"
+      },
       "0.5.1": {
         "en": "Device manager cards show status, programme, phase, programme type and drying step in the system language of ioBroker (all 11 languages; programme names from the Home Assistant translations, otherwise English). The …Text states stay unchanged. Descriptions of control.can* and state.progress in all languages",
         "de": "Gerätekarten im Device-Manager zeigen Status, Programm, Phase, Programmart und Trockenstufe in der Systemsprache des ioBroker (alle 11 Sprachen; Programmnamen aus den Home-Assistant-Übersetzungen, sonst Englisch). Die …Text-Datenpunkte bleiben unverändert. Beschreibungen von control.can* und state.progress in allen Sprachen",
@@ -129,19 +142,6 @@
         "pl": "Polecenia, których nie można wykonać, są potwierdzane z podaniem przyczyny (komentarz i jakość stanu), zamiast pozostawać niepotwierdzone; oczekujące polecenia sprzed restartu są zamykane bez wysyłania. Pozostały czas wynosi 0, gdy urządzenie jest wyłączone lub zakończyło pracę. Utrata i powrót połączenia są zapisywane w dzienniku jednorazowo (info). Wyszukiwanie IP po awarii działa także bez mDNS i w każdej podsieci z brakującym urządzeniem",
         "uk": "Команди, які неможливо виконати, підтверджуються із зазначенням причини (коментар і якість стану), а не залишаються непідтвердженими; очікувані команди до перезапуску закриваються без надсилання. Залишковий час дорівнює 0, поки прилад вимкнений або завершив роботу. Втрата та відновлення зв'язку записуються в журнал один раз (info). Пошук IP при збої працює і без mDNS, у кожній підмережі з відсутнім приладом",
         "zh-cn": "无法执行的命令会附带原因（状态注释和质量）确认，而不再保持未确认；重启前的待处理命令会被关闭且不发送。电器关闭或程序结束时剩余时间为 0。连接丢失与恢复只在日志中记录一次（info）。IP 故障搜索在没有 mDNS 时也会运行，并覆盖每个缺少电器的子网"
-      },
-      "0.3.46": {
-        "en": "Only the running appliance is polled at the short interval, idle appliances keep the idle interval - fewer requests to the Miele modules (until now all appliances were polled at the short interval as soon as one was running)",
-        "de": "Nur das laufende Gerät wird im kurzen Takt abgefragt, Geräte in Ruhe behalten den Ruhetakt - weniger Anfragen an die Miele-Module (bisher wurden alle Geräte im kurzen Takt abgefragt, sobald eines lief)",
-        "ru": "С коротким интервалом опрашивается только работающий прибор, приборы в покое сохраняют интервал покоя - меньше запросов к модулям Miele (раньше все приборы опрашивались с коротким интервалом, как только работал один)",
-        "pt": "Apenas o aparelho em funcionamento é consultado no intervalo curto, aparelhos inativos mantêm o intervalo de repouso - menos pedidos aos módulos Miele (até agora todos eram consultados no intervalo curto assim que um estava a funcionar)",
-        "nl": "Alleen het draaiende apparaat wordt met het korte interval opgevraagd, apparaten in rust houden het rustinterval - minder verzoeken aan de Miele-modules (tot nu toe werden alle apparaten kort opgevraagd zodra er één draaide)",
-        "fr": "Seul l'appareil en marche est interrogé à l'intervalle court, les appareils au repos gardent l'intervalle de repos - moins de requêtes vers les modules Miele (jusqu'ici tous étaient interrogés à l'intervalle court dès qu'un appareil fonctionnait)",
-        "it": "Solo l'elettrodomestico in funzione viene interrogato all'intervallo breve, quelli inattivi mantengono l'intervallo di riposo - meno richieste ai moduli Miele (finora tutti venivano interrogati all'intervallo breve appena uno era in funzione)",
-        "es": "Solo el aparato en marcha se consulta con el intervalo corto, los aparatos en reposo mantienen el intervalo de reposo - menos peticiones a los módulos Miele (hasta ahora todos se consultaban con el intervalo corto en cuanto uno funcionaba)",
-        "pl": "Tylko pracujące urządzenie jest odpytywane w krótkim interwale, urządzenia w spoczynku zachowują interwał spoczynku - mniej zapytań do modułów Miele (dotąd wszystkie były odpytywane krótko, gdy tylko jedno pracowało)",
-        "uk": "З коротким інтервалом опитується лише працюючий прилад, прилади у спокої зберігають інтервал спокою - менше запитів до модулів Miele (досі всі прилади опитувалися з коротким інтервалом, щойно працював один)",
-        "zh-cn": "只有正在运行的电器使用短间隔轮询，空闲电器保持空闲间隔 - 减少对 Miele 模块的请求（此前只要有一台在运行，所有电器都按短间隔轮询）"
       }
     },
     "mode": "daemon",
