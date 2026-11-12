@@ -19,7 +19,15 @@ const OFEN = '000133333333';
 const WASCHMASCHINE = '000111111111';
 
 /** Datenpunkte, die erst seit 0.5.0 angelegt werden - im Objektabzug fehlen sie noch. */
-const NEU = ['control.canPowerOn', 'control.canPowerOff', 'control.canStart', 'control.canPause', 'control.canStop'];
+const NEU = [
+    'control.canPowerOn',
+    'control.canPowerOff',
+    'control.canStart',
+    'control.canPause',
+    'control.canStop',
+    'control.canLightOn',
+    'control.canLightOff',
+];
 
 function objekte({ neu = true } = {}) {
     const m = new Map();
@@ -233,7 +241,7 @@ describe('Geräte-Manager', () => {
         expect(a(1, 6, false)).to.deep.equal(['stop']);
         // Spuelmaschine und Backofen pausieren nicht
         expect(a(7, 5)).to.deep.equal(['stop']);
-        expect(a(12, 5)).to.deep.equal(['stop']);
+        expect(a(12, 5)).to.deep.equal(['stop', 'lightOn']);
         // Kuehlschrank und Kochfeld werden nicht geschaltet und haben keine Programme
         expect(a(19, 1)).to.deep.equal([]);
         expect(a(25, 1)).to.deep.equal([]);
@@ -246,31 +254,87 @@ describe('Geräte-Manager', () => {
         expect(gm.angebot({ deviceType: 1, status: 5, mobileStart: true, verbunden: false })).to.deep.equal([]);
     });
 
+    it('nicht verbunden oder nicht erreichbar: kein einziger Knopf, auch kein Ein und kein Licht', () => {
+        const ofen = (z = {}) => gm.angebot({ deviceType: 12, status: 1, mobileStart: false, verbunden: true, ...z });
+        // erreichbar und aus: Ein, Licht nach state.light
+        expect(ofen()).to.deep.equal(['powerOn', 'lightOn']);
+        expect(ofen({ licht: true })).to.deep.equal(['powerOn', 'lightOff']);
+        // Adapter erreicht das Geraet nicht
+        expect(ofen({ verbunden: false })).to.deep.equal([]);
+        expect(ofen({ verbunden: false, licht: true })).to.deep.equal([]);
+        // Geraet meldet selbst "nicht verbunden" (Status 255)
+        expect(ofen({ status: 255 })).to.deep.equal([]);
+        expect(ofen({ status: 255, licht: true })).to.deep.equal([]);
+    });
+
+    it('angebotLeeren: alle control.can* auf false, auch das Licht', async () => {
+        const a = adapter();
+        a.getObjectAsync = async id => BAUM[`${NS}.${id}`] || (NEU.some(n => id.endsWith(n)) ? { type: 'state' } : null);
+        a.setStateChangedAsync = a.setStateAsync;
+        await gm.angebotLeeren(a, OFEN);
+        const ids = a.geschrieben.map(g => g.id);
+        expect(ids).to.have.members(NEU.map(n => `${OFEN}.${n}`));
+        for (const g of a.geschrieben) {
+            expect(g, g.id).to.include({ val: false, ack: true });
+        }
+    });
+
+    it('Karte: jeder Knopf, auch Ein und Licht, hängt an einem control.can*-Datenpunkt', () => {
+        // So blendet angebotLeeren / ein Offline-Geraet wirklich alle Knoepfe aus.
+        const k = karte(OFEN);
+        for (const i of k.indicators) {
+            expect(i.value.stateId, i.id).to.match(/\.control\.can[A-Z]\w+$/);
+            expect(i.hideIfEmpty, i.id).to.not.equal(false);
+        }
+        expect(k.indicators.map(i => i.actionId)).to.include.members(['powerOn', 'lightOn', 'lightOff']);
+    });
+
     it('Knöpfe stehen in der Statuszeile und folgen live control.can<Befehl>', () => {
         expect(karte(OFEN, false).actions).to.equal(undefined);
         expect(karte(OFEN, false).indicators).to.equal(undefined);
         const k = karte(OFEN);
         // Backofen: kein Pause-Knopf, Licht als ein Umschalter
-        expect(k.actions.map(a => a.id)).to.deep.equal(['powerOn', 'powerOff', 'start', 'stop', 'lightToggle']);
+        expect(k.actions.map(a => a.id)).to.deep.equal(['powerOn', 'powerOff', 'start', 'stop', 'lightOn', 'lightOff']);
         for (const a of k.actions) {
             expect(a.icon).to.be.a('string');
             expect(a.description.de).to.be.a('string').and.not.equal('');
             // Eingriffe in den Betrieb werden bestaetigt, das Licht nicht.
-            expect(!!a.confirmation, a.id).to.equal(a.id !== 'lightToggle');
+            expect(!!a.confirmation, a.id).to.equal(!a.id.startsWith('light'));
         }
         expect(k.actions.find(a => a.id === 'start').confirmation.de).to.equal('„Programm starten“ jetzt an das Gerät senden?');
         // jeder Knopf ist eine Statusanzeige mit Beschriftung; die Aktion steht damit nicht noch im Fuss
         expect(k.indicators.map(i => i.actionId)).to.deep.equal(k.actions.map(a => a.id));
-        for (const i of k.indicators.filter(x => x.actionId !== 'lightToggle')) {
+        for (const i of k.indicators) {
             expect(i.value).to.deep.equal({ stateId: `${NS}.${OFEN}.control.${gm.KANN_ID[i.actionId]}` });
+        }
+        for (const i of k.indicators.filter(x => !x.actionId.startsWith('light'))) {
             expect(i.icon).to.equal(gm.KNOPFSYMBOL[i.actionId]);
             expect(i.text.de).to.be.a('string');
             expect(i.hideIfEmpty).to.not.equal(false);
         }
     });
 
-    it('Licht: ein Umschalter, Symbol, Beschriftung und Tooltip zeigen den Zustand', () => {
-        const licht = karte(OFEN).indicators.filter(i => i.actionId === 'lightToggle');
+    it('Licht: zwei Anzeigen an canLightOn/canLightOff, sie zeigen den Zustand', () => {
+        const ind = karte(OFEN).indicators;
+        const ein = ind.find(i => i.actionId === 'lightOn');
+        const aus = ind.find(i => i.actionId === 'lightOff');
+        // Licht ist aus → Anzeige "Licht aus", Klick schaltet ein
+        expect(ein.value).to.deep.equal({ stateId: `${NS}.${OFEN}.control.canLightOn` });
+        expect(ein.icon).to.equal(gm.KNOPFSYMBOL.lightOff);
+        expect(ein.text.de).to.equal('Licht aus');
+        expect(ein.tooltip.de).to.equal('Garraumbeleuchtung ist aus – klicken zum Einschalten');
+        // Licht ist an → Anzeige "Licht an", Klick schaltet aus
+        expect(aus.value).to.deep.equal({ stateId: `${NS}.${OFEN}.control.canLightOff` });
+        expect(aus.icon).to.equal(gm.KNOPFSYMBOL.lightOn);
+        expect(aus.text.de).to.equal('Licht an');
+        expect(aus.tooltip.de).to.equal('Garraumbeleuchtung ist an – klicken zum Ausschalten');
+        expect(ind.some(i => i.actionId === 'lightToggle')).to.equal(false);
+    });
+
+    it('Licht ohne control.canLight* (ältere Objekte): ein Umschalter an state.light', () => {
+        const ohne = new Map([...objekte()].filter(([id]) => !/canLight/.test(id)));
+        const k = gm.karte({ ns: NS, id: OFEN, obj: BAUM[`${NS}.${OFEN}`], objekte: ohne, deviceType: 12, steuerung: true });
+        const licht = k.indicators.filter(i => i.actionId === 'lightToggle');
         expect(licht).to.have.length(1);
         const l = licht[0];
         expect(l.value).to.deep.equal({ stateId: `${NS}.${OFEN}.state.light` });
@@ -286,7 +350,7 @@ describe('Geräte-Manager', () => {
         expect(aus.tooltip.de).to.equal('Garraumbeleuchtung ist aus – klicken zum Einschalten');
         // unbekannter Zustand (null): Auffangstufe = aus
         expect(l.levels[l.levels.length - 1].value).to.equal(undefined);
-        expect(karte(OFEN, true, 23).indicators.find(i => i.actionId === 'lightToggle').levels[0].tooltip.de).to.contain(
+        expect(karte(OFEN, true, 23).indicators.find(i => i.actionId === 'lightOff').tooltip.de).to.contain(
             'Kochfeldbeleuchtung',
         );
     });

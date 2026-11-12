@@ -54,7 +54,7 @@ const enroll = require('./lib/enroll');
 const dop2 = require('./lib/dop2');
 const stats = require('./lib/stats');
 const { mussNachziehen } = require('./lib/objektabgleich');
-const { MieleGeraeteManager, angebot, fortschritt } = require('./lib/geraetemanager');
+const { MieleGeraeteManager, angebot, angebotLeeren, fortschritt } = require('./lib/geraetemanager');
 
 /*
  * EcoFeedback: DOP2-Leaf 2/6195 (bislang nur Waschmaschinen liefern ihn).
@@ -325,17 +325,21 @@ class MieleLocal extends utils.Adapter {
         const groupKey = this.config.groupKey;
         if (!groupId || !groupKey) {
             this.log.warn('No credentials found. Please sign in via the instance configuration to obtain a GroupKey.');
+            await this.unerreichbareMarkieren();
             return;
         }
         try {
             this.mc = new MieleCrypto(groupId, groupKey);
         } catch (e) {
             this.log.error(`Invalid GroupKey: ${e.message}`);
+            await this.unerreichbareMarkieren();
             return;
         }
 
         // Geräte ermitteln: Auto-Discovery und/oder manuelle IP-Liste
         await this.discoverDevices();
+
+        await this.unerreichbareMarkieren();
 
         if (!Object.keys(this.devices).length) {
             this.log.warn(
@@ -879,6 +883,33 @@ class MieleLocal extends utils.Adapter {
     }
 
     /**
+     * Geraete aus dem Objektbaum, die beim Start nicht gefunden wurden: nicht verbunden, keine
+     * Knoepfe (seit 0.5.2). Ohne das blieb nach einem Absturz info.connected auf true, und nach
+     * jedem Neustart standen die control.can*-Werte vom letzten Lauf - die Karte zeigte dann
+     * "nicht verbunden" und trotzdem den Ein-Knopf. Taucht das Geraet spaeter auf, rechnet die
+     * erste Abfrage beides neu aus.
+     */
+    async unerreichbareMarkieren() {
+        let geraete;
+        try {
+            geraete = await this.getDevicesAsync();
+        } catch (e) {
+            this.log.debug(`Device list not readable: ${e.message}`);
+            return;
+        }
+        for (const g of geraete || []) {
+            const deviceId = String(g._id).slice(this.namespace.length + 1);
+            if (!deviceId || deviceId.includes('.') || (this.devices && this.devices[deviceId])) {
+                continue;
+            }
+            if (await this.getObjectAsync(`${deviceId}.info.connected`)) {
+                await this.setStateChangedAsync(`${deviceId}.info.connected`, { val: false, ack: true });
+            }
+            await angebotLeeren(this, deviceId);
+        }
+    }
+
+    /**
      * control.can<Befehl> neu ausrechnen (seit 0.5.0).
      *
      * Aus Status, MobileStart-Freigabe, Erreichbarkeit und Geraeteart (lib/geraetemanager.js
@@ -899,6 +930,7 @@ class MieleLocal extends utils.Adapter {
             status: await lies('state.status'),
             mobileStart: !!(await lies('state.mobileStart')),
             verbunden: verbunden !== undefined ? verbunden : !!(await lies('info.connected')),
+            licht: await lies('state.light'),
         };
         const jetzt = angebot(z);
         for (const a of objdef.ANGEBOT_STATES) {
@@ -1101,7 +1133,7 @@ class MieleLocal extends utils.Adapter {
                 await this.setStateChangedAsync(`${deviceId}.state.progress`, { val: prozent, ack: true });
             }
         }
-        if (statusVal != null || 'RemoteEnable' in state) {
+        if (statusVal != null || 'RemoteEnable' in state || 'Light' in state) {
             await this.angebotAktualisieren(deviceId, true);
         }
 
@@ -4876,6 +4908,8 @@ class MieleLocal extends utils.Adapter {
             await this.setStateAsync('info.connection', { val: false, ack: true });
             for (const deviceId of Object.keys(this.devices || {})) {
                 await this.setStateAsync(`${deviceId}.info.connected`, { val: false, ack: true });
+                // Ohne Adapter wird nichts ausgefuehrt - die Karten sollen auch keine Knoepfe zeigen.
+                await angebotLeeren(this, deviceId);
             }
         } catch {
             /* ignore */

@@ -94,6 +94,8 @@ describe('Sprachen: Karten, Datenpunkte und Werte', () => {
             'control.canStart',
             'control.canPause',
             'control.canStop',
+            'control.canLightOn',
+            'control.canLightOff',
             'state.progress',
         ]) {
             funde.push(...pruefe(`desc.${id}`, id, namen.beschreibung(id, true)));
