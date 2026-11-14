@@ -338,6 +338,67 @@
                     "xl": 6,
                     "help": "Creates the state names bilingually; the admin then shows them in German. Takes effect after saving and restarting."
                 },
+                "textLanguage": {
+                    "type": "select",
+                    "label": "Language of the text states",
+                    "newLine": true,
+                    "options": [
+                        {
+                            "label": "German or English (as above)",
+                            "value": ""
+                        },
+                        {
+                            "label": "English",
+                            "value": "en"
+                        },
+                        {
+                            "label": "Deutsch",
+                            "value": "de"
+                        },
+                        {
+                            "label": "Polski",
+                            "value": "pl"
+                        },
+                        {
+                            "label": "Français",
+                            "value": "fr"
+                        },
+                        {
+                            "label": "Italiano",
+                            "value": "it"
+                        },
+                        {
+                            "label": "Español",
+                            "value": "es"
+                        },
+                        {
+                            "label": "Português",
+                            "value": "pt"
+                        },
+                        {
+                            "label": "Nederlands",
+                            "value": "nl"
+                        },
+                        {
+                            "label": "Русский",
+                            "value": "ru"
+                        },
+                        {
+                            "label": "Українська",
+                            "value": "uk"
+                        },
+                        {
+                            "label": "简体中文",
+                            "value": "zh-cn"
+                        }
+                    ],
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6,
+                    "help": "Language of statusText, programText, programPhaseText, programTypeText and dryingStepText and of the value lists of the raw states. Default: German or English, following the option above. Where a language has no translation, the English text is written. Scripts that compare against these texts must be adjusted after a change. Takes effect after saving and restarting."
+                },
                 "secondsTime": {
                     "type": "checkbox",
                     "label": "Fetch second-precise remaining/elapsed time (DOP2)",

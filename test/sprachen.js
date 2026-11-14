@@ -17,6 +17,7 @@ const enums = require('../lib/enums');
 const objdef = require('../lib/objects');
 const namen = require('../lib/names');
 const HA = require('../lib/werte_ha');
+const { PROGRAMME } = require('../lib/werte_eigen');
 const { SPRACHEN, pruefe } = require('./lib/sprachpruefung');
 
 const NS = 'miele-local.0';
@@ -142,7 +143,7 @@ describe('Sprachen: Karten, Datenpunkte und Werte', () => {
         }
     });
 
-    it('Programmnamen: Home Assistant, sonst Englisch - nie leer, nie geraten', () => {
+    it('Programmnamen: Home Assistant, dann eigene (PROGRAMME), sonst Englisch - nie leer', () => {
         for (const [dt, m] of Object.entries(enums.BY_TYPE)) {
             for (const [k, schluessel] of Object.entries(enums.TABLES[m.program])) {
                 if (!schluessel || werte.NICHTS.has(schluessel)) {
@@ -153,7 +154,8 @@ describe('Sprachen: Karten, Datenpunkte und Werte', () => {
                     expect(t, `${dt}/${k} ${sp}`).to.be.a('string').and.not.equal('');
                     if (sp !== 'de' && sp !== 'en') {
                         const ha = HA[sp].program[schluessel];
-                        expect(t).to.equal(ha || werte.wertText('program', 'en', Number(dt), Number(k)));
+                        const eigen = PROGRAMME[sp] && PROGRAMME[sp].program[schluessel];
+                        expect(t).to.equal(ha || eigen || werte.wertText('program', 'en', Number(dt), Number(k)));
                     }
                 }
             }
@@ -161,6 +163,52 @@ describe('Sprachen: Karten, Datenpunkte und Werte', () => {
         // Beispiel: Baumwolle der Waschmaschine
         expect(werte.wertText('program', 'fr', 1, 1)).to.equal('Coton');
         expect(werte.wertText('program', 'uk', 1, 1)).to.equal('Cottons');
+        expect(werte.wertText('program', 'pl', 1, 1)).to.equal('Bawełna');
+    });
+
+    it('eigene Programmnamen (PROGRAMME) gehoeren zu Bezeichnern, die es gibt', () => {
+        const bekannt = new Set();
+        for (const m of Object.values(enums.BY_TYPE)) {
+            Object.values(enums.TABLES[m.program]).forEach(k => bekannt.add(k));
+        }
+        for (const [sp, arten] of Object.entries(PROGRAMME)) {
+            expect(SPRACHEN, sp).to.include(sp);
+            for (const [k, t] of Object.entries(arten.program)) {
+                expect(bekannt.has(k), `${sp} ${k}`).to.equal(true);
+                expect(t, `${sp} ${k}`).to.be.a('string').and.not.equal('');
+            }
+        }
+    });
+
+    it('textLanguage: Textdatenpunkte in einer weiteren Sprache, Luecken auf Englisch', () => {
+        const text = (feld, v, ctx, sub) => objdef.STATE_FIELDS[feld].decode(v, ctx).find(p => p.sub === sub).val;
+        const pl = { deviceType: 1, german: true, sprache: 'pl' };
+        expect(text('Status', 5, pl, 'statusText')).to.equal('Pracuje');
+        expect(text('ProgramType', 1, pl, 'programTypeText')).to.equal('Własny program');
+        expect(text('ProgramID', 1, pl, 'programText')).to.equal('Bawełna');
+        expect(text('ProgramID', 0, pl, 'programText')).to.equal('Brak programu');
+        expect(text('ProgramPhase', 256, pl, 'programPhaseText')).to.equal('Nie uruchomiony');
+        expect(text('DryingStep', 0, { deviceType: 2, sprache: 'pl' }, 'dryingStepText')).to.equal('Ekstra suche');
+        // keine polnische Uebersetzung: englischer Name, unbekannter Rohwert: Ersatztext
+        expect(text('ProgramID', 10059, pl, 'programText')).to.equal('Pre ironing');
+        expect(text('ProgramID', 99999, pl, 'programText')).to.equal('Program 99999');
+        // de/en erzwingen die Sprache, unabhaengig von germanNames
+        expect(text('Status', 5, { deviceType: 1, german: true, sprache: 'en' }, 'statusText')).to.equal('In use');
+        expect(text('Status', 5, { deviceType: 1, german: false, sprache: 'de' }, 'statusText')).to.equal(
+            'In Betrieb',
+        );
+        // ohne Angabe wie bisher
+        expect(text('Status', 5, { deviceType: 1, german: false }, 'statusText')).to.equal('In use');
+        expect(werte.datenpunktText('status', 'de', 1, 5)).to.equal(null);
+    });
+
+    it('textLanguage: Werteliste am Rohwert in derselben Sprache wie der Textdatenpunkt', () => {
+        const liste = objdef.zustandsTexte('status', 1, true, 'pl');
+        expect(liste['5']).to.equal('Pracuje');
+        expect(objdef.zustandsTexte('programId', 1, true, 'pl')['1']).to.equal('Bawełna');
+        expect(objdef.zustandsTexte('programPhase', 2, false, 'pl')['512']).to.equal('Nie uruchomiony');
+        expect(objdef.zustandsTexte('status', 1, true, 'en')['5']).to.equal(objdef.zustandsTexte('status', 1, false)['5']);
+        expect(objdef.zustandsTexte('status', 1, true)['5']).to.equal('In Betrieb');
     });
 
     it('unbekannte Sprache faellt auf Englisch, unbekannter Rohwert auf null', () => {

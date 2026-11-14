@@ -193,6 +193,7 @@
     "pushPort": 18082,
     "allowControl": false,
     "germanNames": true,
+    "textLanguage": "",
     "ecoFeedback": true,
     "ecoRawFields": false,
     "leafStates": true,
