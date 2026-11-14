@@ -89,6 +89,13 @@ the community translations of Home Assistant; where a language has none there (U
 entirely, Polish almost entirely, Russian and Dutch in part) the card shows the English name -
 nothing is guessed. An unknown raw value appears as its number.
 
+**Text states in another language (optional).** *Polling & values → Language of the text states*
+writes `statusText`, `programText`, `programPhaseText`, `programTypeText` and `dryingStepText` - and
+the value lists of the raw states - in any of the eleven admin languages instead of German or
+English. Where a language has no translation the English text is written. Programme names come
+from Home Assistant; for Polish, washing machine and tumble dryer programmes are translated in
+`lib/werte_eigen.js`. The default leaves everything as it was.
+
 With "State names in German" switched off, state names and descriptions stay plain English text
 on purpose: a multilingual name would bring the German name back in a German admin and make the
 option pointless.
@@ -331,6 +338,10 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- (KPIotr89) New option **Language of the text states** (Polling & values): `statusText`, `programText`, `programPhaseText`, `programTypeText`, `dryingStepText` and the value lists of the raw states in any of the eleven admin languages. Default unchanged (German or English, following "State names in German"); missing translations fall back to English
+- (KPIotr89) Polish programme names for washing machines and tumble dryers (`PROGRAMME` in `lib/werte_eigen.js`), also used on the device manager cards
+
 ### 0.5.2 (2026-11-12)
 - (SmarthomeElektroniker) Fix: a card could show "not connected" and still offer the On button (or the light). After a stop or restart of the adapter the `control.can*` states kept their last value, and appliances not found at start kept them as well. Now the adapter clears them on stop and for every appliance not found at start; an appliance that is not reachable or reports status 255 ("not connected") gets no button at all
 - (SmarthomeElektroniker) The light button now also follows two read-only states, `control.canLightOn` and `control.canLightOff` (exactly one is true while the appliance is reachable). The card looks as before

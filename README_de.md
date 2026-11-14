@@ -92,6 +92,13 @@ der Community-Übersetzung von Home Assistant; wo eine Sprache dort keine hat (U
 Polnisch fast ganz, Russisch und Niederländisch teilweise), zeigt die Karte den englischen Namen –
 geraten wird nicht. Ein unbekannter Rohwert erscheint als Zahl.
 
+**Text-Datenpunkte in einer weiteren Sprache (optional).** *Abfrage & Werte → Sprache der
+Text-Datenpunkte* schreibt `statusText`, `programText`, `programPhaseText`, `programTypeText` und
+`dryingStepText` - und die Wertelisten der Rohwerte - in einer der elf Admin-Sprachen statt auf
+Deutsch oder Englisch. Fehlt eine Übersetzung, steht der englische Text da. Programmnamen kommen
+aus Home Assistant; für Polnisch sind Waschmaschinen- und Trocknerprogramme in
+`lib/werte_eigen.js` übersetzt. Die Vorgabe lässt alles, wie es war.
+
 Ist „Datenpunkt-Namen auf Deutsch“ aus, bleiben Namen und Beschreibungen mit Absicht schlichter
 englischer Text: Ein mehrsprachiger Name brächte im deutschen Admin wieder den deutschen Namen
 und machte die Option sinnlos.

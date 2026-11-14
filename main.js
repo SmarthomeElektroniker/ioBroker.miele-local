@@ -820,7 +820,7 @@ class MieleLocal extends utils.Adapter {
                 // Klartext direkt am Rohwert: Der Objektbrowser und VIS zeigen dann "In Betrieb"
                 // statt 5, ohne dass man den *Text-Datenpunkt danebenlegen muss. Die gibt es
                 // weiterhin - bestehende Aufbauten haengen daran.
-                const liste = objdef.zustandsTexte(s.sub, deviceType, german);
+                const liste = objdef.zustandsTexte(s.sub, deviceType, german, this.textSprache());
                 if (liste) {
                     common.states = liste;
                 }
@@ -1031,9 +1031,25 @@ class MieleLocal extends utils.Adapter {
         return true;
     }
 
+    /**
+     * Sprache der *Text-Datenpunkte (Option `textLanguage`).
+     *
+     * Leer oder unbekannt heisst: wie bisher Deutsch oder Englisch nach `germanNames`.
+     *
+     * @returns {string|undefined} eine der elf ioBroker-Sprachen oder undefined
+     */
+    textSprache() {
+        const sp = this.config.textLanguage;
+        return sp && namen.SPRACHEN.includes(sp) ? sp : undefined;
+    }
+
     async applyState(deviceId, state) {
         const dev = this.devices[deviceId];
-        const ctx = { deviceType: dev ? dev.deviceType : null, german: this.config.germanNames !== false };
+        const ctx = {
+            deviceType: dev ? dev.deviceType : null,
+            german: this.config.germanNames !== false,
+            sprache: this.textSprache(),
+        };
         // Unmoegliche Sprünge nach "Aus" gar nicht erst in die Datenpunkte lassen - sonst
         // schreiben Status, Restzeit und Laufzeit gemeinsam Unsinn (siehe statusPlausibel).
         if ('Status' in state && !(await this.statusPlausibel(deviceId, state.Status))) {
