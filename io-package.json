@@ -52,6 +52,19 @@
     "readme": "https://github.com/SmarthomeElektroniker/ioBroker.miele-local/blob/main/README.md",
     "loglevel": "info",
     "news": {
+      "0.6.1": {
+        "en": "German „Dunkles“ instead of „Dunkles/Jeans“ for washing programme 50, Polish „Expres“/„Expres 20“ (thanks @KPIotr89). After switching on, the appliance is polled faster for 5 min so the selected programme shows up",
+        "de": "Deutsch „Dunkles“ statt „Dunkles/Jeans“ für Waschprogramm 50, polnisch „Expres“/„Expres 20“ (danke @KPIotr89). Nach dem Einschalten wird das Gerät 5 min lang schneller abgefragt, damit das gewählte Programm erscheint",
+        "ru": "Немецкое «Dunkles» вместо «Dunkles/Jeans» для программы стирки 50, польское «Expres»/«Expres 20» (спасибо @KPIotr89). После включения прибор 5 минут опрашивается чаще, чтобы выбранная программа отобразилась",
+        "pt": "Alemão „Dunkles“ em vez de „Dunkles/Jeans“ para o programa de lavagem 50, polaco „Expres“/„Expres 20“ (obrigado @KPIotr89). Depois de ligado, o aparelho é consultado mais depressa durante 5 min para que o programa escolhido apareça",
+        "nl": "Duits „Dunkles“ in plaats van „Dunkles/Jeans“ voor wasprogramma 50, Pools „Expres“/„Expres 20“ (dank @KPIotr89). Na het inschakelen wordt het apparaat 5 min vaker opgevraagd, zodat het gekozen programma verschijnt",
+        "fr": "Allemand « Dunkles » au lieu de « Dunkles/Jeans » pour le programme de lavage 50, polonais « Expres »/« Expres 20 » (merci @KPIotr89). Après la mise en marche, l'appareil est interrogé plus souvent pendant 5 min pour que le programme choisi apparaisse",
+        "it": "Tedesco „Dunkles“ invece di „Dunkles/Jeans“ per il programma di lavaggio 50, polacco „Expres“/„Expres 20“ (grazie @KPIotr89). Dopo l'accensione l'apparecchio viene interrogato più spesso per 5 min, così compare il programma scelto",
+        "es": "Alemán «Dunkles» en lugar de «Dunkles/Jeans» para el programa de lavado 50, polaco «Expres»/«Expres 20» (gracias @KPIotr89). Tras encenderlo, el aparato se consulta con más frecuencia durante 5 min para que aparezca el programa elegido",
+        "pl": "Niemiecki „Dunkles” zamiast „Dunkles/Jeans” dla programu prania 50, polski „Expres”/„Expres 20” (dziękujemy @KPIotr89). Po włączeniu urządzenie jest odpytywane częściej przez 5 min, aby pojawił się wybrany program",
+        "uk": "Німецьке «Dunkles» замість «Dunkles/Jeans» для програми прання 50, польське «Expres»/«Expres 20» (дякуємо @KPIotr89). Після ввімкнення прилад 5 хв опитується частіше, щоб з'явилася вибрана програма",
+        "zh-cn": "洗衣程序 50 的德语名称改为 „Dunkles“（原为 „Dunkles/Jeans“），波兰语 „Expres“/„Expres 20“（感谢 @KPIotr89）。设备开机后 5 分钟内更频繁地查询，以便显示所选程序"
+      },
       "0.6.0": {
         "en": "Consumption also for dishwashers and dryers: the device context 2/1585 (fallback 2/391) is read independently of the eco leaf, energy and water per programme from the appliance's lifetime counters. DOP2 type 33 is understood. Gentler leaf scan (own pace per appliance) and anonymised scan result for sharing. New option: language of the text states (thanks @KPIotr89), Polish programme names from Miele's operating instructions. Less debug noise for appliances without consumption data",
         "de": "Verbrauch auch für Spülmaschine und Trockner: Der Gerätekontext 2/1585 (ersatzweise 2/391) wird unabhängig vom Eco-Leaf gelesen, Energie und Wasser je Programm aus den Lebenszählern des Geräts. DOP2-Typ 33 wird verstanden. Schonenderer Leaf-Scan (eigener Takt je Gerät) und anonymisiertes Scanergebnis zum Teilen. Neue Option: Sprache der Textzustände (danke @KPIotr89), polnische Programmnamen aus Miele-Bedienungsanleitungen. Weniger Debug-Ausgaben bei Geräten ohne Verbrauchswerte",

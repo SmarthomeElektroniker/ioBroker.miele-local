@@ -355,6 +355,11 @@ engineering work of the projects `MieleRESTServer` (akappner),
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- (SmarthomeElektroniker) German: washing machine programme 50 (`dark_garments`) is now „Dunkles“ (was „Dunkles/Jeans“, which is programme 10048 `dark_jeans`), as shown on a WCR860. **Visible change:** the German `state.programText` changes accordingly
+- (SmarthomeElektroniker) Polish: „Expres 20“ (washing machine) and „Expres“ (tumble dryer) with one s, the spelling of the newer appliances (control panels WWF 664 and TWF 760 WP). Thanks to @KPIotr89 for the feedback
+- (SmarthomeElektroniker) Polling: right after switching on (status 2 "On") an appliance is polled at the active interval for 5 minutes. Directly after switching on, `/State` still reports programme 0; status 3 "Programmed" with the selected programme only follows later (WCR860: at the next poll). At the idle interval (2 min) that next poll could come after the appliance had already been switched off again, so the selected programme never showed up
+
 ### 0.6.0 (2026-11-19)
 - (SmarthomeElektroniker) DOP2 parser reads type 33 (list of structures, AStruct). Until now a leaf containing it (e.g. `2/1585`, `2/17`, `2/131`) failed completely with "Unknown DOP2 field type 33".
 - (SmarthomeElektroniker) The device context `2/1585` (and `2/391` as fallback) is queried independently of the washing-machine leaf `2/6195`. Values of the appliance's own EcoFeedback (fields 6.3–6.6, 6.29, 6.31) honour the unit type (121/46 = Wh, 45 = kWh, 44 = l) and are only created if the appliance keeps them; TwinDos/AutoDos containers (6.7) appear as JSON. Appliances without `2/6195` (dishwasher) get energy and water per programme from the difference of the lifetime counters 6.5/6.6. The "last programme" values no longer replace `eco.*` while a programme runs.
