@@ -60,4 +60,52 @@ describe('Abfragetakt je Geraet', () => {
         expect(takt.weckAbstand([], 0, RUHE)).to.equal(RUHE);
         expect(takt.weckAbstand([{ naechsteAbfrage: 90_000 }, { naechsteAbfrage: 30_000 }], 0, RUHE)).to.equal(30_000);
     });
+    describe('Status 2 "Ein" gleich nach dem Einschalten', () => {
+        it('bleibt die ersten Minuten im Betriebstakt, danach Ruhetakt', () => {
+            expect(takt.imBetriebstakt(2, 0, 0)).to.equal(true);
+            expect(takt.imBetriebstakt(2, 0, takt.EIN_BETRIEBSTAKT_MS - 1)).to.equal(true);
+            expect(takt.imBetriebstakt(2, 0, takt.EIN_BETRIEBSTAKT_MS)).to.equal(false);
+            expect(takt.imBetriebstakt(2, null, 0)).to.equal(false);
+        });
+
+        it('aendert nichts an Aus und an den laufenden Status', () => {
+            expect(takt.imBetriebstakt(1, 0, 0)).to.equal(false);
+            expect(takt.imBetriebstakt(255, 0, 0)).to.equal(false);
+            for (const st of [3, 4, 5, 6, 7, 9, 13, 14, 15]) {
+                expect(takt.imBetriebstakt(st, null, 10 * 3600_000)).to.equal(true);
+            }
+        });
+
+        it('20.11.2026: Programmwahl ohne Start wird jetzt vor dem Ausschalten noch einmal gefragt', () => {
+            // eingeschaltet bei 0 s, erste Abfrage 10 s spaeter (Status 2, Programm 0), ausgeschaltet 91 s.
+            // Vorher kam die naechste Abfrage erst nach 130 s - das Geraet war da schon aus.
+            const dev = {};
+            const status = t => (t >= 10_000 && t < 91_000 ? 2 : 1);
+            let jetzt = 10_000;
+            const abfragen = [];
+            while (jetzt < 200_000) {
+                const st = status(jetzt);
+                abfragen.push([jetzt, st]);
+                dev.einSeit = st === 2 ? (dev.einSeit == null ? jetzt : dev.einSeit) : null;
+                dev.active = takt.imBetriebstakt(st, dev.einSeit, jetzt);
+                jetzt += takt.abstand(dev, AKTIV, RUHE);
+            }
+            expect(abfragen.filter(([, st]) => st === 2).length).to.equal(2);
+            expect(abfragen[1]).to.deep.equal([70_000, 2]);
+        });
+
+        it('ein lange eingeschaltetes Geraet faellt nach 5 min in den Ruhetakt zurueck', () => {
+            // 30 min auf "Ein": 0, 60 … 240 s im Betriebstakt (5), ab 300 s je 120 s bis 1740 s (13).
+            const dev = {};
+            let jetzt = 0;
+            let n = 0;
+            while (jetzt < 1800_000) {
+                n++;
+                dev.einSeit = dev.einSeit == null ? jetzt : dev.einSeit;
+                dev.active = takt.imBetriebstakt(2, dev.einSeit, jetzt);
+                jetzt += takt.abstand(dev, AKTIV, RUHE);
+            }
+            expect(n).to.equal(5 + 13);
+        });
+    });
 });

@@ -211,9 +211,6 @@ const SEC_ELAPSED_IDX = 8;
 const USER_REQ_PREFIX = Buffer.from('00100001062f00000000000100010700', 'hex');
 const USER_REQ_UNIT = 2;
 const USER_REQ_LEAF = 1583;
-// Status-Werte, bei denen ein Gerät „aktiv" ist → schnelleres Polling
-const ACTIVE_STATUSES = new Set([3, 4, 5, 6, 7, 9, 13, 14, 15]);
-
 function buildUserRequest(opcode) {
     return Buffer.concat([USER_REQ_PREFIX, Buffer.from([opcode & 0xff]), Buffer.alloc(15, 0x20)]);
 }
@@ -1173,7 +1170,14 @@ class MieleLocal extends utils.Adapter {
 
         if (dev && statusVal != null) {
             await this.trackCycle(deviceId, statusVal);
-            dev.active = ACTIVE_STATUSES.has(statusVal);
+            // Status 2 frisch eingeschaltet: noch ein paar Minuten kurzer Takt, damit Status 3 und
+            // das gewaehlte Programm ankommen, bevor das Geraet wieder aus ist (lib/takt.js).
+            if (statusVal !== 2) {
+                dev.einSeit = null;
+            } else if (dev.einSeit == null) {
+                dev.einSeit = Date.now();
+            }
+            dev.active = takt.imBetriebstakt(statusVal, dev.einSeit, Date.now());
             // Endet ein Programm, laeuft die Eco-Abfrage noch eine Weile nach - der
             // Schlussstand steht oft erst nach dem Statuswechsel fest.
             const laeuftJetzt = statusVal === 5 || statusVal === 6;
