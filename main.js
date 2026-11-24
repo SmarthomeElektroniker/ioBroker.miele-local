@@ -803,6 +803,9 @@ class MieleLocal extends utils.Adapter {
                 continue;
             }
             for (const s of objdef.STATE_FIELDS[key].states) {
+                if (!objdef.stateAllowed(s.sub, deviceType)) {
+                    continue;
+                }
                 const common = {
                     name: objdef.nameFor('state', s.sub, s.name, german),
                     role: s.role,

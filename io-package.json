@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "miele-local",
-    "version": "0.6.0",
+    "version": "0.6.1",
     "titleLang": {
       "en": "Miele@local",
       "de": "Miele@local",
@@ -53,17 +53,17 @@
     "loglevel": "info",
     "news": {
       "0.6.1": {
-        "en": "German „Dunkles“ instead of „Dunkles/Jeans“ for washing programme 50, Polish „Expres“/„Expres 20“ (thanks @KPIotr89). After switching on, the appliance is polled faster for 5 min so the selected programme shows up",
-        "de": "Deutsch „Dunkles“ statt „Dunkles/Jeans“ für Waschprogramm 50, polnisch „Expres“/„Expres 20“ (danke @KPIotr89). Nach dem Einschalten wird das Gerät 5 min lang schneller abgefragt, damit das gewählte Programm erscheint",
-        "ru": "Немецкое «Dunkles» вместо «Dunkles/Jeans» для программы стирки 50, польское «Expres»/«Expres 20» (спасибо @KPIotr89). После включения прибор 5 минут опрашивается чаще, чтобы выбранная программа отобразилась",
-        "pt": "Alemão „Dunkles“ em vez de „Dunkles/Jeans“ para o programa de lavagem 50, polaco „Expres“/„Expres 20“ (obrigado @KPIotr89). Depois de ligado, o aparelho é consultado mais depressa durante 5 min para que o programa escolhido apareça",
-        "nl": "Duits „Dunkles“ in plaats van „Dunkles/Jeans“ voor wasprogramma 50, Pools „Expres“/„Expres 20“ (dank @KPIotr89). Na het inschakelen wordt het apparaat 5 min vaker opgevraagd, zodat het gekozen programma verschijnt",
-        "fr": "Allemand « Dunkles » au lieu de « Dunkles/Jeans » pour le programme de lavage 50, polonais « Expres »/« Expres 20 » (merci @KPIotr89). Après la mise en marche, l'appareil est interrogé plus souvent pendant 5 min pour que le programme choisi apparaisse",
-        "it": "Tedesco „Dunkles“ invece di „Dunkles/Jeans“ per il programma di lavaggio 50, polacco „Expres“/„Expres 20“ (grazie @KPIotr89). Dopo l'accensione l'apparecchio viene interrogato più spesso per 5 min, così compare il programma scelto",
-        "es": "Alemán «Dunkles» en lugar de «Dunkles/Jeans» para el programa de lavado 50, polaco «Expres»/«Expres 20» (gracias @KPIotr89). Tras encenderlo, el aparato se consulta con más frecuencia durante 5 min para que aparezca el programa elegido",
-        "pl": "Niemiecki „Dunkles” zamiast „Dunkles/Jeans” dla programu prania 50, polski „Expres”/„Expres 20” (dziękujemy @KPIotr89). Po włączeniu urządzenie jest odpytywane częściej przez 5 min, aby pojawił się wybrany program",
-        "uk": "Німецьке «Dunkles» замість «Dunkles/Jeans» для програми прання 50, польське «Expres»/«Expres 20» (дякуємо @KPIotr89). Після ввімкнення прилад 5 хв опитується частіше, щоб з'явилася вибрана програма",
-        "zh-cn": "洗衣程序 50 的德语名称改为 „Dunkles“（原为 „Dunkles/Jeans“），波兰语 „Expres“/„Expres 20“（感谢 @KPIotr89）。设备开机后 5 分钟内更频繁地查询，以便显示所选程序"
+        "en": "MobileStart now read from the correct element of RemoteEnable; new states fullRemoteControl and smartGrid (thanks Reinfelderjung). German „Dunkles“ instead of „Dunkles/Jeans“ for washing programme 50, Polish „Expres“/„Expres 20“ (thanks @KPIotr89). After switching on, the appliance is polled faster for 5 min so the selected programme shows up",
+        "de": "MobileStart wird jetzt aus dem richtigen Element von RemoteEnable gelesen; neue Datenpunkte fullRemoteControl und smartGrid (danke Reinfelderjung). Deutsch „Dunkles“ statt „Dunkles/Jeans“ für Waschprogramm 50, polnisch „Expres“/„Expres 20“ (danke @KPIotr89). Nach dem Einschalten wird das Gerät 5 min lang schneller abgefragt, damit das gewählte Programm erscheint",
+        "ru": "MobileStart теперь читается из правильного элемента RemoteEnable; новые точки данных fullRemoteControl и smartGrid (спасибо Reinfelderjung). Немецкое «Dunkles» вместо «Dunkles/Jeans» для программы стирки 50, польское «Expres»/«Expres 20» (спасибо @KPIotr89). После включения прибор 5 минут опрашивается чаще, чтобы выбранная программа отобразилась",
+        "pt": "MobileStart passa a ser lido do elemento correto de RemoteEnable; novos estados fullRemoteControl e smartGrid (obrigado Reinfelderjung). Alemão „Dunkles“ em vez de „Dunkles/Jeans“ para o programa de lavagem 50, polaco „Expres“/„Expres 20“ (obrigado @KPIotr89). Depois de ligado, o aparelho é consultado mais depressa durante 5 min para que o programa escolhido apareça",
+        "nl": "MobileStart wordt nu uit het juiste element van RemoteEnable gelezen; nieuwe datapunten fullRemoteControl en smartGrid (dank Reinfelderjung). Duits „Dunkles“ in plaats van „Dunkles/Jeans“ voor wasprogramma 50, Pools „Expres“/„Expres 20“ (dank @KPIotr89). Na het inschakelen wordt het apparaat 5 min vaker opgevraagd, zodat het gekozen programma verschijnt",
+        "fr": "MobileStart est désormais lu dans le bon élément de RemoteEnable ; nouveaux états fullRemoteControl et smartGrid (merci Reinfelderjung). Allemand « Dunkles » au lieu de « Dunkles/Jeans » pour le programme de lavage 50, polonais « Expres »/« Expres 20 » (merci @KPIotr89). Après la mise en marche, l'appareil est interrogé plus souvent pendant 5 min pour que le programme choisi apparaisse",
+        "it": "MobileStart ora viene letto dall'elemento corretto di RemoteEnable; nuovi stati fullRemoteControl e smartGrid (grazie Reinfelderjung). Tedesco „Dunkles“ invece di „Dunkles/Jeans“ per il programma di lavaggio 50, polacco „Expres“/„Expres 20“ (grazie @KPIotr89). Dopo l'accensione l'apparecchio viene interrogato più spesso per 5 min, così compare il programma scelto",
+        "es": "MobileStart se lee ahora del elemento correcto de RemoteEnable; nuevos estados fullRemoteControl y smartGrid (gracias Reinfelderjung). Alemán «Dunkles» en lugar de «Dunkles/Jeans» para el programa de lavado 50, polaco «Expres»/«Expres 20» (gracias @KPIotr89). Tras encenderlo, el aparato se consulta con más frecuencia durante 5 min para que aparezca el programa elegido",
+        "pl": "MobileStart jest teraz odczytywany z właściwego elementu RemoteEnable; nowe stany fullRemoteControl i smartGrid (dziękujemy Reinfelderjung). Niemiecki „Dunkles” zamiast „Dunkles/Jeans” dla programu prania 50, polski „Expres”/„Expres 20” (dziękujemy @KPIotr89). Po włączeniu urządzenie jest odpytywane częściej przez 5 min, aby pojawił się wybrany program",
+        "uk": "MobileStart тепер зчитується з правильного елемента RemoteEnable; нові точки даних fullRemoteControl і smartGrid (дякуємо Reinfelderjung). Німецьке «Dunkles» замість «Dunkles/Jeans» для програми прання 50, польське «Expres»/«Expres 20» (дякуємо @KPIotr89). Після ввімкнення прилад 5 хв опитується частіше, щоб з'явилася вибрана програма",
+        "zh-cn": "MobileStart 现在从 RemoteEnable 的正确元素读取；新增数据点 fullRemoteControl 和 smartGrid（感谢 Reinfelderjung）。洗衣程序 50 的德语名称改为 „Dunkles“（原为 „Dunkles/Jeans“），波兰语 „Expres“/„Expres 20“（感谢 @KPIotr89）。设备开机后 5 分钟内更频繁地查询，以便显示所选程序"
       },
       "0.6.0": {
         "en": "Consumption also for dishwashers and dryers: the device context 2/1585 (fallback 2/391) is read independently of the eco leaf, energy and water per programme from the appliance's lifetime counters. DOP2 type 33 is understood. Gentler leaf scan (own pace per appliance) and anonymised scan result for sharing. New option: language of the text states (thanks @KPIotr89), Polish programme names from Miele's operating instructions. Less debug noise for appliances without consumption data",
@@ -142,19 +142,6 @@
         "pl": "Wydanie serwisowe: skrócono informacje o wersjach w io-package.json (kontrola repozytorium W1032/W2004), bez zmian funkcjonalnych",
         "uk": "Сервісний випуск: скорочено примітки до версій у io-package.json (перевірка репозиторію W1032/W2004), без функціональних змін",
         "zh-cn": "维护版本：精简了 io-package.json 中的版本说明（仓库检查 W1032/W2004），无功能变更"
-      },
-      "0.4.1": {
-        "en": "New option 'Keep the appliance clock on local time' (off by default): checks the appliance clock (Settings/TimeSync) at start and hourly and sets it to the local time if it differs by more than 2 minutes",
-        "de": "Neue Option „Geräteuhr auf Ortszeit halten“ (Standard aus): prüft die Geräteuhr (Settings/TimeSync) beim Start und stündlich und stellt sie auf die Ortszeit, wenn sie mehr als 2 Minuten abweicht",
-        "ru": "Новая опция «Поддерживать часы прибора по местному времени» (по умолчанию выключена): проверяет часы прибора (Settings/TimeSync) при запуске и ежечасно и устанавливает местное время при отклонении более 2 минут",
-        "pt": "Nova opção 'Manter o relógio do aparelho na hora local' (desligada por padrão): verifica o relógio do aparelho (Settings/TimeSync) no arranque e a cada hora e acerta-o para a hora local se a diferença exceder 2 minutos",
-        "nl": "Nieuwe optie 'Klok van het apparaat op lokale tijd houden' (standaard uit): controleert de klok (Settings/TimeSync) bij de start en elk uur en zet hem op lokale tijd bij meer dan 2 minuten afwijking",
-        "fr": "Nouvelle option « Maintenir l’horloge de l’appareil à l’heure locale » (désactivée par défaut) : vérifie l’horloge (Settings/TimeSync) au démarrage et toutes les heures et la règle sur l’heure locale si l’écart dépasse 2 minutes",
-        "it": "Nuova opzione 'Mantenere l’orologio dell’apparecchio sull’ora locale' (disattivata per impostazione predefinita): controlla l’orologio (Settings/TimeSync) all’avvio e ogni ora e lo regola sull’ora locale se lo scostamento supera 2 minuti",
-        "es": "Nueva opción 'Mantener el reloj del aparato en la hora local' (desactivada por defecto): comprueba el reloj (Settings/TimeSync) al iniciar y cada hora y lo ajusta a la hora local si difiere más de 2 minutos",
-        "pl": "Nowa opcja „Utrzymuj zegar urządzenia w czasie lokalnym” (domyślnie wyłączona): sprawdza zegar (Settings/TimeSync) przy starcie i co godzinę i ustawia czas lokalny przy odchyłce ponad 2 minuty",
-        "uk": "Нова опція «Тримати годинник приладу за місцевим часом» (за замовчуванням вимкнена): перевіряє годинник (Settings/TimeSync) під час запуску та щогодини і встановлює місцевий час при відхиленні понад 2 хвилини",
-        "zh-cn": "新选项“使设备时钟保持本地时间”（默认关闭）：启动时及每小时检查设备时钟（Settings/TimeSync），偏差超过 2 分钟时校准为本地时间"
       }
     },
     "mode": "daemon",
