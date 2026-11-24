@@ -33,7 +33,9 @@ Checkbox „Datenpunkt-Namen auf Deutsch" aktiv ist (Standard). Enum-Felder gibt
 | `state.signalDoor` | Tür offen | boolean | | Türsignal |
 | `state.signalInfo` | Info-Signal | boolean | | Info-Signal aktiv |
 | `state.signalFailure` | Störungssignal | boolean | | Störung/Fehler aktiv |
-| `state.mobileStart` | MobileStart verfügbar | boolean | | Fernsteuerung am Gerät freigegeben |
+| `state.mobileStart` | MobileStart verfügbar | boolean | | MobileStart am Gerät freigegeben (RemoteEnable[2]) |
+| `state.fullRemoteControl` | Fernsteuerung freigegeben | boolean | | Fernsteuerung im Gerätemenü an (RemoteEnable[0] ohne Bit 3) |
+| `state.smartGrid` | SmartGrid aktiv | boolean | | nur Waschen/Trocknen (RemoteEnable[1]) |
 | `state.remoteEnableRaw` | Fernsteuer-Freigabe (Rohwert) | string | | RemoteEnable-Array (Rohwert) |
 | `state.light` | Licht | boolean | | Beleuchtung an |
 | `state.spinningSpeed` | Schleuderdrehzahl | number | rpm | nur Waschmaschine |
